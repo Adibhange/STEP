@@ -1,0 +1,103 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * STEP Enterprise Platform — Elevation Token System
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Canonical home for all depth and elevation concerns:
+ * • Shadow tokens     — box-shadow values by elevation level
+ * • Backdrop blur     — blur values for glass/frosted surfaces
+ * • Glass opacity     — fill opacity for translucent surfaces
+ * • Overlay depth     — z-position and opacity of overlaid surfaces
+ *
+ * Never hardcode a shadow, blur, or glass value in a component.
+ * All values reference the graphite single-theme foundation.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+:root {
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SHADOW SCALE
+     Elevation 0 (flat) → Elevation 5 (floating command palette)
+     Optimised for the dark graphite foundation (#09090f).
+     Shadow colors use pure black alpha — never colored shadows.
+  ───────────────────────────────────────────────────────────────────────── */
+
+  /** xs — subtle lift for micro components (chips, badges) */
+  --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.30);
+
+  /** sm — row hover, small cards, dropdown items */
+  --shadow-sm:  0 2px 6px rgba(0, 0, 0, 0.36);
+
+  /** md — card resting state, popovers, tooltips */
+  --shadow-md:  0 6px 18px rgba(0, 0, 0, 0.42), 0 1px 3px rgba(0, 0, 0, 0.25);
+
+  /** lg — drawers, side panels, large modals */
+  --shadow-lg:  0 14px 36px rgba(0, 0, 0, 0.50), 0 4px 8px rgba(0, 0, 0, 0.30);
+
+  /** xl — floating command palette, bottom sheets, entry card */
+  --shadow-xl:  0 28px 72px rgba(0, 0, 0, 0.60), 0 8px 20px rgba(0, 0, 0, 0.40);
+
+  /** 2xl — deepest elevation, maximum premium depth */
+  --shadow-2xl: 0 48px 100px rgba(0, 0, 0, 0.70), 0 16px 40px rgba(0, 0, 0, 0.50);
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     INSET HIGHLIGHTS
+     Simulates physical surface top-light catch.
+     Applied as inset box-shadow on elevated cards and panels.
+  ───────────────────────────────────────────────────────────────────────── */
+
+  /** Standard top-edge highlight for cards */
+  --inset-highlight:      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+
+  /** Strong top-edge highlight for entry surfaces */
+  --inset-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 0.11);
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     BACKDROP BLUR SCALE
+     Used with backdrop-filter: blur(var(--blur-*))
+     Apply to glass/frosted panels only — not to opaque surfaces.
+  ───────────────────────────────────────────────────────────────────────── */
+
+  --blur-xs:   4px;
+  --blur-sm:   8px;
+  --blur-md:   16px;
+  --blur-lg:   24px;
+  --blur-xl:   40px;
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     GLASS SURFACE FILLS
+     Opacity values for semi-transparent frosted panels.
+  ───────────────────────────────────────────────────────────────────────── */
+
+  /** Standard glass panel fill */
+  --glass-fill:        rgba(15, 17, 24, 0.82);
+
+  /** Light glass fill for subtle floating elements */
+  --glass-fill-light:  rgba(15, 17, 24, 0.60);
+
+  /** Heavy glass fill for prominent panels */
+  --glass-fill-heavy:  rgba(9, 9, 15, 0.92);
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     RING / GLOW ELEVATIONS
+     For accent glows on interactive elements (focused inputs, primary buttons).
+  ───────────────────────────────────────────────────────────────────────── */
+
+  /** Standard accent ring — focus state on brand-colored elements */
+  --ring-accent:     0 0 0 3px rgba(99, 102, 241, 0.20);
+
+  /** Strong accent ring — pressed primary button */
+  --ring-accent-sm:  0 0 0 2px rgba(99, 102, 241, 0.15);
+
+  /** Danger ring — destructive input validation */
+  --ring-danger:     0 0 0 3px rgba(239, 68, 68, 0.15);
+
+  /** Warning ring — warning input validation */
+  --ring-warning:    0 0 0 3px rgba(245, 158, 11, 0.15);
+
+}

@@ -1,0 +1,41 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * STEP Enterprise Platform — Enterprise Scrollbar Styling
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Minimal, non-intrusive scrollbars that recede into the background.
+ * Colors reference --scrollbar-* tokens from colors.css (§8).
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* ── Webkit (Chrome, Safari, Edge) ───────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-full);
+  transition: background 120ms ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ── Firefox ────────────────────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}

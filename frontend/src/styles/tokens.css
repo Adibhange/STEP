@@ -1,146 +1,76 @@
-/* Comprehensive Design Tokens - Light, Dark & High Contrast Modes */
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * STEP Enterprise Platform — Core Structural Tokens
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Responsibility: Non-color, non-geometry structural tokens.
+ *
+ * CONTENTS
+ * ─────────
+ * 1. Z-Index Scale        — layering order (never hardcode z-index)
+ * 2. Opacity Scale        — standard opacity steps
+ * 3. Transition Shorthand — component dimension tokens (forwarded from spacing)
+ *
+ * OUT OF SCOPE (owned by dedicated files)
+ * ─────────────────────────────────────────
+ * Border radius   → radius.css
+ * Shadows & blur  → elevation.css
+ * Color tokens    → colors.css
+ * Spacing scale   → spacing.css
+ * Typography      → typography.css
+ * Motion          → motion.css
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 
 :root {
-  /* Color Palette - Light Mode */
-  --bg-app: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-surface-hover: #f1f5f9;
-  --bg-sidebar: #0f172a;
-  --bg-sidebar-hover: #1e293b;
-  --bg-card: #ffffff;
-  --bg-overlay: rgba(15, 23, 42, 0.4);
-  --bg-input: #ffffff;
-  --bg-input-focus: #ffffff;
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-inverse: #ffffff;
+  /* ─────────────────────────────────────────────────────────────────────────
+     1. Z-INDEX SCALE
+     Defines the complete layering order for the application.
+     Never hardcode a z-index value — always reference this scale.
 
-  --brand-primary: #2563eb;
-  --brand-primary-hover: #1d4ed8;
-  --brand-primary-light: #eff6ff;
-  
-  --status-success: #16a34a;
-  --status-success-bg: #f0fdf4;
-  --status-warning: #d97706;
-  --status-warning-bg: #fffbeb;
-  --status-danger: #dc2626;
-  --status-danger-bg: #fef2f2;
-  --status-info: #0284c7;
-  --status-info-bg: #f0f9ff;
+     Base       (0)  — static page content
+     Dropdown   (10) — menus, autocomplete lists
+     Sticky     (20) — sticky table headers, pinned rows
+     Header     (30) — app top navigation bar
+     Drawer     (40) — side drawers, side sheets
+     Modal      (50) — dialogs, alerts
+     Toast      (60) — notification toasts
+     Popover    (70) — rich popovers, date pickers
+     Tooltip    (80) — simple hover tooltips
+     Command    (90) — command palette (highest user-facing layer)
+  ───────────────────────────────────────────────────────────────────────── */
 
-  --border-subtle: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --border-focus: #2563eb;
+  --z-base:      0;
+  --z-dropdown:  10;
+  --z-sticky:    20;
+  --z-header:    30;
+  --z-drawer:    40;
+  --z-modal:     50;
+  --z-toast:     60;
+  --z-popover:   70;
+  --z-tooltip:   80;
+  --z-command:   90;
 
-  /* Elevation Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 12px rgba(37, 99, 235, 0.25);
 
-  /* Radius Tokens */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-full: 9999px;
+  /* ─────────────────────────────────────────────────────────────────────────
+     2. OPACITY SCALE
+     Standard opacity steps for consistent hover/active/disabled communication.
 
-  /* Density Default (Comfortable) */
-  --density-cell-py: 8px;
-  --density-cell-px: 12px;
-  --density-font-size: 13px;
+     Use these for opacity: property — NOT for rgba() fill colors.
+     For rgba() colors, use the color tokens from colors.css.
+  ───────────────────────────────────────────────────────────────────────── */
 
-  /* Animation Durations */
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 350ms;
-  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-}
+  /** disabled — non-interactive elements (buttons, inputs, rows) */
+  --opacity-disabled: 0.38;
 
-/* Dark Mode Tokens */
-.dark {
-  --bg-app: #090d16;
-  --bg-surface: #0f172a;
-  --bg-surface-hover: #1e293b;
-  --bg-sidebar: #020617;
-  --bg-sidebar-hover: #0f172a;
-  --bg-card: #0f172a;
-  --bg-overlay: rgba(2, 6, 23, 0.7);
-  --bg-input: #1e293b;
-  --bg-input-focus: #0f172a;
+  /** muted — de-emphasised secondary content */
+  --opacity-muted:    0.55;
 
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-inverse: #0f172a;
+  /** hover — subtle lightening on hover (apply to icon-only buttons) */
+  --opacity-hover:    0.80;
 
-  --brand-primary: #3b82f6;
-  --brand-primary-hover: #60a5fa;
-  --brand-primary-light: #1e3a8a;
+  /** overlay — backdrop scrims */
+  --opacity-overlay:  0.65;
 
-  --status-success: #22c55e;
-  --status-success-bg: #052e16;
-  --status-warning: #f59e0b;
-  --status-warning-bg: #451a03;
-  --status-danger: #ef4444;
-  --status-danger-bg: #450a0a;
-  --status-info: #38bdf8;
-  --status-info-bg: #075985;
-
-  --border-subtle: #1e293b;
-  --border-strong: #334155;
-  --border-focus: #3b82f6;
-
-  --shadow-glow: 0 0 16px rgba(59, 130, 246, 0.35);
-}
-
-/* High Contrast Mode Tokens */
-.high-contrast {
-  --bg-app: #000000;
-  --bg-surface: #000000;
-  --bg-surface-hover: #1a1a1a;
-  --bg-sidebar: #000000;
-  --bg-sidebar-hover: #1a1a1a;
-  --bg-card: #000000;
-  --bg-overlay: rgba(0, 0, 0, 0.9);
-  --bg-input: #000000;
-
-  --text-primary: #ffffff;
-  --text-secondary: #ffff00;
-  --text-muted: #ffffff;
-  --text-inverse: #000000;
-
-  --brand-primary: #ffff00;
-  --brand-primary-hover: #ffffff;
-  --brand-primary-light: #333300;
-
-  --status-success: #00ff00;
-  --status-success-bg: #003300;
-  --status-warning: #ffff00;
-  --status-warning-bg: #333300;
-  --status-danger: #ff0000;
-  --status-danger-bg: #330000;
-  --status-info: #00ffff;
-  --status-info-bg: #003333;
-
-  --border-subtle: #ffffff;
-  --border-strong: #ffffff;
-  --border-focus: #ffff00;
-
-  --shadow-glow: none;
-}
-
-/* Table Density Overrides */
-[data-density="compact"] {
-  --density-cell-py: 4px;
-  --density-cell-px: 8px;
-  --density-font-size: 12px;
-}
-
-[data-density="spacious"] {
-  --density-cell-py: 14px;
-  --density-cell-px: 16px;
-  --density-font-size: 14px;
 }

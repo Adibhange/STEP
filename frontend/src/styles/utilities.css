@@ -1,0 +1,124 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * STEP Enterprise Platform — Utility Classes
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Provides shorthand helper classes for common token-based styles.
+ * All values reference tokens. Zero hardcoded values.
+ * No duplication. No conflicts. No ad-hoc overrides.
+ *
+ * RULE: If a utility references a color, it must use a token from colors.css.
+ * RULE: If a utility references a radius, it must use a token from radius.css.
+ * RULE: If a utility references a shadow, it must use a token from elevation.css.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FOCUS RING — High-Visibility Keyboard Focus (WCAG 2.1 AAA)
+   2px outline + 2px offset + ambient glow = 3:1+ contrast ratio guaranteed.
+───────────────────────────────────────────────────────────────────────── */
+
+.focus-ring-step {
+  outline: none;
+}
+
+.focus-ring-step:focus-visible {
+  outline:       2px solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset, 2px);
+  box-shadow:    0 0 0 4px var(--focus-glow);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CANVAS HELPERS
+───────────────────────────────────────────────────────────────────────── */
+
+.bg-canvas          { background-color: var(--canvas); }
+.bg-canvas-elevated { background-color: var(--canvas-elevated); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SURFACE HELPERS — Canonical (use these in new code)
+───────────────────────────────────────────────────────────────────────── */
+
+.bg-surface-1 { background-color: var(--surface-1); }
+.bg-surface-2 { background-color: var(--surface-2); }
+.bg-surface-3 { background-color: var(--surface-3); }
+.bg-surface-4 { background-color: var(--surface-4); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SURFACE HELPERS — Deprecated aliases (kept for DS component compat)
+   @deprecated: Use canonical surface-1/2/3/4 in new code.
+───────────────────────────────────────────────────────────────────────── */
+
+.bg-surface-base     { background-color: var(--surface-base); }
+.bg-surface-subtle   { background-color: var(--surface-subtle); }
+.bg-surface-elevated { background-color: var(--surface-elevated); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   INTERACTIVE SURFACE HELPERS
+───────────────────────────────────────────────────────────────────────── */
+
+.bg-hover     { background-color: var(--surface-hover); }
+.bg-active    { background-color: var(--surface-active); }
+.bg-selected  { background-color: var(--surface-selected); }
+.bg-disabled  { background-color: var(--surface-disabled); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BORDER HELPERS
+───────────────────────────────────────────────────────────────────────── */
+
+.border-soft    { border-color: var(--border-soft); }
+.border-default { border-color: var(--border-default); }
+.border-strong  { border-color: var(--border-strong); }
+.border-focus   { border-color: var(--border-focus); }
+.border-active  { border-color: var(--border-active); }
+
+/* @deprecated: Use border-default in new code. */
+.border-subtle  { border-color: var(--border-subtle); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TEXT HELPERS
+───────────────────────────────────────────────────────────────────────── */
+
+.text-primary     { color: var(--text-primary); }
+.text-secondary   { color: var(--text-secondary); }
+.text-tertiary    { color: var(--text-tertiary); }
+.text-disabled-c  { color: var(--text-disabled); }
+.text-on-accent   { color: var(--text-on-accent); }
+.text-inverse     { color: var(--text-inverse); }
+
+/* @deprecated: Use text-tertiary in new code. */
+.text-muted       { color: var(--text-muted); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SHADOW HELPERS
+───────────────────────────────────────────────────────────────────────── */
+
+.shadow-xs  { box-shadow: var(--shadow-xs); }
+.shadow-sm  { box-shadow: var(--shadow-sm); }
+.shadow-md  { box-shadow: var(--shadow-md); }
+.shadow-lg  { box-shadow: var(--shadow-lg); }
+.shadow-xl  { box-shadow: var(--shadow-xl); }
+.shadow-2xl { box-shadow: var(--shadow-2xl); }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   STATUS HELPERS
+───────────────────────────────────────────────────────────────────────── */
+
+.bg-success  { background-color: var(--status-success-bg); }
+.bg-warning  { background-color: var(--status-warning-bg); }
+.bg-danger   { background-color: var(--status-danger-bg); }
+.bg-info     { background-color: var(--status-info-bg); }
+
+.text-success { color: var(--status-success-text); }
+.text-warning { color: var(--status-warning-text); }
+.text-danger  { color: var(--status-danger-text); }
+.text-info    { color: var(--status-info-text); }

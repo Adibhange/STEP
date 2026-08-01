@@ -1,0 +1,99 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * STEP Enterprise Platform — 4px Spatial Grid & Component Dimension Tokens
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * All spatial values follow a strict 4px base grid.
+ * Never hardcode pixel values inside components — always reference these tokens.
+ *
+ * SPATIAL SCALE
+ * ─────────────
+ *  3xs  2px   — micro gaps: icon-label in dense badges
+ *  2xs  4px   — small gaps: button icon+label
+ *  xs   8px   — component internal padding (tight)
+ *  sm  12px   — component internal padding (standard)
+ *  md  16px   — section internal padding
+ *  lg  20px   — section gaps
+ *  xl  24px   — card padding
+ *  2xl 32px   — section margins
+ *  3xl 48px   — page-level vertical breathing room
+ *  4xl 64px   — page-level horizontal margins (desktop)
+ *  5xl 80px   — large hero spacing
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+:root {
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SPATIAL SCALE — 4px Base Grid
+  ───────────────────────────────────────────────────────────────────────── */
+
+  --space-3xs:  0.125rem;  /*  2px */
+  --space-2xs:  0.25rem;   /*  4px */
+  --space-xs:   0.5rem;    /*  8px */
+  --space-sm:   0.75rem;   /* 12px */
+  --space-md:   1rem;      /* 16px */
+  --space-lg:   1.25rem;   /* 20px */
+  --space-xl:   1.5rem;    /* 24px */
+  --space-2xl:  2rem;      /* 32px */
+  --space-3xl:  3rem;      /* 48px */
+  --space-4xl:  4rem;      /* 64px */
+  --space-5xl:  5rem;      /* 80px */
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     COMPONENT HEIGHTS — Interactive Control Scale
+     CANONICAL DEFINITION: tokens.css must not redefine these.
+  ───────────────────────────────────────────────────────────────────────── */
+
+  --button-height-sm:  30px;
+  --button-height-md:  36px;
+  --button-height-lg:  44px;
+
+  --input-height-sm:   30px;
+  --input-height-md:   36px;
+  --input-height-lg:   46px;
+
+  --row-height-compact:  36px;
+  --row-height-standard: 44px;
+  --row-height-relaxed:  52px;
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     LAYOUT STRUCTURE — Named Shell Dimensions
+  ───────────────────────────────────────────────────────────────────────── */
+
+  --sidebar-width:            240px;
+  --sidebar-width-collapsed:   64px;
+  --header-height:             56px;
+  --toolbar-height:            44px;
+  --footer-height:             48px;
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     MODAL & DRAWER DIMENSIONS
+  ───────────────────────────────────────────────────────────────────────── */
+
+  --drawer-width-standard:   640px;
+  --drawer-width-wide:       960px;
+  --modal-width-sm:          400px;
+  --modal-width-md:          560px;
+  --modal-width-lg:          760px;
+  --modal-width-xl:          960px;
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     COMPONENT PADDING SCALE
+     Standardised padding values for cards, panels, tables, forms.
+     Reference these instead of raw space tokens inside components.
+  ───────────────────────────────────────────────────────────────────────── */
+
+  --padding-card:          var(--space-xl);   /* 24px standard card */
+  --padding-card-compact:  var(--space-md);   /* 16px compact card */
+  --padding-section:       var(--space-2xl);  /* 32px section */
+  --padding-page:          var(--space-3xl);  /* 48px page edge */
+  --padding-table-cell:    var(--space-sm);   /* 12px table cell h-padding */
+  --padding-form-field:    var(--space-xs);   /* 8px form field between */
+  --padding-input:         0 var(--space-sm); /* 0 12px input h-padding */
+
+}

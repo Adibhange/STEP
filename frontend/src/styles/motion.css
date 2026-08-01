@@ -1,0 +1,186 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * STEP Enterprise Platform — Functional Motion System
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * PHILOSOPHY (Brand DNA v3.0)
+ * ────────────────────────────
+ * Every animation must explain a state change. Remove decorative motion.
+ * Animations describe: entrance, exit, feedback, loading, validation.
+ * If an animation communicates nothing, it should not exist.
+ *
+ * DURATION SCALE
+ * ──────────────
+ *  instant  75ms  — micro feedback (checkbox tick, toggle switch)
+ *  fast    150ms  — hover states, focus transitions
+ *  standard 200ms — component state changes (show/hide, expand/collapse)
+ *  complex  300ms — multi-step transitions (form morph, drawer open)
+ *  deliberate 450ms — full-page entrance, onboarding moments
+ *
+ * EASING PHILOSOPHY
+ * ─────────────────
+ *  ease-out   — elements entering (they start fast, settle gently)
+ *  ease-in    — elements leaving (they start slow, exit with energy)
+ *  ease-in-out — elements moving within the viewport (symmetric)
+ *  spring     — premium physics for entrance moments (overshoots slightly)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+:root {
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     DURATION TOKENS
+  ───────────────────────────────────────────────────────────────────────── */
+
+  --duration-instant:    75ms;
+  --duration-fast:      150ms;
+  --duration-standard:  200ms;
+  --duration-complex:   300ms;
+  --duration-deliberate: 450ms;
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     EASING CURVE TOKENS
+  ───────────────────────────────────────────────────────────────────────── */
+
+  /** ease-out — for entrances: fast start, gentle settle */
+  --ease-out:     cubic-bezier(0.0, 0.0, 0.2, 1);
+
+  /** ease-in — for exits: slow start, energetic finish */
+  --ease-in:      cubic-bezier(0.4, 0.0, 1, 1);
+
+  /** ease-in-out — for within-viewport movement */
+  --ease-in-out:  cubic-bezier(0.4, 0.0, 0.2, 1);
+
+  /** spring — premium physics for entrance moments */
+  --ease-spring:  cubic-bezier(0.16, 1, 0.3, 1);
+
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ENTRANCE KEYFRAMES
+   Use for: modals opening, drawers sliding in, toast appearing,
+            page entering, component mounting.
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes step-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes step-zoom-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes step-slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes step-slide-in-left {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+@keyframes step-slide-in-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes step-slide-in-down {
+  from { transform: translateY(-12px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   EXIT KEYFRAMES
+   Use for: modals closing, drawers dismissing, toast disappearing.
+   Mirror of entrance keyframes — use ease-in easing.
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes step-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes step-zoom-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes step-slide-out-right {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes step-slide-out-left {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(-100%); opacity: 0; }
+}
+
+@keyframes step-slide-out-up {
+  from { transform: translateY(0);     opacity: 1; }
+  to   { transform: translateY(-12px); opacity: 0; }
+}
+
+@keyframes step-slide-out-down {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(12px); opacity: 0; }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FEEDBACK KEYFRAMES
+   Use for: loading states, validation errors, shimmer skeletons.
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes step-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes step-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes step-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+@keyframes step-shake {
+  0%   { transform: translateX(0); }
+  12%  { transform: translateX(-5px); }
+  28%  { transform: translateX( 5px); }
+  44%  { transform: translateX(-4px); }
+  60%  { transform: translateX( 4px); }
+  76%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes step-bounce-in {
+  0%   { opacity: 0; transform: scale(0.85); }
+  60%  { opacity: 1; transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   REDUCED MOTION — WCAG 2.1 AAA Compliance
+   Must remain at the END of this file to correctly override all above rules.
+───────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration:        0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration:       0.01ms !important;
+    scroll-behavior:           auto !important;
+  }
+}

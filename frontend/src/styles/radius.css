@@ -1,0 +1,33 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * STEP Enterprise Platform — Border Radius Token System
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Canonical home for all border-radius tokens.
+ * Every component that needs rounded corners references this file.
+ * Never hardcode a border-radius value in a component.
+ *
+ * SCALE RATIONALE
+ * ───────────────
+ * xs  (2px)    — Tight tags, micro indicators, progress bars
+ * sm  (4px)    — Badges, chips, small inputs
+ * md  (6px)    — Standard inputs, dropdowns, small cards
+ * lg  (10px)   — Cards, panels, standard containers
+ * xl  (16px)   — Drawers, large modals, section panels
+ * 2xl (24px)   — Entry card, large feature containers
+ * full         — Pills, avatars, circular icons, toggles
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+:root {
+
+  --radius-none: 0px;
+  --radius-xs:   2px;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-xl:   16px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+}
