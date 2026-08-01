@@ -1,22 +1,19 @@
 import './globals.css';
-import { StoreProvider } from '@/store/provider';
+import { ReduxProvider } from '@/providers/redux-provider';
+import { UserPreferencesProvider } from '@/providers/user-preferences-provider';
 
 export const metadata = {
-  title: 'ERMS - Enterprise Recruitment Management System',
-  description: 'Production-Ready Enterprise Recruitment, Assessment & Interview Platform',
+  title: 'STEP ERMS - Enterprise Recruitment Management System',
+  description: 'Commercial-Grade Enterprise Recruitment, Assessment & Candidate Verification System',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <StoreProvider>
-          {children}
-        </StoreProvider>
+        <ReduxProvider>
+          <UserPreferencesProvider>{children}</UserPreferencesProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

@@ -1,0 +1,61 @@
+/* Enterprise Headless DataGrid Styling Rules */
+
+.data-grid-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.data-grid-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--density-font-size);
+  text-align: left;
+}
+
+.data-grid-header-cell {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: var(--density-cell-py) var(--density-cell-px);
+  background-color: var(--bg-surface-hover);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.data-grid-body-cell {
+  padding: var(--density-cell-py) var(--density-cell-px);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.data-grid-row {
+  transition: background-color var(--duration-fast) var(--ease-smooth);
+}
+
+.data-grid-row:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.data-grid-row.selected {
+  background-color: var(--brand-primary-light);
+}
+
+/* Sticky First Column */
+.data-grid-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background-color: inherit;
+  border-right: 1px solid var(--border-subtle);
+}
