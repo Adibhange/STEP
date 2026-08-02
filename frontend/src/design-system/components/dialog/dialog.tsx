@@ -27,17 +27,15 @@ const DialogContent = React.forwardRef<
 >(({ className = '', children, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={`fixed left-1/2 top-1/2 z-[var(--z-modal)] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-xl)] bg-[var(--surface-1)] p-xl border border-[var(--border-default)] shadow-[var(--shadow-xl)] duration-fast data-[state=open]:animate-zoom-in data-[state=closed]:animate-zoom-out ${className}`}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute right-md top-md rounded-[var(--radius-sm)] p-3xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus-ring-step transition-colors">
-        <Icon name="close" size="sm" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 overflow-y-auto pointer-events-none">
+      <DialogPrimitive.Content
+        ref={ref}
+        className={`pointer-events-auto relative w-full max-w-lg rounded-[var(--radius-xl)] bg-[var(--surface-1)] p-xl border border-[var(--border-default)] shadow-[var(--shadow-xl)] ${className}`}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Content>
+    </div>
   </DialogPortal>
 ));
 DialogContent.displayName = DialogPrimitive.Content.displayName;

@@ -18,6 +18,7 @@ export interface SelectProps {
   onChange?: (val: string) => void;
   widthClass?: string;
   disabled?: boolean;
+  menuPlacement?: 'bottom' | 'top' | 'auto';
   children?: React.ReactNode;
 }
 
@@ -52,117 +53,90 @@ export const Select: React.FC<SelectProps> & {
 
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
-  const containerRef = React.useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((o) => o.value === value);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') setOpen(false);
-  };
 
   const filteredOptions = search.trim()
     ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
     : options;
 
   return (
-    <div className={`relative inline-block shrink-0 ${open ? 'z-[100]' : 'z-10'} ${disabled ? 'opacity-50 pointer-events-none' : ''}`} ref={containerRef} onKeyDown={handleKeyDown}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
+    <SelectPrimitive.Root
+      value={value}
+      onValueChange={(val) => {
+        onChange?.(val);
+        setSearch('');
+      }}
+      open={open}
+      onOpenChange={setOpen}
+      disabled={disabled}
+    >
+      <SelectPrimitive.Trigger
         aria-label={label}
-        disabled={disabled}
-        className={`h-8.5 px-3.5 rounded-full border flex items-center justify-between gap-2 ${widthClass}
-          text-[12px] transition-all duration-150 ease-out cursor-pointer select-none focus-ring-step active:scale-[0.98]
-          ${value
-            ? 'bg-[var(--accent-indigo-dim)] border-[var(--border-focus)] text-[var(--accent-indigo)] font-bold'
-            : 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] font-semibold'
-          }`}
+        className={`h-9 px-3 rounded-lg border flex items-center justify-between gap-2 ${widthClass} text-xs transition-all duration-150 ease-out cursor-pointer select-none focus-ring-step outline-none ${
+          value
+            ? 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-primary)] font-medium hover:border-[var(--border-strong)]'
+            : 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-tertiary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] font-normal'
+        }`}
       >
         <span className="truncate">
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <Icon
-          name="chevron-down"
-          size="xs"
-          className={`shrink-0 transition-transform duration-150 ${
-            value ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'
-          } ${open ? 'rotate-180 text-[var(--accent-indigo)]' : ''}`}
-        />
-      </button>
+        <SelectPrimitive.Icon asChild>
+          <Icon
+            name="chevron-down"
+            size="xs"
+            className={`shrink-0 transition-transform duration-150 ${
+              value ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'
+            } ${open ? 'rotate-180 text-[var(--accent-indigo)]' : ''}`}
+          />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
 
-      {/* Dropdown Panel with Motion */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98, y: 4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 2 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 top-full mt-1.5 min-w-[180px] max-w-[280px] w-full bg-[var(--surface-1)] border border-[var(--border-default)]
-              rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-[100] p-1.5 overflow-hidden origin-top-left"
-            role="listbox"
-          >
-            {options.length > 4 && (
-              <div className="px-1 py-1 mb-1 border-b border-[var(--border-soft)]">
-                <div className="flex items-center gap-1.5 px-2.5 h-7 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-default)] focus-within:border-[var(--border-focus)] transition-all duration-150">
-                  <Icon name="search" size="xs" className="text-[var(--text-tertiary)] shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Search options..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-transparent border-none outline-none text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] font-sans"
-                  />
-                </div>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          position="popper"
+          sideOffset={5}
+          className="z-[9999] w-[var(--radix-select-trigger-width)] max-h-52 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-[var(--shadow-xl)] p-1.5"
+        >
+          {options.length > 4 && (
+            <div className="px-1 py-1 mb-1 border-b border-[var(--border-soft)]">
+              <div className="flex items-center gap-1.5 px-2.5 h-7 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-default)] focus-within:border-[var(--border-focus)] transition-all duration-150">
+                <Icon name="search" size="xs" className="text-[var(--text-tertiary)] shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search options..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-transparent border-none outline-none text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] font-sans"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
               </div>
-            )}
-
-            <div className="max-h-56 overflow-y-auto scrollbar-step space-y-0.5">
-              {filteredOptions.length === 0 ? (
-                <div className="px-3 py-2 text-[11.5px] text-[var(--text-tertiary)] text-center font-sans">No options found</div>
-              ) : (
-                filteredOptions.map((opt) => {
-                  const isSelected = opt.value === value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => {
-                        onChange?.(opt.value);
-                        setOpen(false);
-                        setSearch('');
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[var(--radius-md)] text-[12px] text-left transition-colors duration-150 cursor-pointer font-sans
-                        ${isSelected
-                          ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] font-medium'
-                        }`}
-                    >
-                      <span className="truncate">{opt.label}</span>
-                      {isSelected && <Icon name="check" size="xs" className="text-[var(--accent-indigo)] shrink-0 ml-2" />}
-                    </button>
-                  );
-                })
-              )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          )}
+
+          <SelectPrimitive.Viewport className="max-h-36 overflow-y-auto scrollbar-none space-y-0.5">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-[11.5px] text-[var(--text-tertiary)] text-center font-sans">No options found</div>
+            ) : (
+              filteredOptions.map((opt) => (
+                <SelectPrimitive.Item
+                  key={opt.value}
+                  value={opt.value}
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-[var(--radius-md)] text-[12px] text-left transition-colors duration-150 cursor-pointer font-sans outline-none data-[highlighted]:bg-[var(--surface-hover)] data-[highlighted]:text-[var(--text-primary)] data-[state=checked]:bg-[var(--accent-indigo-dim)] data-[state=checked]:text-[var(--accent-indigo)] data-[state=checked]:font-bold"
+                >
+                  <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
+                  <SelectPrimitive.ItemIndicator>
+                    <Icon name="check" size="xs" className="text-[var(--accent-indigo)] shrink-0 ml-2" />
+                  </SelectPrimitive.ItemIndicator>
+                </SelectPrimitive.Item>
+              ))
+            )}
+          </SelectPrimitive.Viewport>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   );
 };
 

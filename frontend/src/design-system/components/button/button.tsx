@@ -34,11 +34,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     // Variant Styles
     const variantStyles: Record<string, string> = {
-      primary: 'bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)] border border-transparent shadow-sm',
-      secondary: 'bg-[var(--surface-subtle)] text-[var(--text-primary)] hover:bg-[var(--border-subtle)] border border-[var(--border-subtle)]',
-      ghost: 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-subtle)] border border-transparent',
-      outline: 'bg-transparent text-[var(--text-primary)] border border-[var(--border-strong)] hover:bg-[var(--surface-subtle)]',
-      destructive: 'bg-[var(--status-danger)] text-white hover:opacity-90 border border-transparent shadow-sm',
+      primary: 'bg-[var(--accent-indigo)] text-[var(--text-on-accent)] hover:bg-[var(--accent-indigo-hover)] border border-transparent shadow-xs font-bold',
+      secondary: 'bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] border border-[var(--border-default)] font-bold',
+      ghost: 'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] border border-transparent font-bold',
+      outline: 'bg-transparent text-[var(--text-primary)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] font-bold',
+      destructive: 'bg-rose-600 text-white hover:bg-rose-700 border border-transparent shadow-xs font-bold',
     };
 
     // Height & Padding Styles

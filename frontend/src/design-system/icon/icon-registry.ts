@@ -58,6 +58,14 @@ import {
   Columns3,
   Phone,
   MapPin,
+  UserPlus,
+  FileSpreadsheet,
+  Upload,
+  GraduationCap,
+  Award,
+  Link as LinkIcon,
+  Paperclip,
+  FileUp,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -123,7 +131,15 @@ export type IconName =
   | 'log-out'
   | 'code-2'
   | 'inbox'
-  | 'columns-3';
+  | 'columns-3'
+  | 'user-plus'
+  | 'file-spreadsheet'
+  | 'upload'
+  | 'graduation-cap'
+  | 'award'
+  | 'link'
+  | 'paperclip'
+  | 'file-up';
 
 export const iconRegistry: Record<IconName, LucideIcon> = {
   'search': Search,
@@ -188,4 +204,12 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'code-2': Code2,
   'inbox': Inbox,
   'columns-3': Columns3,
+  'user-plus': UserPlus,
+  'file-spreadsheet': FileSpreadsheet,
+  'upload': Upload,
+  'graduation-cap': GraduationCap,
+  'award': Award,
+  'link': LinkIcon,
+  'paperclip': Paperclip,
+  'file-up': FileUp,
 };

@@ -714,8 +714,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         <div className="lg:col-span-4 flex flex-col gap-4">
           {/* Card 1: Candidate Summary Card with Top Inline Share Link */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-1.5 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div
                   onClick={() => setShowImageModal(true)}
                   className="group relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-slate-200 shadow-2xs bg-slate-100 cursor-pointer transition-transform hover:scale-[1.02]"
@@ -732,7 +732,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 </div>
 
                 <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <h1 className="font-bold text-slate-900 text-base font-heading truncate">{candidate.name}</h1>
                     <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                       {candidate.status}
@@ -743,11 +743,11 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 </div>
               </div>
 
-              {/* Inline Share Link Action Button */}
+              {/* Share Button — sits tight next to status badge */}
               <button
                 type="button"
                 onClick={handleShare}
-                className="h-8 px-2.5 inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer shrink-0 shadow-2xs transition-colors"
+                className="h-7 px-2 inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer shrink-0 shadow-2xs transition-colors"
                 title="Share Candidate Link"
               >
                 <Icon name="external-link" size="xs" className="text-slate-500" />
@@ -916,7 +916,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           </div>
         </div>
 
-        {/* RIGHT COLUMN (8 cols / ~70%): Hiring Stage Progress Cards (UNTOUCHED as requested!) */}
+        {/* RIGHT COLUMN (8 cols / ~70%): Hiring Stage Progress Cards */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex items-center justify-between gap-3 flex-wrap">
             <h2 className="text-sm sm:text-base font-bold text-slate-900 font-heading flex items-center gap-2">
@@ -928,10 +928,11 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             <button
               type="button"
               onClick={() => router.push(`/dashboard/candidates/${candidateId}/workspace`)}
-              className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs cursor-pointer ml-auto"
+              className="h-8 px-2.5 sm:px-3 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs cursor-pointer w-full sm:w-auto justify-center sm:justify-start"
             >
               <Icon name="external-link" size="xs" />
-              <span>View Candidate Assignment Details for Evaluation</span>
+              <span className="hidden sm:inline">View Candidate Assignment Details for Evaluation</span>
+              <span className="sm:hidden">View Assignment Details</span>
             </button>
           </div>
 
@@ -950,8 +951,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     : 'border-slate-200 border-l-4 border-l-amber-400'
                 }`}
               >
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2.5">
+                  <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
                     <span
                       className={`w-5.5 h-5.5 rounded-full text-white font-bold text-xs flex items-center justify-center shrink-0 ${
                         stage.isTerminated
@@ -989,7 +990,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
                   {/* Action Buttons Sequence */}
                   {!stage.isTerminated && (
-                    <div className="flex items-center gap-2 ml-auto flex-wrap">
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:ml-auto">
                       {!stage.isOfferRound && (
                         <>
                           <button
@@ -1004,7 +1005,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                   : 'Rahul Patel'
                               );
                             }}
-                            className="h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-purple-500 bg-purple-50 text-purple-700 text-xs font-semibold hover:bg-purple-100 transition-colors cursor-pointer"
+                            className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-purple-500 bg-purple-50 text-purple-700 text-[11.5px] sm:text-xs font-semibold hover:bg-purple-100 transition-colors cursor-pointer"
                           >
                             <Icon name="user" size="xs" />
                             <span>{stage.isDirectorRound ? 'Assign Director' : 'Assign Interviewer'}</span>
@@ -1017,7 +1018,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                               setFeedbackText(stage.feedback);
                               setDirectorDecision('offer');
                             }}
-                            className="h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-blue-500 bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
+                            className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-blue-500 bg-blue-50 text-blue-700 text-[11.5px] sm:text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
                           >
                             <Icon name="pencil" size="xs" />
                             <span>{stage.isDirectorRound ? 'Director Decision' : 'Submit Feedback'}</span>
@@ -1028,22 +1029,23 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       {stage.actionLabel && !stage.isOfferRound && (
                         <button
                           type="button"
-                          className="h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg text-xs font-semibold transition-colors border border-emerald-500 bg-white text-emerald-700 hover:bg-emerald-50 cursor-pointer"
+                          className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-emerald-500 bg-white text-emerald-700 hover:bg-emerald-50 cursor-pointer"
                         >
                           <Icon name="calendar" size="xs" />
                           <span>{stage.actionLabel}</span>
                         </button>
                       )}
 
-                      {/* Stage 5 Offer Action: Opens Offer Letter Form Dialog Directly */}
+                      {/* Stage 5 Offer Action */}
                       {stage.isOfferRound && (
                         <button
                           type="button"
                           onClick={() => setShowOfferModal(true)}
-                          className="h-7.5 px-3.5 inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer shadow-2xs"
+                          className="h-7 sm:h-7.5 px-3 sm:px-3.5 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 text-[11.5px] sm:text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer shadow-2xs"
                         >
                           <Icon name="file-text" size="xs" />
-                          <span>View & Rollout Offer Letter</span>
+                          <span className="hidden sm:inline">View & Rollout Offer Letter</span>
+                          <span className="sm:hidden">Rollout Offer Letter</span>
                         </button>
                       )}
                     </div>

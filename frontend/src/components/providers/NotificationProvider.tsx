@@ -84,7 +84,7 @@ export const NotificationProvider: React.FC = () => {
       richColors={false}
       closeButton={true}
       duration={4000}
-      visibleToasts={4}
+      visibleToasts={5}
     />
   );
 };

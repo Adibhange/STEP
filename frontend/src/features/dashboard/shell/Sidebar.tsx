@@ -81,8 +81,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
             className="flex flex-col min-w-0"
           >
             <span className="font-black text-[var(--text-primary)] text-base tracking-tight leading-none">STEP</span>
-            <span className="text-[var(--type-label-size)] font-semibold text-[var(--text-tertiary)] tracking-widest uppercase mt-0.5 truncate">
-              Enterprise ATS
+            <span className="text-[10px] font-bold text-[var(--text-tertiary)] tracking-wider uppercase mt-0.5 truncate">
+              Talent Platform
             </span>
           </motion.div>
         )}
@@ -171,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
           >
             <button
               type="button"
-              className="absolute top-3 right-3 p-1.5 rounded-[var(--radius-md)] text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors z-10"
+              className="absolute top-3 right-3 p-1.5 rounded-[var(--radius-md)] text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors z-20"
               onClick={onMobileClose}
               aria-label="Close navigation"
             >
@@ -179,14 +179,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
             </button>
 
             <nav className="flex flex-col h-full overflow-hidden" aria-label="Main navigation">
-              <div className="flex items-center gap-[var(--space-sm)] px-[var(--space-md)] border-b border-[var(--border-default)] h-[var(--header-height)] shrink-0">
+              <div className="flex items-center gap-[var(--space-sm)] px-[var(--space-md)] pr-12 border-b border-[var(--border-default)] h-[var(--header-height)] shrink-0">
                 <span className="w-8 h-8 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--accent-indigo-hover)] to-[var(--accent-indigo)] flex items-center justify-center text-white font-black text-base shrink-0">
                   S
                 </span>
                 <div className="flex flex-col min-w-0">
                   <span className="font-black text-[var(--text-primary)] text-base tracking-tight leading-none">STEP</span>
-                  <span className="text-[var(--type-label-size)] font-semibold text-[var(--text-tertiary)] tracking-widest uppercase mt-0.5">
-                    Enterprise ATS
+                  <span className="text-[10px] font-bold text-[var(--text-tertiary)] tracking-wider uppercase mt-0.5 truncate">
+                    Talent Platform
                   </span>
                 </div>
               </div>

@@ -155,14 +155,24 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
           </td>
         );
 
-      case 'currentRound':
+      case 'currentRound': {
+        const stageStyles: Record<string, { bg: string; text: string; border: string }> = {
+          'Screening':      { bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200' },
+          'Technical':      { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+          'HR Interview':   { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+          'Director Round': { bg: 'bg-rose-50',   text: 'text-rose-700',   border: 'border-rose-200' },
+        };
+        const s = stageStyles[candidate.currentRound] ?? { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' };
         return (
           <td key={col.id} className={cellPadding}>
-            <span className={`${textSize} font-medium text-[var(--text-primary)]`}>
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap ${s.bg} ${s.text} ${s.border}`}
+            >
               {candidate.currentRound}
             </span>
           </td>
         );
+      }
 
       case 'assignedInterviewer':
         return (
@@ -202,22 +212,15 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       case 'actions':
         return (
           <td key={col.id} className={`${cellPadding} text-right`}>
-            <div className="opacity-90 group-hover:opacity-100 transition-opacity duration-150">
-              <ActionMenu
-                ariaLabel={`Actions for ${candidate.name}`}
-                primaryActions={[
-                  { id: 'view', label: 'View profile', icon: 'eye', onClick: () => onView?.(candidate), variant: 'primary' },
-                  { id: 'resume', label: 'View resume', icon: 'file-text', onClick: () => onResume?.(candidate) },
-                  { id: 'edit', label: 'Edit candidate', icon: 'pencil', onClick: () => onEdit?.(candidate) },
-                ]}
-                menuItems={[
-                  { id: 'download', label: 'Download resume', icon: 'download', onClick: () => onDownload?.(candidate) },
-                  { id: 'schedule', label: 'Schedule interview', icon: 'calendar', onClick: () => {} },
-                  { id: 'send-offer', label: 'Send offer letter', icon: 'send', onClick: () => {} },
-                  { id: 'delete', label: 'Remove candidate', icon: 'trash-2', onClick: () => onDelete?.(candidate), variant: 'danger', dividerBefore: true },
-                ]}
-              />
-            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onView?.(candidate); }}
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-slate-300 bg-white text-slate-700 text-[11px] font-semibold hover:bg-slate-50 hover:border-slate-400 hover:text-slate-900 transition-all duration-150 cursor-pointer shadow-sm whitespace-nowrap"
+              title={`View ${candidate.name}'s profile`}
+            >
+              <Icon name="eye" size="xs" className="text-slate-500" />
+              <span>View Details</span>
+            </button>
           </td>
         );
 
@@ -284,7 +287,12 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
               candidates.map((candidate, rowIdx) => (
                 <tr
                   key={candidate.id}
-                  className={`group border-b border-[var(--border-soft)] hover:bg-[var(--surface-hover)] transition-colors duration-120
+                  onClick={() => onView?.(candidate)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onView?.(candidate); }}
+                  title={`Open ${candidate.name}'s profile`}
+                  className={`group border-b border-[var(--border-soft)] hover:bg-[var(--surface-hover)] transition-colors duration-120 cursor-pointer select-none
                     ${rowIdx % 2 === 1 ? 'bg-[var(--table-row-stripe)]' : 'bg-[var(--table-row)]'}`}
                 >
                   {columns.map((col) => renderCell(col, candidate))}

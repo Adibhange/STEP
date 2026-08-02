@@ -82,20 +82,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
         </button>
 
         {/* Page breadcrumb with active back navigation */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[var(--type-body-md-size)] select-none">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1 sm:gap-2 text-[var(--type-body-md-size)] select-none">
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
-            className="text-[13px] font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:underline tracking-tight cursor-pointer transition-colors"
+            className="text-[11px] sm:text-[13px] font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:underline tracking-tight cursor-pointer transition-colors"
           >
             STEP
           </button>
-          <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60" />
+          <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60 shrink-0" />
 
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
-            className={`text-[13.5px] tracking-tight font-heading cursor-pointer transition-colors ${
+            className={`text-[11px] sm:text-[13.5px] tracking-tight font-heading cursor-pointer transition-colors ${
               isCandidatePage
                 ? 'font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:underline'
                 : 'font-bold text-[var(--text-primary)]'
@@ -106,11 +106,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
 
           {isCandidatePage && (
             <>
-              <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60" />
+              <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60 shrink-0" />
               <button
                 type="button"
                 onClick={() => router.push('/dashboard')}
-                className="text-[13.5px] font-bold text-[var(--text-primary)] tracking-tight font-heading hover:text-[var(--accent-indigo)] cursor-pointer"
+                className="text-[11px] sm:text-[13.5px] font-bold text-[var(--text-primary)] tracking-tight font-heading hover:text-[var(--accent-indigo)] cursor-pointer truncate max-w-[72px] sm:max-w-none"
               >
                 Candidates
               </button>
