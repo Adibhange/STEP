@@ -56,6 +56,8 @@ import {
   Code2,
   Inbox,
   Columns3,
+  Phone,
+  MapPin,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -84,6 +86,8 @@ export type IconName =
   | 'arrow-up-down'
   | 'move-right'
   | 'mail'
+  | 'phone'
+  | 'map-pin'
   | 'trash'
   | 'trash-2'
   | 'download'
@@ -146,6 +150,8 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'arrow-up-down': ArrowUpDown,
   'move-right': MoveRight,
   'mail': Mail,
+  'phone': Phone,
+  'map-pin': MapPin,
   'trash': Trash2,
   'trash-2': Trash2,
   'download': Download,

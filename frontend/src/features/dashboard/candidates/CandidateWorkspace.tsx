@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/design-system';
 import { FilterBar } from '../shared/FilterBar';
 import { TablePagination } from '../shared/TablePagination';
@@ -19,6 +20,7 @@ const ROWS_PER_PAGE_DEFAULT = 10;
  * - Export button with crisp Excel badge icon & clear text
  */
 export const CandidateWorkspace: React.FC = () => {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilter>({});
@@ -193,7 +195,7 @@ export const CandidateWorkspace: React.FC = () => {
           candidates={paginatedCandidates}
           loading={false}
           filterKey={filterKey}
-          onView={(c) => console.info('View', c.code)}
+          onView={(c) => router.push(`/dashboard/candidates/${c.id}`)}
           onResume={(c) => console.info('Resume', c.code)}
           onEdit={(c) => console.info('Edit', c.code)}
           onDelete={(c) => console.info('Delete', c.code)}

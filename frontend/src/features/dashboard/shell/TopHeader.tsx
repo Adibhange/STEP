@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Badge } from '@/design-system';
 import { QUICK_NOTIFICATIONS, CURRENT_USER } from '@/mock/dashboard';
@@ -10,9 +11,12 @@ interface TopHeaderProps {
 }
 
 /**
- * STEP Enterprise TopHeader — Clean Streamlined Profile Dropdown
+ * STEP Enterprise TopHeader — Clean Streamlined Profile Dropdown with Interactive Breadcrumbs
  */
 export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -57,12 +61,15 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
     error: 'text-[var(--status-danger)]',
   };
 
+  // Determine breadcrumb structure based on pathname
+  const isCandidatePage = pathname?.includes('/dashboard/candidates');
+
   return (
     <header
       className="sticky top-0 z-30 h-13 flex items-center justify-between px-4 sm:px-6 bg-[var(--surface-1)] border-b border-[var(--border-default)]"
       style={{ backdropFilter: 'blur(8px)' }}
     >
-      {/* Left: Mobile Menu Trigger + Breadcrumb */}
+      {/* Left: Mobile Menu Trigger + Interactive Breadcrumb */}
       <div className="flex items-center gap-3">
         {/* Mobile menu trigger */}
         <button
@@ -74,12 +81,42 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           <Icon name="menu" size="sm" />
         </button>
 
-        {/* Page breadcrumb */}
-        <div className="flex items-center gap-2 text-[var(--type-body-md-size)]">
-          <span className="text-[13px] font-medium text-[var(--text-tertiary)] tracking-tight">STEP</span>
+        {/* Page breadcrumb with active back navigation */}
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[var(--type-body-md-size)] select-none">
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            className="text-[13px] font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:underline tracking-tight cursor-pointer transition-colors"
+          >
+            STEP
+          </button>
           <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60" />
-          <span className="text-[13.5px] font-bold text-[var(--text-primary)] tracking-tight font-heading">Dashboard</span>
-        </div>
+
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            className={`text-[13.5px] tracking-tight font-heading cursor-pointer transition-colors ${
+              isCandidatePage
+                ? 'font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:underline'
+                : 'font-bold text-[var(--text-primary)]'
+            }`}
+          >
+            Dashboard
+          </button>
+
+          {isCandidatePage && (
+            <>
+              <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60" />
+              <button
+                type="button"
+                onClick={() => router.push('/dashboard')}
+                className="text-[13.5px] font-bold text-[var(--text-primary)] tracking-tight font-heading hover:text-[var(--accent-indigo)] cursor-pointer"
+              >
+                Candidates
+              </button>
+            </>
+          )}
+        </nav>
       </div>
 
       {/* Right: Notifications + Profile */}
@@ -91,7 +128,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
             id="notifications-trigger"
             className="relative w-8.5 h-8.5 flex items-center justify-center rounded-full text-[var(--text-secondary)]
               hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] hover:scale-[1.04] active:scale-95 transition-all duration-150 focus-ring-step cursor-pointer"
-            onClick={() => { setNotifOpen((o) => !o); setProfileOpen(false); }}
+            onClick={() => {
+              setNotifOpen((o) => !o);
+              setProfileOpen(false);
+            }}
             aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
             aria-expanded={notifOpen}
             aria-haspopup="true"
@@ -108,109 +148,86 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.98, y: 6 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: 6 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="absolute right-0 top-full mt-2 w-80 bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-50 overflow-hidden"
-                role="region"
-                aria-label="Notifications"
+                exit={{ opacity: 0, scale: 0.98, y: 4 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[var(--surface-1)] border border-[var(--border-default)]
+                  rounded-[var(--radius-lg)] shadow-[var(--shadow-xl)] z-50 overflow-hidden origin-top-right"
               >
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-default)]">
-                  <span className="text-[13px] font-bold text-[var(--text-primary)]">Notifications</span>
-                  {unreadCount > 0 && (
-                    <Badge variant="danger" size="sm">{unreadCount} unread</Badge>
-                  )}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-default)] bg-[var(--surface-2)]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-bold text-[var(--text-primary)] font-heading">
+                      Notifications
+                    </span>
+                    {unreadCount > 0 && (
+                      <Badge variant="danger" size="sm">
+                        {unreadCount} new
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-                <div className="max-h-80 overflow-y-auto scrollbar-step">
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-[var(--border-soft)] scrollbar-step">
                   {QUICK_NOTIFICATIONS.map((n) => (
                     <div
                       key={n.id}
-                      className={`flex gap-3 px-4 py-2.5 border-b border-[var(--border-soft)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer
-                        ${!n.read ? 'bg-[var(--surface-2)]' : ''}`}
+                      className={`p-3 text-[12px] flex items-start gap-3 hover:bg-[var(--surface-hover)] transition-colors ${
+                        !n.read ? 'bg-[var(--accent-indigo-dim)]/20' : ''
+                      }`}
                     >
-                      <span className={`mt-0.5 shrink-0 ${notifColorMap[n.type]}`}>
-                        <Icon name={notifIconMap[n.type] as any} size="sm" />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12.5px] font-semibold text-[var(--text-primary)] truncate">{n.title}</p>
-                        <p className="text-[11px] text-[var(--text-secondary)] leading-snug mt-0.5 line-clamp-2">{n.description}</p>
-                        <p className="text-[10px] text-[var(--text-tertiary)] mt-1">{n.time}</p>
+                      <div className="mt-0.5 shrink-0">
+                        <Icon
+                          name={(notifIconMap[n.type] || 'info') as any}
+                          size="xs"
+                          className={notifColorMap[n.type] || 'text-[var(--text-secondary)]'}
+                        />
                       </div>
-                      {!n.read && (
-                        <span className="mt-2 w-1.5 h-1.5 rounded-full bg-[var(--accent-indigo)] shrink-0" />
-                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-[var(--text-primary)] leading-tight">{n.title}</div>
+                        <div className="text-[var(--text-secondary)] text-[11.5px] mt-0.5 leading-snug">
+                          {n.description}
+                        </div>
+                        <div className="text-[10px] text-[var(--text-tertiary)] mt-1 font-mono">{n.time}</div>
+                      </div>
                     </div>
                   ))}
-                </div>
-                <div className="px-4 py-2.5 text-center border-t border-[var(--border-default)] bg-[var(--surface-2)]">
-                  <button
-                    type="button"
-                    className="text-[12px] text-[var(--accent-indigo)] font-semibold hover:text-[var(--accent-indigo-hover)] transition-colors cursor-pointer"
-                  >
-                    View all notifications
-                  </button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Profile Avatar Trigger & Streamlined Dropdown */}
+        {/* Profile Dropdown */}
         <div className="relative" ref={profileRef}>
           <button
             type="button"
-            id="profile-trigger"
-            className="w-8.5 h-8.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo-hover)] flex items-center justify-center text-[11.5px] font-black
-              border border-[var(--accent-indigo)] border-opacity-30 hover:border-opacity-60 hover:scale-[1.04] active:scale-95 transition-all duration-150 focus-ring-step cursor-pointer"
-            onClick={() => { setProfileOpen((o) => !o); setNotifOpen(false); }}
-            aria-label="Profile menu"
+            id="profile-menu-trigger"
+            className="flex items-center gap-2.5 p-1 pr-2 rounded-full hover:bg-[var(--surface-hover)] transition-colors focus-ring-step cursor-pointer"
+            onClick={() => {
+              setProfileOpen((o) => !o);
+              setNotifOpen(false);
+            }}
             aria-expanded={profileOpen}
             aria-haspopup="true"
           >
-            {CURRENT_USER.avatarInitials}
+            <div className="w-7.5 h-7.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-[12px] flex items-center justify-center shadow-xs">
+              {CURRENT_USER.avatarInitials}
+            </div>
+            <div className="hidden sm:flex flex-col text-left">
+              <span className="text-[12.5px] font-bold text-[var(--text-primary)] leading-none font-heading">
+                {CURRENT_USER.name}
+              </span>
+              <span className="text-[10.5px] text-[var(--text-tertiary)] font-medium leading-tight">
+                {CURRENT_USER.role}
+              </span>
+            </div>
+            <Icon
+              name="chevron-down"
+              size="xs"
+              className={`text-[var(--text-tertiary)] transition-transform duration-150 ${
+                profileOpen ? 'rotate-180 text-[var(--text-primary)]' : ''
+              }`}
+            />
           </button>
-
-          {/* Streamlined Profile Dropdown */}
-          <AnimatePresence>
-            {profileOpen && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98, y: 6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: 6 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-50 overflow-hidden"
-                role="menu"
-                aria-label="Profile menu"
-              >
-                <div className="px-4 py-3 border-b border-[var(--border-default)] bg-[var(--surface-2)]">
-                  <p className="text-[13px] font-bold text-[var(--text-primary)]">{CURRENT_USER.name}</p>
-                  <p className="text-[11px] font-medium text-[var(--text-secondary)] mt-0.5">{CURRENT_USER.role}</p>
-                  <p className="text-[10.5px] text-[var(--text-tertiary)] truncate mt-0.5">{CURRENT_USER.email}</p>
-                </div>
-
-                <div className="py-1">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[12px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors text-left cursor-pointer"
-                  >
-                    <Icon name="user" size="xs" />
-                    Profile Settings
-                  </button>
-                </div>
-
-                <div className="border-t border-[var(--border-default)]">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[12px] font-semibold text-[var(--status-danger-text)] hover:bg-[var(--status-danger-bg)] transition-colors text-left cursor-pointer"
-                  >
-                    <Icon name="log-out" size="xs" />
-                    Sign out
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
     </header>
