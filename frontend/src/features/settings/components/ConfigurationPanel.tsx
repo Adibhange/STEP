@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Icon } from '@/design-system';
 import { MasterTable } from './MasterTable';
-import { MASTER_DATA, type MasterRecord } from '../mock/master.mock';
+import { MASTER_DATA, type MasterRecord } from '@/mock/masters';
 
 export interface CategoryDef {
   key: string;

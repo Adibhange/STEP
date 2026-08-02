@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import { VacancyDetailView } from '@/features/vacancies/components/VacancyDetailView';
-import { VACANCIES_MOCK } from '@/features/vacancies/mock/vacancy.mock';
+import { VacancyWorkspace } from '@/features/vacancies/components/VacancyWorkspace';
+import { VACANCIES_MOCK } from '@/mock/vacancies';
 
 export default function VacancyDetailPage() {
   const params = useParams();
@@ -11,5 +11,5 @@ export default function VacancyDetailPage() {
 
   const vacancy = VACANCIES_MOCK.find((v) => v.id === id) || VACANCIES_MOCK[0];
 
-  return <VacancyDetailView vacancy={vacancy} />;
+  return <VacancyWorkspace vacancy={vacancy} />;
 }

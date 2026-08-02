@@ -1,17 +1,14 @@
 'use client';
 
 import React from 'react';
-import { WelcomeSection } from '@/features/dashboard/overview/WelcomeSection';
-import { KpiSection } from '@/features/dashboard/overview/KpiSection';
-import { CandidateWorkspace } from '@/features/dashboard/candidates/CandidateWorkspace';
+import { KpiSection, CandidateWorkspace } from '@/features/dashboard';
 
 /**
  * STEP Enterprise Dashboard Page
  *
  * The primary daily-use dashboard for the recruitment operations team.
  * Layout:
- *   - Welcome Section (greeting + today's stats)
- *   - KPI Metric Row (9 pipeline KPIs)
+ *   - KPI Metric Row (pipeline KPIs with animated counter & trend badge)
  *   - Candidate Workspace (table + filters + pagination)
  */
 export default function DashboardPage() {

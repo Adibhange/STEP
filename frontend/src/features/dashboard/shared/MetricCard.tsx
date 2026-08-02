@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { StatsCard } from '@/features/shared/stats-card/StatsCard';
-import type { KpiItem } from '../mock/kpi.mock';
+import type { KpiItem } from '@/mock/dashboard';
 
 interface MetricCardProps {
   item: KpiItem;
@@ -24,6 +24,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({ item, active = false, on
       icon={item.icon}
       colorToken={item.colorToken}
       bgToken={item.bgToken}
+      trend={item.trend}
+      trendLabel={item.trendLabel}
       active={active}
       onClick={onClick}
     />

@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
-import type { MasterRecord } from '../mock/master.mock';
+import type { MasterRecord } from '@/mock/masters';
 
 export interface MasterColumn {
   key: keyof MasterRecord | string;

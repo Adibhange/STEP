@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Badge } from '@/design-system';
-import { QUICK_NOTIFICATIONS, CURRENT_USER } from '../mock/dashboard.mock';
+import { QUICK_NOTIFICATIONS, CURRENT_USER } from '@/mock/dashboard';
 
 interface TopHeaderProps {
   onMobileMenuOpen: () => void;
@@ -11,11 +11,6 @@ interface TopHeaderProps {
 
 /**
  * STEP Enterprise TopHeader — Clean Streamlined Profile Dropdown
- *
- * Profile Menu:
- * - User info header (Aditya Bhange, Recruitment Director)
- * - Profile Settings
- * - Sign out
  */
 export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
   const [notifOpen, setNotifOpen] = useState(false);

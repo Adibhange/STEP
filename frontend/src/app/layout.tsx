@@ -1,8 +1,5 @@
 import './globals.css';
-import { ReduxProvider } from '@/providers/redux-provider';
-import { ThemeProvider } from '@/providers/theme-provider';
-import { AccessibilityProvider } from '@/providers/accessibility-provider';
-import { UserPreferencesProvider } from '@/providers/user-preferences-provider';
+import { AppProvider } from '@/providers/AppProvider';
 import { NotificationProvider } from '@/components/providers/NotificationProvider';
 
 export const metadata = {
@@ -14,14 +11,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <ReduxProvider>
-          <ThemeProvider>
-            <NotificationProvider />
-            <AccessibilityProvider>
-              <UserPreferencesProvider>{children}</UserPreferencesProvider>
-            </AccessibilityProvider>
-          </ThemeProvider>
-        </ReduxProvider>
+        <AppProvider>
+          <NotificationProvider />
+          {children}
+        </AppProvider>
       </body>
     </html>
   );

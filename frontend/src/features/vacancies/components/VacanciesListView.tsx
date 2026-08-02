@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import useRouter from 'next/navigation';
 import { Icon } from '@/design-system';
 import { CreateVacancyModal } from './CreateVacancyModal';
-import { VACANCIES_MOCK, type VacancyItem } from '../mock/vacancy.mock';
+import { VACANCIES_MOCK, type VacancyItem } from '@/mock/vacancies';
 
 /**
  * STEP Enterprise VacanciesListView

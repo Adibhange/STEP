@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { MetricGrid } from '../shared/MetricGrid';
-import { KPI_DATA } from '../mock/kpi.mock';
+import { KPI_DATA } from '@/mock/dashboard';
 
 /**
  * STEP Enterprise KpiSection
