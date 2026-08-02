@@ -7,62 +7,67 @@
 
 :root {
   /* Font Family Tokens */
+  --font-heading: 'Plus Jakarta Sans', var(--font-inter, 'Inter', sans-serif);
   --font-sans: var(--font-inter, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   --font-mono: var(--font-jetbrains-mono, 'JetBrains Mono', monospace);
 
   /* Display Typography Token (32px / 2.0rem) */
   --type-display-xl-size: 2rem;
-  --type-display-xl-weight: 700;
-  --type-display-xl-line-height: 2.5rem;
-  --type-display-xl-tracking: -0.025em;
+  --type-display-xl-weight: 800;
+  --type-display-xl-line-height: 2.375rem;
+  --type-display-xl-tracking: -0.03em;
 
   /* Heading 1 Token (24px / 1.5rem) */
   --type-h1-size: 1.5rem;
-  --type-h1-weight: 600;
-  --type-h1-line-height: 2rem;
-  --type-h1-tracking: -0.02em;
+  --type-h1-weight: 700;
+  --type-h1-line-height: 1.875rem;
+  --type-h1-tracking: -0.025em;
 
   /* Heading 2 Token (18px / 1.125rem) */
   --type-h2-size: 1.125rem;
-  --type-h2-weight: 600;
+  --type-h2-weight: 700;
   --type-h2-line-height: 1.5rem;
-  --type-h2-tracking: -0.015em;
+  --type-h2-tracking: -0.02em;
 
   /* Heading 3 Token (15px / 0.9375rem) */
   --type-h3-size: 0.9375rem;
   --type-h3-weight: 600;
   --type-h3-line-height: 1.25rem;
-  --type-h3-tracking: -0.01em;
+  --type-h3-tracking: -0.015em;
 
   /* Body Large Token (14px / 0.875rem) */
   --type-body-lg-size: 0.875rem;
   --type-body-lg-weight: 400;
   --type-body-lg-line-height: 1.25rem;
-  --type-body-lg-tracking: 0em;
+  --type-body-lg-tracking: -0.005em;
 
   /* Body Medium / Standard Table Data Token (13px / 0.8125rem) */
   --type-body-md-size: 0.8125rem;
   --type-body-md-weight: 400;
   --type-body-md-line-height: 1.125rem;
-  --type-body-md-tracking: 0.005em;
+  --type-body-md-tracking: 0em;
 
   /* Caption Token (12px / 0.75rem) */
   --type-caption-size: 0.75rem;
   --type-caption-weight: 400;
   --type-caption-line-height: 1rem;
-  --type-caption-tracking: 0.01em;
+  --type-caption-tracking: 0.005em;
 
   /* Label Token (11px / 0.6875rem) */
   --type-label-size: 0.6875rem;
   --type-label-weight: 600;
   --type-label-line-height: 0.875rem;
-  --type-label-tracking: 0.03em;
+  --type-label-tracking: 0.04em;
 
   /* Code / Monospace Token (12px / 0.75rem) */
   --type-mono-size: 0.75rem;
-  --type-mono-weight: 400;
+  --type-mono-weight: 500;
   --type-mono-line-height: 1rem;
-  --type-mono-tracking: 0em;
+  --type-mono-tracking: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: var(--font-heading);
 }
 
 /* OpenType Tabular Figures Utility for Data Columns */

@@ -78,20 +78,20 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const sizeStyles: Record<string, string> = {
-    sm: 'px-2 py-0.5 text-[11px] gap-1',
-    md: 'px-2.5 py-1 text-xs font-medium gap-1.5',
+    sm: 'h-6 px-2.5 py-0.5 text-[11px] font-semibold gap-1.5 rounded-full inline-flex items-center justify-center',
+    md: 'h-7 px-3 py-1 text-xs font-semibold gap-1.5 rounded-full inline-flex items-center justify-center',
   };
 
   const activeVariant = variantStyles[variant] || variantStyles.neutral;
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-semibold select-none shrink-0 ${activeVariant.container} ${sizeStyles[size]} ${className}`}
+      className={`select-none shrink-0 transition-all duration-150 ${activeVariant.container} ${sizeStyles[size]} ${className}`}
       {...props}
     >
       {dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeVariant.dot}`} />}
       {icon}
-      {children && <span>{children}</span>}
+      {children && <span className="truncate">{children}</span>}
     </span>
   );
 };

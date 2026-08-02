@@ -6,9 +6,11 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   Calendar,
   Filter,
   UserRound,
+  Users,
   Settings2,
   Bell,
   CheckCircle2,
@@ -24,6 +26,7 @@ import {
   Download,
   Plus,
   Edit2,
+  Pencil,
   ExternalLink,
   Lock,
   Unlock,
@@ -32,23 +35,44 @@ import {
   Loader2,
   BriefcaseBusiness,
   ShieldCheck,
+  ShieldAlert,
   Building2,
   GripVertical,
   MoreVertical,
+  MoreHorizontal,
+  Menu,
+  Eye,
+  FileText,
+  ClipboardCheck,
+  Mic,
+  Send,
+  PauseCircle,
+  TrendingUp,
+  TrendingDown,
+  BarChart2,
+  LayoutDashboard,
+  UserCog,
+  LogOut,
+  Code2,
+  Inbox,
+  Columns3,
   type LucideIcon,
 } from 'lucide-react';
 
 export type IconName =
   | 'search'
+  | 'x'
   | 'close'
   | 'check'
   | 'chevron-down'
   | 'chevron-up'
   | 'chevron-left'
   | 'chevron-right'
+  | 'chevrons-up-down'
   | 'calendar'
   | 'filter'
   | 'user'
+  | 'users'
   | 'settings'
   | 'bell'
   | 'check-circle'
@@ -61,9 +85,11 @@ export type IconName =
   | 'move-right'
   | 'mail'
   | 'trash'
+  | 'trash-2'
   | 'download'
   | 'plus'
   | 'edit'
+  | 'pencil'
   | 'external-link'
   | 'lock'
   | 'unlock'
@@ -73,21 +99,42 @@ export type IconName =
   | 'loader'
   | 'briefcase'
   | 'shield'
+  | 'shield-check'
   | 'building'
   | 'grip-vertical'
-  | 'more-vertical';
+  | 'more-vertical'
+  | 'more-horizontal'
+  | 'menu'
+  | 'eye'
+  | 'file-text'
+  | 'clipboard-check'
+  | 'mic'
+  | 'send'
+  | 'pause-circle'
+  | 'trending-up'
+  | 'trending-down'
+  | 'bar-chart-2'
+  | 'layout-dashboard'
+  | 'user-cog'
+  | 'log-out'
+  | 'code-2'
+  | 'inbox'
+  | 'columns-3';
 
 export const iconRegistry: Record<IconName, LucideIcon> = {
   'search': Search,
+  'x': X,
   'close': X,
   'check': Check,
   'chevron-down': ChevronDown,
   'chevron-up': ChevronUp,
   'chevron-left': ChevronLeft,
   'chevron-right': ChevronRight,
+  'chevrons-up-down': ChevronsUpDown,
   'calendar': Calendar,
   'filter': Filter,
   'user': UserRound,
+  'users': Users,
   'settings': Settings2,
   'bell': Bell,
   'check-circle': CheckCircle2,
@@ -100,9 +147,11 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'move-right': MoveRight,
   'mail': Mail,
   'trash': Trash2,
+  'trash-2': Trash2,
   'download': Download,
   'plus': Plus,
   'edit': Edit2,
+  'pencil': Pencil,
   'external-link': ExternalLink,
   'lock': Lock,
   'unlock': Unlock,
@@ -111,8 +160,26 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'spinner': Loader2,
   'loader': Loader2,
   'briefcase': BriefcaseBusiness,
-  'shield': ShieldCheck,
+  'shield': ShieldAlert,
+  'shield-check': ShieldCheck,
   'building': Building2,
   'grip-vertical': GripVertical,
   'more-vertical': MoreVertical,
+  'more-horizontal': MoreHorizontal,
+  'menu': Menu,
+  'eye': Eye,
+  'file-text': FileText,
+  'clipboard-check': ClipboardCheck,
+  'mic': Mic,
+  'send': Send,
+  'pause-circle': PauseCircle,
+  'trending-up': TrendingUp,
+  'trending-down': TrendingDown,
+  'bar-chart-2': BarChart2,
+  'layout-dashboard': LayoutDashboard,
+  'user-cog': UserCog,
+  'log-out': LogOut,
+  'code-2': Code2,
+  'inbox': Inbox,
+  'columns-3': Columns3,
 };

@@ -5,7 +5,7 @@
  * All application modules import components and utilities exclusively from @/design-system.
  *
  * Implementation Strategy:
- * Complex primitives (Dialog, Drawer, Popover, Select, DropdownMenu, Tooltip, Tabs,
+ * Complex primitives (Dialog, Drawer, Popover, Select, CustomSelect, DropdownMenu, Tooltip, Tabs,
  * Accordion, Command, ContextMenu, HoverCard, NavigationMenu, Calendar, DatePicker,
  * Menubar, ResizablePanels, Toast) wrap underlying Radix UI / Sonner engines while
  * consuming STEP Design Tokens and exposing a stable, clean STEP API.
@@ -77,6 +77,9 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
 } from './components/select';
+
+export { CustomSelect } from '@/features/shared/select/CustomSelect';
+export type { CustomSelectProps, SelectOption } from '@/features/shared/select/CustomSelect';
 
 export {
   DropdownMenu,
