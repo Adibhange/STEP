@@ -13,13 +13,12 @@ interface TablePaginationProps {
   rowsPerPageOptions?: number[];
 }
 
-const DEFAULT_OPTIONS = [10, 20, 50, 100];
-
 /**
  * STEP Enterprise TablePagination
  *
  * Compact, accessible pagination control for all enterprise tables.
- * Shows: rows per page selector | record range | page numbers | prev/next
+ * Shows: record range | page numbers | prev/next controls
+ * Uses typography and button styling matching the core design system.
  */
 export const TablePagination: React.FC<TablePaginationProps> = ({
   currentPage,
@@ -47,23 +46,23 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-[var(--space-sm)] px-[var(--padding-card-compact)] py-2 bg-[var(--surface-1)] border-t border-[var(--border-default)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 bg-[var(--surface-1)] border-t border-[var(--border-default)]">
       {/* Record range */}
-      <span className="text-[var(--type-body-md-size)] text-[var(--text-secondary)] font-medium">
-        Showing <strong className="font-mono text-[var(--text-primary)]">{from.toLocaleString()}–{to.toLocaleString()}</strong> of <strong className="font-mono text-[var(--text-primary)]">{totalRecords.toLocaleString()}</strong>
+      <span className="text-xs sm:text-[12.5px] font-sans font-medium text-[var(--text-secondary)]">
+        Showing <strong className="font-bold text-[var(--text-primary)]">{from.toLocaleString()}–{to.toLocaleString()}</strong> of <strong className="font-bold text-[var(--text-primary)]">{totalRecords.toLocaleString()}</strong>
       </span>
 
-      {/* Page numbers */}
-      <nav className="flex items-center gap-[var(--space-3xs)]" aria-label="Pagination">
-        {/* Previous */}
+      {/* Page numbers navigation */}
+      <nav className="flex items-center gap-1.5" aria-label="Pagination">
+        {/* Previous button */}
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           aria-label="Previous page"
-          className="w-7.5 h-7.5 flex items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-default)]
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border-default)]
             text-[var(--text-secondary)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]
-            disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-0.5 transition-all duration-150 focus-ring-step cursor-pointer"
+            disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
         >
           <Icon name="chevron-left" size="xs" />
         </button>
@@ -72,7 +71,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         <div className="hidden sm:flex items-center gap-1">
           {pageNumbers.map((p, i) =>
             p === 'ellipsis' ? (
-              <span key={`ellipsis-${i}`} className="w-7.5 h-7.5 flex items-center justify-center text-[var(--text-tertiary)] text-[11px] font-mono">
+              <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-[var(--text-tertiary)] text-xs font-medium font-sans">
                 …
               </span>
             ) : (
@@ -82,11 +81,11 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                 onClick={() => onPageChange(p)}
                 aria-label={`Page ${p}`}
                 aria-current={p === currentPage ? 'page' : undefined}
-                className={`w-7.5 h-7.5 flex items-center justify-center rounded-[var(--radius-md)] text-[12px] font-mono font-bold
-                  transition-all duration-150 focus-ring-step cursor-pointer
+                className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold font-sans
+                  transition-all duration-150 cursor-pointer
                   ${p === currentPage
-                    ? 'bg-[var(--accent-indigo)] text-white border border-[var(--accent-indigo)] shadow-xs'
-                    : 'border border-[var(--border-default)] text-[var(--text-secondary)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] hover:-translate-y-0.5'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs border-none'
+                    : 'border border-[var(--border-default)] text-[var(--text-secondary)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
                   }`}
               >
                 {p}
@@ -96,19 +95,19 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
         </div>
 
         {/* Mobile: current / total */}
-        <span className="sm:hidden text-[12px] font-mono font-semibold text-[var(--text-secondary)] px-2">
+        <span className="sm:hidden text-xs font-sans font-semibold text-[var(--text-secondary)] px-2">
           {currentPage} / {totalPages}
         </span>
 
-        {/* Next */}
+        {/* Next button */}
         <button
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           aria-label="Next page"
-          className="w-7.5 h-7.5 flex items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-default)]
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border-default)]
             text-[var(--text-secondary)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]
-            disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-0.5 transition-all duration-150 focus-ring-step cursor-pointer"
+            disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
         >
           <Icon name="chevron-right" size="xs" />
         </button>

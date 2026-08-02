@@ -188,9 +188,8 @@ export const CandidateWorkspace: React.FC = () => {
             type="button"
             onClick={() => setIsAddModalOpen(true)}
             className="h-8 w-8 sm:w-auto px-0 sm:px-3.5 flex items-center justify-center gap-1.5 rounded-full
-              bg-[var(--accent-indigo)] text-[var(--text-on-accent)]
-              text-[12px] font-bold hover:bg-[var(--accent-indigo-hover)] hover:-translate-y-[1px] hover:shadow-sm active:scale-[0.98]
-              transition-all duration-150 focus-ring-step cursor-pointer shrink-0"
+              bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md hover:from-indigo-700 hover:to-purple-700 hover:-translate-y-[1px] active:scale-[0.98]
+              text-[12px] font-bold transition-all duration-150 focus-ring-step cursor-pointer shrink-0 border-none"
             aria-label="Add new candidate"
             title="Add new candidate"
           >

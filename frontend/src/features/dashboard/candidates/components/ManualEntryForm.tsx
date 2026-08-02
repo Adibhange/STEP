@@ -111,7 +111,7 @@ const InlineDatePicker: React.FC<InlineDatePickerProps> = ({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full h-9 px-3 rounded-lg border flex items-center justify-between text-xs bg-[var(--surface-1)] transition-all cursor-pointer select-none ${
+        className={`w-full h-10 px-3.5 rounded-lg border flex items-center justify-between text-[13px] bg-[var(--surface-1)] transition-all cursor-pointer select-none ${
           open
             ? 'border-[var(--accent-indigo)] ring-2 ring-[var(--accent-indigo-dim)] shadow-xs'
             : 'border-[var(--border-default)] hover:border-[var(--border-strong)]'
@@ -439,7 +439,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     <div className="space-y-3.5 animate-fadeIn">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             First Name <span className="text-rose-500">*</span>
           </label>
           <input
@@ -454,7 +454,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         </div>
 
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Last Name <span className="text-rose-500">*</span>
           </label>
           <input
@@ -471,7 +471,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Email Address <span className="text-rose-500">*</span>
           </label>
           <input
@@ -492,7 +492,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         </div>
 
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Mobile Number <span className="text-rose-500">*</span>
           </label>
           <input
@@ -516,7 +516,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Gender
           </label>
           <CustomSelect
@@ -529,7 +529,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         </div>
 
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Date of Birth
           </label>
           <InlineDatePicker
@@ -545,14 +545,14 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   const renderStep2 = () => (
     <div className="space-y-3.5 animate-fadeIn">
       <div>
-        <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1.5 font-sans">
+        <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
           Candidate Background Type <span className="text-rose-500">*</span>
         </label>
         <div className="grid grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={() => setCandidateType('experienced')}
-            className={`h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+            className={`h-10 px-4 text-[13px] font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
               uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
             } ${
               candidateType === 'experienced'
@@ -567,7 +567,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           <button
             type="button"
             onClick={() => setCandidateType('fresher')}
-            className={`h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+            className={`h-10 px-4 text-[13px] font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
               uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
             } ${
               candidateType === 'fresher'
@@ -583,7 +583,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Applied Role <span className="text-rose-500">*</span>
           </label>
           <CustomSelect
@@ -597,15 +597,15 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
         {candidateType === 'experienced' && (
           <div>
-            <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
               Total Experience <span className="text-rose-500">*</span>
             </label>
-            <CustomSelect
-              placeholder="Select experience..."
+            <input
+              type="text"
+              placeholder="e.g. 3.5 Years"
               value={experience}
-              options={EXPERIENCE_OPTIONS}
-              onChange={setExperience}
-              widthClass="w-full"
+              onChange={(e) => setExperience(e.target.value)}
+              className={`w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all`}
             />
           </div>
         )}
@@ -615,7 +615,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         <>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Current Company
               </label>
               <input
@@ -630,7 +630,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Current Designation
               </label>
               <input
@@ -647,7 +647,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Current CTC
               </label>
               <input
@@ -662,7 +662,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Expected CTC
               </label>
               <input
@@ -679,7 +679,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Notice Period
               </label>
               <CustomSelect
@@ -709,7 +709,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
               Highest Qualification
             </label>
             <CustomSelect
@@ -722,7 +722,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
               College / University
             </label>
             <input
@@ -730,14 +730,14 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
               placeholder="e.g. COEP / SPPU"
               value={college}
               onChange={(e) => setCollege(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+              className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
               Passing Year
             </label>
             <input
@@ -745,12 +745,12 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
               placeholder="e.g. 2023"
               value={passingYear}
               onChange={(e) => setPassingYear(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+              className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
               Percentage / CGPA
             </label>
             <input
@@ -758,7 +758,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
               placeholder="e.g. 8.4 CGPA / 82%"
               value={percentage}
               onChange={(e) => setPercentage(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+              className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
             />
           </div>
         </div>
@@ -767,7 +767,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       {/* Hiring Location & Employment Type (2-Column Row) */}
       <div className="grid grid-cols-2 gap-3 pt-1 border-t border-[var(--border-soft)]">
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Hiring Location <span className="text-rose-500">*</span>
           </label>
           <CustomSelect
@@ -780,7 +780,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         </div>
 
         <div>
-          <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Employment Type
           </label>
           <CustomSelect
@@ -798,14 +798,14 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   const renderStep4 = () => (
     <div className="space-y-4 animate-fadeIn">
       <div>
-        <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1.5 font-sans">
+        <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
           Reference Category <span className="text-[10px] font-normal text-[var(--text-tertiary)]">(Optional)</span>
         </label>
         <div className="grid grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={() => setRefType('internal')}
-            className={`h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 border rounded-lg transition-all cursor-pointer ${
+            className={`h-10 px-4 text-[13px] font-bold flex items-center justify-center gap-2 border rounded-lg transition-all cursor-pointer ${
               refType === 'internal'
                 ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-2xs'
                 : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
@@ -818,7 +818,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           <button
             type="button"
             onClick={() => setRefType('external')}
-            className={`h-9 px-3 text-xs font-bold flex items-center justify-center gap-1.5 border rounded-lg transition-all cursor-pointer ${
+            className={`h-10 px-4 text-[13px] font-bold flex items-center justify-center gap-2 border rounded-lg transition-all cursor-pointer ${
               refType === 'external'
                 ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-2xs'
                 : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
@@ -834,7 +834,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         <>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Employee Name
               </label>
               <input
@@ -842,12 +842,12 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 placeholder="e.g. Vikramaditya Rao"
                 value={refName}
                 onChange={(e) => setRefName(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Employee ID
               </label>
               <input
@@ -855,14 +855,14 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 placeholder="e.g. EMP-9082"
                 value={refEmployeeId}
                 onChange={(e) => setRefEmployeeId(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Mobile Number
               </label>
               <input
@@ -871,12 +871,12 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 placeholder="e.g. 9876543210"
                 value={refMobile}
                 onChange={(e) => setRefMobile(e.target.value.replace(/\D/g, ''))}
-                className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Verified By
               </label>
               <input
@@ -884,7 +884,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 placeholder="e.g. Anand Sharma (HR Lead)"
                 value={refVerifiedBy}
                 onChange={(e) => setRefVerifiedBy(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
               />
             </div>
           </div>
@@ -893,7 +893,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         <>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Referrer Name
               </label>
               <input
@@ -901,12 +901,12 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 placeholder="e.g. Rajesh Kumar"
                 value={refName}
                 onChange={(e) => setRefName(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Mobile Number
               </label>
               <input
@@ -915,14 +915,14 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 placeholder="e.g. 9876543210"
                 value={refMobile}
                 onChange={(e) => setRefMobile(e.target.value.replace(/\D/g, ''))}
-                className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
                 Verified By
               </label>
               <input
@@ -930,7 +930,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 placeholder="e.g. Anand Sharma (HR Lead)"
                 value={refVerifiedBy}
                 onChange={(e) => setRefVerifiedBy(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
               />
             </div>
           </div>
@@ -954,7 +954,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         }}
       />
 
-      <label className="block text-[11.5px] font-bold text-[var(--text-primary)] font-heading">
+      <label className="block text-xs font-semibold text-[var(--text-primary)] font-heading">
         Upload Candidate Resume <span className="text-rose-500">*</span>
       </label>
 
@@ -1005,66 +1005,54 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   );
 
   const renderFooter = () => (
-    <div className="px-6 py-3.5 bg-[var(--surface-1)] border-t border-[var(--border-default)] shrink-0 shadow-xs">
+    <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[var(--surface-1)] border-t border-[var(--border-default)] shrink-0 shadow-xs">
       {step < 5 ? (
         <div className="grid grid-cols-2 gap-3">
           {step > 1 ? (
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => setStep((s) => ((s - 1) as any))}
+            <button
               type="button"
-              fullWidth
+              onClick={() => setStep((s) => ((s - 1) as any))}
+              className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2.5 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
             >
               <Icon name="chevron-left" size="xs" />
               <span>Back</span>
-            </Button>
+            </button>
           ) : (
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={onCancel}
+            <button
               type="button"
-              fullWidth
+              onClick={onCancel}
+              className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2.5 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
             >
               <span>Cancel</span>
-            </Button>
+            </button>
           )}
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleNextStep}
+          <button
             type="button"
-            fullWidth
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 border-none shadow-md hover:from-indigo-700 hover:to-purple-700"
+            onClick={handleNextStep}
+            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2.5 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full"
           >
             <span>Next Step</span>
             <Icon name="chevron-right" size="xs" />
-          </Button>
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            size="md"
-            onClick={() => setStep(4)}
+          <button
             type="button"
-            fullWidth
+            onClick={() => setStep(4)}
+            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2.5 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
           >
             <Icon name="chevron-left" size="xs" />
             <span>Back</span>
-          </Button>
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => handleSave(false)}
+          </button>
+          <button
             type="button"
-            fullWidth
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 border-none shadow-md hover:from-indigo-700 hover:to-purple-700"
+            onClick={() => handleSave(false)}
+            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2.5 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full"
           >
             <Icon name="check" size="xs" />
             <span>Save Candidate</span>
-          </Button>
+          </button>
         </div>
       )}
     </div>
@@ -1074,13 +1062,13 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     <div className="flex flex-col overflow-hidden">
 
       {/* ── Scrollable Form Body ────────────────────────────────────────── */}
-      <div className="px-6 pt-4 pb-5 space-y-4 overflow-y-auto scrollbar-none max-h-[calc(88vh-200px)]">
+      <div className="max-h-[55vh] sm:max-h-[60vh] px-4 sm:px-8 pt-4 sm:pt-5 pb-5 sm:pb-6 space-y-4 sm:space-y-5 overflow-y-auto scrollbar-none">
 
         {/* Progress Segments Bar (5 Steps) */}
-        <div className="space-y-2 p-3 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/50 via-purple-50/30 to-indigo-50/50 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-[var(--text-primary)] font-heading flex items-center gap-1.5">
-              <span className="w-5 h-5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[10.5px] font-bold flex items-center justify-center shrink-0 shadow-xs">
+        <div className="space-y-2.5 p-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/50 via-purple-50/30 to-indigo-50/50 shadow-xs">
+          <div className="flex items-center justify-between text-[13px] font-bold">
+            <span className="text-[var(--text-primary)] font-heading flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
                 {step}
               </span>
               <span>Step {step} of 5:</span>
@@ -1088,7 +1076,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 {STEPS[step - 1].title}
               </span>
             </span>
-            <span className="text-[11.5px] font-sans font-bold tracking-tight text-purple-600">
+            <span className="text-xs font-sans font-bold tracking-tight text-purple-600">
               {step * 20}% Complete
             </span>
           </div>

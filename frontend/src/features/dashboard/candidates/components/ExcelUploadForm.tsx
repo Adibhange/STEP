@@ -102,14 +102,14 @@ export const ExcelUploadForm: React.FC<ExcelUploadFormProps> = ({ onSuccess }) =
           )}
         </div>
 
-        <div className="flex items-center justify-center gap-3 pt-1">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 pt-1 w-full max-w-xs sm:max-w-none mx-auto">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               fileInputRef.current?.click();
             }}
-            className="h-9 px-4 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-2xs flex items-center justify-center gap-2.5 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none"
+            className="h-9 px-4 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-2xs flex items-center justify-center gap-2.5 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full sm:w-auto"
           >
             <Icon name="upload" size="xs" />
             <span>Browse Spreadsheet</span>
@@ -121,7 +121,7 @@ export const ExcelUploadForm: React.FC<ExcelUploadFormProps> = ({ onSuccess }) =
               e.stopPropagation();
               handleDownloadTemplate();
             }}
-            className="h-9 px-4 rounded-lg text-xs font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2.5 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none"
+            className="h-9 px-4 rounded-lg text-xs font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2.5 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full sm:w-auto"
           >
             <Icon name="download" size="xs" />
             <span>Download Template</span>
