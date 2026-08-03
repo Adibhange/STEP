@@ -1,4 +1,4 @@
-# STEP - Enterprise Recruitment Management System (ERMS)
+# STEP - Sthapatya Talent Excellance Platform
 
 STEP is an end-to-end Enterprise Recruitment Management System designed to streamline candidate tracking, interview schedules, skill assessments, dynamic workflows, anti-cheating candidate evaluations, and recruitment analytics.
 
@@ -7,11 +7,11 @@ STEP is an end-to-end Enterprise Recruitment Management System designed to strea
 ```
 STEP/
 ├── backend/                  # .NET 10 ASP.NET Core Clean Architecture API
-│   ├── ERMS.Api/             # REST API Controllers, Middlewares & App Configuration
-│   ├── ERMS.Application/     # CQRS Handlers, DTOs, Application Interfaces & Business Logic
-│   ├── ERMS.Domain/          # Domain Entities, Enums, Value Objects & Domain Events
-│   ├── ERMS.Infrastructure/   # Entity Framework Core, SQL Server Repositories & External Services
-│   ├── ERMS.sln              # Visual Studio Solution File
+│   ├── STEP.Api/             # REST API Controllers, Middlewares & App Configuration
+│   ├── STEP.Application/     # CQRS Handlers, DTOs, Application Interfaces & Business Logic
+│   ├── STEP.Domain/          # Domain Entities, Enums, Value Objects & Domain Events
+│   ├── STEP.Infrastructure/   # Entity Framework Core, SQL Server Repositories & External Services
+│   ├── STEP.sln              # Visual Studio Solution File
 │   └── .env.example          # Environment Variables Template
 ├── frontend/                 # Next.js 16 Modern Web Application (TypeScript & Tailwind CSS)
 │   ├── src/                  # App Router, Components, Redux Toolkit Query & UI Modules
@@ -39,11 +39,11 @@ STEP/
    ```bash
    cp .env.example .env
    ```
-3. Run database scripts located in `ERMS.Api/ERMS_Schema.sql` to initialize database tables and seed data.
+3. Run database scripts located in `STEP.Api/STEP_Schema.sql` to initialize database tables and seed data.
 4. Restore dependencies and run the API:
    ```bash
    dotnet restore
-   dotnet run --project ERMS.Api
+   dotnet run --project STEP.Api
    ```
    The backend API will run on `http://localhost:5000`.
 

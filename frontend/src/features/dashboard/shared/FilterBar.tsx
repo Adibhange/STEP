@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Icon } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 
@@ -32,7 +32,7 @@ interface FilterBarProps {
   inline?: boolean;
 }
 
-// ── Single-Line Compact Date Picker with Motion ─────────────────────────────────
+// ── Single-Line Compact Date Picker with Radix Popover Portal ────────────────────
 
 interface CustomDatePickerProps {
   label: string;
@@ -52,22 +52,31 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   widthClass = 'w-auto',
 }) => {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedDate = value ? new Date(value) : new Date();
+  const selectedDate = useMemo(() => {
+    if (!value) return new Date();
+    const parts = value.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d);
+      }
+    }
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }, [value]);
+
   const [viewYear, setViewYear] = useState(selectedDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(selectedDate.getMonth());
 
   useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
+    if (open) {
+      setViewYear(selectedDate.getFullYear());
+      setViewMonth(selectedDate.getMonth());
+    }
+  }, [open, selectedDate]);
 
   const monthName = new Date(viewYear, viewMonth, 1).toLocaleString('default', { month: 'long' });
 
@@ -120,160 +129,178 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
     }
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const formattedDisplayValue = useMemo(() => {
+    if (!value) return placeholder;
+    const parts = value.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      }
+    }
+    return placeholder;
+  }, [value, placeholder]);
 
   return (
-    <div className={`relative inline-block shrink-0 ${open ? 'z-[100]' : 'z-10'}`} ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-label={label}
-        className={`h-8 px-3 rounded-full border flex items-center justify-between gap-1.5 ${widthClass}
-          text-[12px] font-medium transition-all duration-150 ease-out cursor-pointer select-none focus-ring-step active:scale-[0.98]
-          ${value
-            ? 'bg-[var(--accent-indigo-dim)] border-[var(--border-focus)] text-[var(--accent-indigo)] font-semibold'
-            : 'bg-[var(--surface-2)] border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+      <PopoverPrimitive.Trigger asChild>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-label={label}
+          className={`h-9 px-3 rounded-lg border flex items-center justify-between gap-2 ${widthClass} text-xs transition-all duration-150 ease-out cursor-pointer select-none focus-ring-step outline-none ${
+            value
+              ? 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-primary)] font-medium hover:border-[var(--border-strong)]'
+              : 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-tertiary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] font-normal'
           }`}
-      >
-        <div className="flex items-center gap-1.5 min-w-0 truncate">
-          <Icon name="calendar" size="xs" className={value ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'} />
-          <span className="truncate font-mono">
-            {value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : placeholder}
+        >
+          <span className="truncate">
+            {formattedDisplayValue}
           </span>
-        </div>
-        {value ? (
-          <span
-            onClick={(e) => {
-              e.stopPropagation();
-              onChange('');
-            }}
-            className="hover:text-[var(--text-primary)] text-[var(--text-tertiary)] cursor-pointer ml-0.5 shrink-0 transition-colors"
-          >
-            <Icon name="x" size="xs" />
-          </span>
-        ) : (
-          <Icon name="chevron-down" size="xs" className={`shrink-0 transition-transform duration-150 text-[var(--text-tertiary)] ${open ? 'rotate-180 text-[var(--accent-indigo)]' : ''}`} />
-        )}
-      </button>
+          {value ? (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onChange('');
+              }}
+              className="hover:text-[var(--text-primary)] text-[var(--text-tertiary)] cursor-pointer shrink-0 transition-colors"
+              title="Clear date filter"
+            >
+              <Icon name="x" size="xs" />
+            </span>
+          ) : (
+            <Icon
+              name="chevron-down"
+              size="xs"
+              className={`shrink-0 transition-transform duration-150 ${
+                value ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'
+              } ${open ? 'rotate-180 text-[var(--accent-indigo)]' : ''}`}
+            />
+          )}
+        </button>
+      </PopoverPrimitive.Trigger>
 
-      {/* Calendar Dropdown Panel with Motion */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: -4 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 top-full mt-1.5 p-3 w-64 bg-[var(--surface-1)] border border-[var(--border-default)]
-              rounded-[var(--radius-lg)] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.22)] z-[100] space-y-2.5
-              origin-top-left select-none"
-          >
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[13px] font-bold text-[var(--text-primary)] font-heading">
-                {monthName} {viewYear}
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+          align="start"
+          sideOffset={6}
+          className="z-[9999] p-3 w-64 bg-[var(--surface-1)] border border-[var(--border-default)]
+            rounded-[var(--radius-lg)] shadow-[0_16px_40px_-8px_rgba(15,23,42,0.22)] space-y-2.5
+            select-none outline-none data-[state=open]:animate-zoom-in data-[state=closed]:animate-zoom-out"
+        >
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[13px] font-bold text-[var(--text-primary)] font-heading">
+              {monthName} {viewYear}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={prevMonth}
+                className="w-6.5 h-6.5 rounded-[var(--radius-sm)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-secondary)] transition-colors duration-150 active:scale-95"
+                aria-label="Previous month"
+              >
+                <Icon name="chevron-left" size="xs" />
+              </button>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="w-6.5 h-6.5 rounded-[var(--radius-sm)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-secondary)] transition-colors duration-150 active:scale-95"
+                aria-label="Next month"
+              >
+                <Icon name="chevron-right" size="xs" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 text-center">
+            {DAYS_OF_WEEK.map((day) => (
+              <span key={day} className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider font-mono">
+                {day}
               </span>
-              <div className="flex items-center gap-1">
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {calendarDays.map((cell) => {
+              const isSelected = value === cell.dateStr;
+              const isToday = todayStr === cell.dateStr;
+
+              return (
                 <button
-                  type="button"
-                  onClick={prevMonth}
-                  className="w-6.5 h-6.5 rounded-[var(--radius-sm)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-secondary)] transition-colors duration-150 active:scale-95"
-                  aria-label="Previous month"
-                >
-                  <Icon name="chevron-left" size="xs" />
-                </button>
-                <button
-                  type="button"
-                  onClick={nextMonth}
-                  className="w-6.5 h-6.5 rounded-[var(--radius-sm)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-secondary)] transition-colors duration-150 active:scale-95"
-                  aria-label="Next month"
-                >
-                  <Icon name="chevron-right" size="xs" />
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-7 text-center">
-              {DAYS_OF_WEEK.map((day) => (
-                <span key={day} className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider font-mono">
-                  {day}
-                </span>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((cell) => {
-                const isSelected = value === cell.dateStr;
-                const isToday = todayStr === cell.dateStr;
-
-                return (
-                  <button
-                    key={cell.dateStr}
-                    type="button"
-                    onClick={() => {
-                      onChange(cell.dateStr);
-                      setOpen(false);
-                    }}
-                    className={`h-7.5 w-full rounded-[var(--radius-sm)] text-[11.5px] font-mono transition-all duration-150 flex items-center justify-center cursor-pointer active:scale-95
-                      ${isSelected
-                        ? 'bg-[var(--accent-indigo)] text-[var(--text-on-accent)] font-bold'
-                        : cell.isCurrentMonth
-                        ? isToday
-                          ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold border border-[var(--border-focus)]'
-                          : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)] font-medium'
-                        : 'text-[var(--text-disabled)] hover:bg-[var(--surface-hover)]'
-                      }`}
-                  >
-                    {cell.day}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-2 gap-1 pt-2 border-t border-[var(--border-soft)]">
-              {[
-                { label: 'Today', days: 0 },
-                { label: 'Past 7 Days', days: 7 },
-                { label: 'Past 30 Days', days: 30 },
-                { label: 'This Month', days: 1 },
-              ].map((shortcut) => (
-                <button
-                  key={shortcut.label}
+                  key={cell.dateStr}
                   type="button"
                   onClick={() => {
-                    const d = new Date();
-                    if (shortcut.days > 0 && shortcut.days !== 1) {
-                      d.setDate(d.getDate() - shortcut.days);
-                    }
-                    onChange(d.toISOString().split('T')[0]);
+                    onChange(cell.dateStr);
                     setOpen(false);
                   }}
-                  className="px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--surface-2)] hover:bg-[var(--accent-indigo-dim)] hover:text-[var(--accent-indigo)]
-                    text-[10.5px] font-semibold text-[var(--text-secondary)] text-center transition-all duration-150 cursor-pointer active:scale-95"
+                  className={`h-7.5 w-full rounded-[var(--radius-sm)] text-[11.5px] font-mono transition-all duration-150 flex items-center justify-center cursor-pointer active:scale-95
+                    ${isSelected
+                      ? 'bg-[var(--accent-indigo)] text-[var(--text-on-accent)] font-bold'
+                      : cell.isCurrentMonth
+                      ? isToday
+                        ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold border border-[var(--border-focus)]'
+                        : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)] font-medium'
+                      : 'text-[var(--text-disabled)] hover:bg-[var(--surface-hover)]'
+                    }`}
                 >
-                  {shortcut.label}
+                  {cell.day}
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            {value && (
-              <div className="pt-1.5 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange('');
-                    setOpen(false);
-                  }}
-                  className="text-[11px] font-semibold text-[var(--status-danger-text)] hover:underline transition-colors cursor-pointer"
-                >
-                  Clear Selection
-                </button>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          <div className="grid grid-cols-2 gap-1 pt-2 border-t border-[var(--border-soft)]">
+            {[
+              { label: 'Today', days: 0 },
+              { label: 'Past 7 Days', days: 7 },
+              { label: 'Past 30 Days', days: 30 },
+              { label: 'This Month', days: 1 },
+            ].map((shortcut) => (
+              <button
+                key={shortcut.label}
+                type="button"
+                onClick={() => {
+                  const d = new Date();
+                  if (shortcut.days > 0 && shortcut.days !== 1) {
+                    d.setDate(d.getDate() - shortcut.days);
+                  }
+                  const y = d.getFullYear();
+                  const m = String(d.getMonth() + 1).padStart(2, '0');
+                  const day = String(d.getDate()).padStart(2, '0');
+                  onChange(`${y}-${m}-${day}`);
+                  setOpen(false);
+                }}
+                className="px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--surface-2)] hover:bg-[var(--accent-indigo-dim)] hover:text-[var(--accent-indigo)]
+                  text-[10.5px] font-semibold text-[var(--text-secondary)] text-center transition-all duration-150 cursor-pointer active:scale-95"
+              >
+                {shortcut.label}
+              </button>
+            ))}
+          </div>
+
+          {value && (
+            <div className="pt-1.5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange('');
+                  setOpen(false);
+                }}
+                className="text-[11px] font-semibold text-[var(--status-danger-text)] hover:underline transition-colors cursor-pointer"
+              >
+                Clear Selection
+              </button>
+            </div>
+          )}
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
   );
 };
 
