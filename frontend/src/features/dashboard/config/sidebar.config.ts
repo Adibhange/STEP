@@ -74,9 +74,9 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'settings',
-    label: 'Settings',
+    label: 'Master Data',
     href: '/dashboard/settings',
-    icon: 'settings',
+    icon: 'grid',
     section: 'administration',
   },
 ];

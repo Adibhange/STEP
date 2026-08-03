@@ -6,6 +6,7 @@ export interface VacancyItem {
   id: string;
   code: string;
   title: string;
+  driveType?: 'Walk-in Drive' | 'Direct / Sourced Hiring';
   role: string;
   department: string;
   employmentType: string;
@@ -74,6 +75,7 @@ export const VACANCIES_MOCK: VacancyItem[] = [
     id: 'vac-101',
     code: 'VAC-2026-101',
     title: 'Senior React / Next.js Developer',
+    driveType: 'Walk-in Drive',
     role: 'Senior Frontend Engineer',
     department: 'Engineering',
     employmentType: 'Full-Time Permanent',
@@ -134,6 +136,7 @@ export const VACANCIES_MOCK: VacancyItem[] = [
     id: 'vac-102',
     code: 'VAC-2026-102',
     title: 'Node.js Backend Microservices Lead',
+    driveType: 'Direct / Sourced Hiring',
     role: 'Software Engineer',
     department: 'Engineering',
     employmentType: 'Full-Time Permanent',

@@ -1,7 +1,7 @@
 /**
  * STEP Enterprise Platform — Master Data Configuration Mock
  *
- * Single unified mock dataset powering all 14 Configuration master entities.
+ * Single unified mock dataset powering all 15 Configuration master entities.
  */
 
 export interface MasterRecord {
@@ -45,6 +45,16 @@ export const MASTER_DATA: Record<string, MasterRecord[]> = {
     { id: 'dept-3', name: 'Talent Acquisition', code: 'TA', description: 'Recruitment & HR', status: 'Active', updatedAt: '2026-07-01', count: 20 },
     { id: 'dept-4', name: 'Quality Assurance', code: 'QA', description: 'Software Quality', status: 'Active', updatedAt: '2026-07-01', count: 45 },
   ],
+  assessmentTitles: [
+    { id: 'at-1', name: 'MCQ (Multiple Choice Questions)', code: 'MCQ', description: 'Objective choice evaluation', status: 'Active', updatedAt: '2026-08-03', count: 120 },
+    { id: 'at-2', name: 'Coding & Algorithm Challenge', code: 'CODE', description: 'Live coding IDE test', status: 'Active', updatedAt: '2026-08-03', count: 85 },
+    { id: 'at-3', name: 'SQL & Database Queries', code: 'SQL', description: 'Database schema & queries', status: 'Active', updatedAt: '2026-08-03', count: 64 },
+    { id: 'at-4', name: 'Subjective & Essay Questions', code: 'SUBJ', description: 'Domain theory & essays', status: 'Active', updatedAt: '2026-08-03', count: 42 },
+    { id: 'at-5', name: 'General Aptitude & Logical Test', code: 'APT', description: 'Quant & analytical logic', status: 'Active', updatedAt: '2026-08-03', count: 150 },
+    { id: 'at-6', name: 'System Design & Architecture', code: 'ARCH', description: 'High-level system design', status: 'Active', updatedAt: '2026-08-03', count: 38 },
+    { id: 'at-7', name: 'Technical F2F & Live Coding', code: 'F2F', description: 'In-person pair coding round', status: 'Active', updatedAt: '2026-08-03', count: 90 },
+    { id: 'at-8', name: 'HR & Cultural Fit Round', code: 'HR', description: 'Culture & behavioral fit', status: 'Active', updatedAt: '2026-08-03', count: 110 },
+  ],
   skills: [
     { id: 'skill-1', name: 'React.js', code: 'REACT', description: 'Frontend UI library', status: 'Active', updatedAt: '2026-07-30', count: 280 },
     { id: 'skill-2', name: 'TypeScript', code: 'TS', description: 'Typed JavaScript', status: 'Active', updatedAt: '2026-07-30', count: 310 },
@@ -56,44 +66,5 @@ export const MASTER_DATA: Record<string, MasterRecord[]> = {
     { id: 'emp-1', name: 'Full-Time Permanent', code: 'FT', description: 'Standard employee contract', status: 'Active', updatedAt: '2026-07-01', count: 450 },
     { id: 'emp-2', name: 'Contractual (6-12 Months)', code: 'CON', description: 'Fixed term contract', status: 'Active', updatedAt: '2026-07-01', count: 35 },
     { id: 'emp-3', name: 'Graduate Internship', code: 'INT', description: '6 Months stipend program', status: 'Active', updatedAt: '2026-07-01', count: 15 },
-  ],
-  interviewTypes: [
-    { id: 'itype-1', name: 'Technical Screening', code: 'TECH-1', description: 'Initial coding evaluation', status: 'Active', updatedAt: '2026-07-01', count: 143 },
-    { id: 'itype-2', name: 'System Design', code: 'SYS-DES', description: 'Architecture & Scalability', status: 'Active', updatedAt: '2026-07-01', count: 52 },
-    { id: 'itype-3', name: 'Culture & HR Fit', code: 'HR-FIT', description: 'Soft skills & team alignment', status: 'Active', updatedAt: '2026-07-01', count: 45 },
-  ],
-  interviewRounds: [
-    { id: 'iround-1', name: 'Round 1: Online Assessment', code: 'R1-ASSESS', description: 'Automated test paper', status: 'Active', updatedAt: '2026-07-01', count: 500 },
-    { id: 'iround-2', name: 'Round 2: Technical Live Coding', code: 'R2-CODE', description: '1-on-1 pair programming', status: 'Active', updatedAt: '2026-07-01', count: 143 },
-    { id: 'iround-3', name: 'Round 3: System Design & Architecture', code: 'R3-ARCH', description: 'Senior panel interview', status: 'Active', updatedAt: '2026-07-01', count: 97 },
-    { id: 'iround-4', name: 'Round 4: Leadership & HR', code: 'R4-HR', description: 'Director discussion', status: 'Active', updatedAt: '2026-07-01', count: 19 },
-  ],
-  candidateStatuses: [
-    { id: 'st-1', name: 'New / Applied', code: 'NEW', description: 'Initial application received', status: 'Active', updatedAt: '2026-07-01', count: 120 },
-    { id: 'st-2', name: 'Screening In Progress', code: 'SCREEN', description: 'Resume & test review', status: 'Active', updatedAt: '2026-07-01', count: 143 },
-    { id: 'st-3', name: 'In Interview', code: 'INTERVIEW', description: 'Active interview rounds', status: 'Active', updatedAt: '2026-07-01', count: 97 },
-    { id: 'st-4', name: 'Offered', code: 'OFFER', description: 'Offer letter released', status: 'Active', updatedAt: '2026-07-01', count: 19 },
-    { id: 'st-5', name: 'Hired / Joined', code: 'HIRED', description: 'Onboarded employee', status: 'Active', updatedAt: '2026-07-01', count: 14 },
-    { id: 'st-6', name: 'On Hold', code: 'HOLD', description: 'Awaiting opening confirmation', status: 'Active', updatedAt: '2026-07-01', count: 32 },
-    { id: 'st-7', name: 'Rejected', code: 'REJECT', description: 'Not shortlisted', status: 'Active', updatedAt: '2026-07-01', count: 87 },
-  ],
-  questionCategories: [
-    { id: 'qcat-1', name: 'Frontend Engineering', code: 'FE', description: 'DOM, React, CSS, Async JS', status: 'Active', updatedAt: '2026-07-01', count: 120 },
-    { id: 'qcat-2', name: 'Backend & APIs', code: 'BE', description: 'REST, GraphQL, Databases', status: 'Active', updatedAt: '2026-07-01', count: 95 },
-    { id: 'qcat-3', name: 'Data Structures & Algo', code: 'DSA', description: 'Arrays, Trees, Graphs', status: 'Active', updatedAt: '2026-07-01', count: 80 },
-  ],
-  questionDifficulty: [
-    { id: 'qdiff-1', name: 'Easy (Level 1)', code: 'DIFF-1', description: 'Basic syntax & concepts', status: 'Active', updatedAt: '2026-07-01', count: 85 },
-    { id: 'qdiff-2', name: 'Medium (Level 2)', code: 'DIFF-2', description: 'Practical problem solving', status: 'Active', updatedAt: '2026-07-01', count: 140 },
-    { id: 'qdiff-3', name: 'Hard (Level 3)', code: 'DIFF-3', description: 'Complex algorithms & edge cases', status: 'Active', updatedAt: '2026-07-01', count: 65 },
-  ],
-  technologyStack: [
-    { id: 'tech-1', name: 'Next.js 16', code: 'NEXT16', description: 'App Router & Turbopack', status: 'Active', updatedAt: '2026-07-01', count: 15 },
-    { id: 'tech-2', name: 'Node.js & Express', code: 'NODE-EX', description: 'Backend microservices', status: 'Active', updatedAt: '2026-07-01', count: 22 },
-    { id: 'tech-3', name: 'PostgreSQL & Prisma', code: 'PG-PRISMA', description: 'Relational data tier', status: 'Active', updatedAt: '2026-07-01', count: 18 },
-  ],
-  vacancyTemplates: [
-    { id: 'tpl-1', name: 'Standard Fullstack Developer', code: 'TPL-FS', description: 'React + Node 4-round pipeline', status: 'Active', updatedAt: '2026-07-01', count: 8 },
-    { id: 'tpl-2', name: 'Senior QA Engineer Template', code: 'TPL-QA', description: 'Automation focus with 3 rounds', status: 'Active', updatedAt: '2026-07-01', count: 5 },
   ],
 };

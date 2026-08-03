@@ -10,41 +10,78 @@ export interface CategoryDef {
   title: string;
   icon: string;
   description: string;
-  group: 'recruitment' | 'locations' | 'assessment' | 'interview' | 'system';
+  group: 'recruitment' | 'locations';
+  exampleName: string;
+  exampleCode: string;
 }
-
-export const CONFIG_GROUPS = [
-  { key: 'recruitment', label: 'Recruitment' },
-  { key: 'locations', label: 'Locations' },
-  { key: 'assessment', label: 'Assessment' },
-  { key: 'interview', label: 'Interview' },
-  { key: 'system', label: 'System' },
-] as const;
 
 export const CONFIG_CATEGORIES: CategoryDef[] = [
   // Recruitment Group
-  { key: 'roles', title: 'Roles', icon: 'briefcase', description: 'Job role definitions & titles', group: 'recruitment' },
-  { key: 'experiences', title: 'Experience', icon: 'bar-chart-2', description: 'Years of experience tiers', group: 'recruitment' },
-  { key: 'departments', title: 'Departments', icon: 'users', description: 'Organizational business units', group: 'recruitment' },
-  { key: 'employmentTypes', title: 'Employment Types', icon: 'file-text', description: 'Full-time, contract, internship contracts', group: 'recruitment' },
+  {
+    key: 'roles',
+    title: 'Roles',
+    icon: 'briefcase',
+    description: 'Job role definitions & titles',
+    group: 'recruitment',
+    exampleName: 'Data Analyst',
+    exampleCode: 'DA',
+  },
+  {
+    key: 'experiences',
+    title: 'Experience',
+    icon: 'bar-chart-2',
+    description: 'Years of experience tiers',
+    group: 'recruitment',
+    exampleName: 'Junior (1–3 Years)',
+    exampleCode: 'JY',
+  },
+  {
+    key: 'departments',
+    title: 'Departments',
+    icon: 'users',
+    description: 'Organizational business units',
+    group: 'recruitment',
+    exampleName: 'Human Resources',
+    exampleCode: 'HR',
+  },
+  {
+    key: 'employmentTypes',
+    title: 'Employment Types',
+    icon: 'file-text',
+    description: 'Full-time, contract, internship contracts',
+    group: 'recruitment',
+    exampleName: 'Full-Time Permanent',
+    exampleCode: 'FTP',
+  },
+  {
+    key: 'assessmentTitles',
+    title: 'Assessment & Round Titles',
+    icon: 'clipboard-check',
+    description: 'Master data for Assessment & Round titles (Coding, MCQ, SQL, Subjective)',
+    group: 'recruitment',
+    exampleName: 'SQL & Database Queries',
+    exampleCode: 'SQL',
+  },
 
   // Locations Group
-  { key: 'hiringLocations', title: 'Hiring Locations', icon: 'building', description: 'Enterprise office locations', group: 'locations' },
-  { key: 'testLocations', title: 'Test Locations', icon: 'clipboard-check', description: 'Assessment test centers & online proctoring', group: 'locations' },
-
-  // Assessment Group
-  { key: 'questionCategories', title: 'Question Categories', icon: 'inbox', description: 'Question bank domains & subjects', group: 'assessment' },
-  { key: 'questionDifficulty', title: 'Question Difficulty', icon: 'trending-up', description: 'Easy, Medium, Hard difficulty tiers', group: 'assessment' },
-  { key: 'technologyStack', title: 'Technology Stack', icon: 'grid', description: 'Tech stack frameworks & tools', group: 'assessment' },
-  { key: 'skills', title: 'Skills', icon: 'code-2', description: 'Technical & functional skills taxonomy', group: 'assessment' },
-
-  // Interview Group
-  { key: 'interviewTypes', title: 'Interview Types', icon: 'mic', description: 'Technical, HR, system design types', group: 'interview' },
-  { key: 'interviewRounds', title: 'Interview Rounds', icon: 'list', description: 'Sequential round definitions', group: 'interview' },
-
-  // System Group
-  { key: 'candidateStatuses', title: 'Candidate Statuses', icon: 'check-circle', description: 'Lifecycle pipeline status labels', group: 'system' },
-  { key: 'vacancyTemplates', title: 'Vacancy Templates', icon: 'file-text', description: 'Pre-configured vacancy setup blueprints', group: 'system' },
+  {
+    key: 'hiringLocations',
+    title: 'Hiring Locations',
+    icon: 'building',
+    description: 'Enterprise office locations',
+    group: 'locations',
+    exampleName: 'Mumbai HQ',
+    exampleCode: 'MHQ',
+  },
+  {
+    key: 'testLocations',
+    title: 'Test Locations',
+    icon: 'clipboard-check',
+    description: 'Assessment test centers & online proctoring',
+    group: 'locations',
+    exampleName: 'Pune Test Center',
+    exampleCode: 'PTC',
+  },
 ];
 
 export const ConfigurationPanel: React.FC = () => {
@@ -59,7 +96,6 @@ export const ConfigurationPanel: React.FC = () => {
       ...newRec,
       id: `${activeCategoryKey}-${Date.now()}`,
       updatedAt: new Date().toISOString().split('T')[0],
-      count: 0,
     };
     setDataStore((prev) => ({
       ...prev,
@@ -91,59 +127,47 @@ export const ConfigurationPanel: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Categorized Configuration Groups */}
-      <div className="flex flex-col gap-4">
-        {CONFIG_GROUPS.map((grp) => {
-          const groupCategories = CONFIG_CATEGORIES.filter((c) => c.group === grp.key);
+    <div className="flex flex-col gap-4 w-full">
+      {/* Category Navigation Bar */}
+      <div className="bg-[var(--surface-1)] border border-[var(--border-default)] p-2 rounded-[var(--radius-lg)] shadow-2xs flex items-center gap-2 overflow-x-auto scrollbar-step w-full">
+        {CONFIG_CATEGORIES.map((cat) => {
+          const isActive = cat.key === activeCategoryKey;
+          const count = (dataStore[cat.key] || []).length;
           return (
-            <div key={grp.key} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase font-mono tracking-wider">
-                  {grp.label}
-                </span>
-                <div className="flex-1 h-px bg-[var(--border-soft)]" />
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {groupCategories.map((cat) => {
-                  const isActive = cat.key === activeCategoryKey;
-                  const count = (dataStore[cat.key] || []).length;
-                  return (
-                    <button
-                      key={cat.key}
-                      type="button"
-                      onClick={() => setActiveCategoryKey(cat.key)}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-[12px] font-semibold transition-all cursor-pointer ${
-                        isActive
-                          ? 'bg-[var(--accent-indigo)] text-[var(--text-on-accent)] border-[var(--accent-indigo)] shadow-2xs font-bold'
-                          : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
-                      }`}
-                    >
-                      <Icon name={cat.icon as any} size="xs" />
-                      <span>{cat.title}</span>
-                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-[var(--surface-2)] text-[var(--text-tertiary)]'}`}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <button
+              key={cat.key}
+              type="button"
+              onClick={() => setActiveCategoryKey(cat.key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] text-[12.5px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                isActive
+                  ? 'bg-[var(--accent-indigo)] text-white shadow-2xs'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <Icon name={cat.icon as any} size="xs" />
+              <span>{cat.title}</span>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-[var(--surface-2)] text-[var(--text-tertiary)]'}`}>
+                {count}
+              </span>
+            </button>
           );
         })}
       </div>
 
-      {/* Active Master Table */}
-      <MasterTable
-        title={activeCategory.title}
-        description={activeCategory.description}
-        data={activeRecords}
-        onAdd={handleAdd}
-        onEdit={handleEdit}
-        onToggleStatus={handleToggleStatus}
-        onDelete={handleDelete}
-      />
+      {/* Master Data Table */}
+      <div className="w-full">
+        <MasterTable
+          title={activeCategory.title}
+          description={activeCategory.description}
+          data={activeRecords}
+          exampleName={activeCategory.exampleName}
+          exampleCode={activeCategory.exampleCode}
+          onAdd={handleAdd}
+          onEdit={handleEdit}
+          onToggleStatus={handleToggleStatus}
+          onDelete={handleDelete}
+        />
+      </div>
     </div>
   );
 };

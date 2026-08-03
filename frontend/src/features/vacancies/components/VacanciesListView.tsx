@@ -3,19 +3,22 @@
 import React, { useState } from 'react';
 import { Icon } from '@/design-system';
 import { CreateVacancyModal } from './CreateVacancyModal';
+import { VacancyDetailDialog } from './VacancyDetailDialog';
 import { VACANCIES_MOCK, type VacancyItem } from '@/mock/vacancies';
 
 /**
  * STEP Enterprise VacanciesListView
  *
  * Primary Vacancy List overview.
- * Clicking any vacancy navigates to its individual Hiring Hub (/dashboard/vacancies/[id]).
+ * Displays drive type badges (Walk-in Drive vs Direct Hiring) and opens Hiring Hub Workspace in a Modal Dialog.
  */
 export const VacanciesListView: React.FC = () => {
   const [vacancies, setVacancies] = useState<VacancyItem[]>(VACANCIES_MOCK);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [driveFilter, setDriveFilter] = useState<string>('All');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedVacancy, setSelectedVacancy] = useState<VacancyItem | null>(null);
 
   const filteredVacancies = vacancies.filter((v) => {
     const matchSearch =
@@ -25,7 +28,12 @@ export const VacanciesListView: React.FC = () => {
       v.hiringLocation.toLowerCase().includes(search.toLowerCase());
 
     const matchStatus = statusFilter === 'All' || v.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchDrive =
+      driveFilter === 'All' ||
+      (driveFilter === 'Walk-in Drive' && (v.driveType === 'Walk-in Drive' || !v.driveType)) ||
+      (driveFilter === 'Direct Hiring' && v.driveType === 'Direct / Sourced Hiring');
+
+    return matchSearch && matchStatus && matchDrive;
   });
 
   const handleCreateSave = (newVac: any) => {
@@ -79,106 +87,159 @@ export const VacanciesListView: React.FC = () => {
 
       {/* Filter & Search Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--surface-1)] border border-[var(--border-default)] p-3 rounded-[var(--radius-lg)] shadow-2xs">
-        <div className="relative flex items-center h-8 px-3 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] w-full sm:w-72">
+        <div className="relative flex items-center h-8 px-3 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] w-full sm:w-64">
           <Icon name="search" size="xs" className="text-[var(--text-tertiary)] shrink-0 mr-1.5" />
           <input
             type="search"
-            placeholder="Search vacancies by title, code, location..."
+            placeholder="Search vacancies by title, code..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-transparent outline-none text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)]"
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] font-semibold text-[var(--text-tertiary)]">Status:</span>
-          {['All', 'Open', 'Draft', 'Paused', 'Closed'].map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1 rounded-full text-[11.5px] font-semibold transition-all cursor-pointer ${
-                statusFilter === st
-                  ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* Drive Type Filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11.5px] font-semibold text-[var(--text-tertiary)] uppercase font-mono">Model:</span>
+            {[
+              { id: 'All', label: 'All Models' },
+              { id: 'Walk-in Drive', label: 'Walk-in Drives' },
+              { id: 'Direct Hiring', label: 'Direct Hiring' },
+            ].map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setDriveFilter(d.id)}
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all cursor-pointer border ${
+                  driveFilter === d.id
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-transparent hover:bg-[var(--surface-hover)]'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5 border-l border-[var(--border-default)] pl-3">
+            <span className="text-[11.5px] font-semibold text-[var(--text-tertiary)] uppercase font-mono">Status:</span>
+            {['All', 'Open', 'Draft', 'Paused', 'Closed'].map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setStatusFilter(st)}
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                  statusFilter === st
+                    ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Vacancy Cards List */}
       <div className="grid grid-cols-1 gap-4">
-        {filteredVacancies.map((v) => (
-          <div
-            key={v.id}
-            onClick={() => { window.location.href = `/dashboard/vacancies/${v.id}`; }}
-            className="group bg-[var(--surface-1)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)] rounded-[var(--radius-lg)] p-5 transition-all duration-150 cursor-pointer shadow-2xs hover:shadow-md flex flex-col gap-4"
-          >
-            {/* Top Info */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-xl bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] flex items-center justify-center font-bold shrink-0">
-                  <Icon name="briefcase" size="md" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-extrabold text-[var(--text-primary)] font-heading group-hover:text-[var(--accent-indigo)] transition-colors">
-                      {v.title}
-                    </h3>
-                    <span className="font-mono text-[11px] text-[var(--text-tertiary)]">({v.code})</span>
+        {filteredVacancies.map((v) => {
+          const driveType = v.driveType || 'Walk-in Drive';
+          const isDirect = driveType === 'Direct / Sourced Hiring';
+
+          return (
+            <div
+              key={v.id}
+              onClick={() => setSelectedVacancy(v)}
+              className="group bg-[var(--surface-1)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)] rounded-[var(--radius-lg)] p-5 transition-all duration-150 cursor-pointer shadow-2xs hover:shadow-md flex flex-col gap-4"
+            >
+              {/* Top Info */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <span className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 border ${
+                    isDirect
+                      ? 'bg-purple-50 text-purple-700 border-purple-200'
+                      : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/20'
+                  }`}>
+                    <Icon name={isDirect ? 'users' : 'briefcase'} size="md" />
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-extrabold text-[var(--text-primary)] font-heading group-hover:text-[var(--accent-indigo)] transition-colors">
+                        {v.title}
+                      </h3>
+                      <span className="font-mono text-[11px] text-[var(--text-tertiary)]">({v.code})</span>
+
+                      {/* Drive Type Badge */}
+                      <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full border font-mono ${
+                        isDirect
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      }`}>
+                        {driveType}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[12px] text-[var(--text-tertiary)] mt-1 flex-wrap font-sans">
+                      <span>Role: <strong>{v.role}</strong></span>
+                      <span>•</span>
+                      <span>Hiring Location: <strong>{v.hiringLocation}</strong></span>
+                      <span>•</span>
+                      <span>Exp: <strong>{v.experience}</strong></span>
+                      <span>•</span>
+                      <span className="font-semibold text-[var(--text-secondary)]">{v.openPositions} Open Positions</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-[12px] text-[var(--text-tertiary)] mt-0.5 flex-wrap">
-                    <span>{v.role}</span>
-                    <span>•</span>
-                    <span>{v.hiringLocation}</span>
-                    <span>•</span>
-                    <span>{v.experience}</span>
-                    <span>•</span>
-                    <span className="font-semibold text-[var(--text-secondary)]">{v.openPositions} Positions</span>
-                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border font-mono uppercase ${statusVariantMap[v.status]}`}>
+                    {v.status}
+                  </span>
+                  <Icon name="chevron-right" size="sm" className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-indigo)] transition-colors" />
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border font-mono uppercase ${statusVariantMap[v.status]}`}>
-                  {v.status}
-                </span>
-                <Icon name="chevron-right" size="sm" className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-indigo)] transition-colors" />
+              {/* Pipeline Stats Summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-[var(--border-default)] bg-[var(--surface-2)] -mx-5 -mb-5 px-5 py-3 rounded-b-[var(--radius-lg)]">
+                <div>
+                  <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Applied</span>
+                  <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.appliedCount}</span>
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Screening</span>
+                  <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.assessmentCount}</span>
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Interview</span>
+                  <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.interviewCount}</span>
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Offered</span>
+                  <span className="text-sm font-black font-mono text-[var(--status-info-text)]">{v.offeredCount}</span>
+                </div>
+                <div>
+                  <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Hired</span>
+                  <span className="text-sm font-black font-mono text-[var(--status-success-text)]">{v.joinedCount}</span>
+                </div>
               </div>
             </div>
-
-            {/* Pipeline Stats Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-[var(--border-default)] bg-[var(--surface-2)] -mx-5 -mb-5 px-5 py-3 rounded-b-[var(--radius-lg)]">
-              <div>
-                <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Applied</span>
-                <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.appliedCount}</span>
-              </div>
-              <div>
-                <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Screening</span>
-                <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.assessmentCount}</span>
-              </div>
-              <div>
-                <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Interview</span>
-                <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.interviewCount}</span>
-              </div>
-              <div>
-                <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Offered</span>
-                <span className="text-sm font-black font-mono text-[var(--status-info-text)]">{v.offeredCount}</span>
-              </div>
-              <div>
-                <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Hired</span>
-                <span className="text-sm font-black font-mono text-[var(--status-success-text)]">{v.joinedCount}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Modal */}
+      {/* Create Vacancy Wizard Modal */}
       <CreateVacancyModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSave={handleCreateSave} />
+
+      {/* Vacancy Hiring Hub Detail Dialog Modal */}
+      <VacancyDetailDialog
+        vacancy={selectedVacancy}
+        isOpen={!!selectedVacancy}
+        onClose={() => setSelectedVacancy(null)}
+      />
     </div>
   );
 };
+

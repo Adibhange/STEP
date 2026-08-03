@@ -66,7 +66,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
 
   return (
     <header
-      className="sticky top-0 z-30 h-13 flex items-center justify-between px-4 sm:px-6 bg-[var(--surface-1)] border-b border-[var(--border-default)]"
+      className="sticky top-0 z-30 h-[var(--header-height)] flex items-center justify-between px-4 sm:px-6 bg-[var(--surface-1)] border-b border-[var(--border-default)]"
       style={{ backdropFilter: 'blur(8px)' }}
     >
       {/* Left: Mobile Menu Trigger + Interactive Breadcrumb */}
