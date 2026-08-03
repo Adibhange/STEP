@@ -61,8 +61,18 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
     error: 'text-[var(--status-danger)]',
   };
 
-  // Determine breadcrumb structure based on pathname
-  const isCandidatePage = pathname?.includes('/dashboard/candidates');
+  // Route → breadcrumb label map
+  const BREADCRUMB_MAP: { match: string; label: string; href: string }[] = [
+    { match: '/dashboard/candidates', label: 'Candidates', href: '/dashboard/candidates' },
+    { match: '/dashboard/question-papers', label: 'Question Papers Library', href: '/dashboard/question-papers' },
+    { match: '/dashboard/users', label: 'Users & Access', href: '/dashboard/users' },
+    { match: '/dashboard/vacancies', label: 'Vacancies', href: '/dashboard/vacancies' },
+    { match: '/dashboard/reports', label: 'Reports', href: '/dashboard/reports' },
+    { match: '/dashboard/settings', label: 'Settings', href: '/dashboard/settings' },
+  ];
+
+  const activeCrumb = BREADCRUMB_MAP.find((b) => pathname?.includes(b.match));
+  const isDashboardRoot = !activeCrumb;
 
   return (
     <header
@@ -81,8 +91,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           <Icon name="menu" size="sm" />
         </button>
 
-        {/* Page breadcrumb with active back navigation */}
+        {/* Page breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1 sm:gap-2 text-[var(--type-body-md-size)] select-none">
+          {/* STEP root */}
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
@@ -92,27 +103,29 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           </button>
           <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60 shrink-0" />
 
+          {/* Dashboard crumb — dimmed if on a sub-page, bold if on root */}
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
             className={`text-[11px] sm:text-[13.5px] tracking-tight font-heading cursor-pointer transition-colors ${
-              isCandidatePage
-                ? 'font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:underline'
-                : 'font-bold text-[var(--text-primary)]'
+              isDashboardRoot
+                ? 'font-bold text-[var(--text-primary)]'
+                : 'font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:underline'
             }`}
           >
             Dashboard
           </button>
 
-          {isCandidatePage && (
+          {/* Dynamic sub-page crumb */}
+          {activeCrumb && (
             <>
               <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60 shrink-0" />
               <button
                 type="button"
-                onClick={() => router.push('/dashboard')}
-                className="text-[11px] sm:text-[13.5px] font-bold text-[var(--text-primary)] tracking-tight font-heading hover:text-[var(--accent-indigo)] cursor-pointer truncate max-w-[72px] sm:max-w-none"
+                onClick={() => router.push(activeCrumb.href)}
+                className="text-[11px] sm:text-[13.5px] font-bold text-[var(--text-primary)] tracking-tight font-heading hover:text-[var(--accent-indigo)] cursor-pointer truncate max-w-[100px] sm:max-w-none"
               >
-                Candidates
+                {activeCrumb.label}
               </button>
             </>
           )}
