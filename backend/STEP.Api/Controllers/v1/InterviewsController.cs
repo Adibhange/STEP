@@ -1,78 +1,47 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using STEP.Application.Common.Models;
-using STEP.Domain.Entities.Interview;
-using STEP.Infrastructure.Persistence;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using STEP.Application.Common.Models;
+using STEP.Application.Features.Interviews.Commands.PublishInterviewResult;
+using STEP.Application.Features.Interviews.Commands.ScheduleInterview;
+using STEP.Application.Features.Interviews.Commands.SubmitInterviewFeedback;
+using STEP.Application.Features.Interviews.Queries.GetInterviewById;
 
 namespace STEP.Api.Controllers.v1
 {
-    public class InterviewsController : BaseApiController
+    [Authorize(Policy = "Candidate.Approve")]
+    public class InterviewsController(ISender mediator) : BaseApiController
     {
-        private readonly StepDbContext _db;
-
-        public InterviewsController(StepDbContext db)
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById(int id)
         {
-            _db = db;
+            var result = await mediator.Send(new GetInterviewByIdQuery(id));
+            return Ok(ApiResponse<object>.Ok(result, "Interview retrieved successfully"));
         }
 
-        [HttpGet("schedules")]
-        public async Task<IActionResult> GetSchedules()
+        [HttpPost("schedule")]
+        public async Task<IActionResult> Schedule([FromBody] ScheduleInterviewCommand command)
         {
-            var schedules = await _db.InterviewSchedules
-                .Include(s => s.Progress)
-                .ThenInclude(p => p!.Candidate)
-                .Include(s => s.Progress)
-                .ThenInclude(p => p!.VacancyStage)
-                .Include(s => s.InterviewerUser)
-                .AsNoTracking()
-                .ToListAsync();
-
-            return Ok(ApiResponse<List<InterviewSchedule>>.Ok(schedules, "Scheduled interviews retrieved successfully"));
+            var result = await mediator.Send(command);
+            return Ok(ApiResponse<object>.Ok(result, "Interview scheduled successfully"));
         }
 
         [HttpPost("feedback")]
-        public async Task<IActionResult> SubmitFeedback([FromBody] SubmitFeedbackDto dto)
+        public async Task<IActionResult> SubmitFeedback([FromBody] SubmitInterviewFeedbackCommand command)
         {
-            var schedule = await _db.InterviewSchedules.FirstOrDefaultAsync(s => s.Id == dto.ScheduleId);
-            if (schedule == null)
-            {
-                return NotFound(ApiResponse<object>.Fail("Interview schedule not found", statusCode: 404));
-            }
+            await mediator.Send(command);
+            return Ok(ApiResponse<object>.Ok(new { }, "Interview scorecard submitted successfully"));
+        }
 
-            var feedback = new InterviewFeedback
-            {
-                ScheduleId = dto.ScheduleId,
-                TechnicalRating = dto.TechnicalRating,
-                CommunicationRating = dto.CommunicationRating,
-                ProblemSolvingRating = dto.ProblemSolvingRating,
-                CulturalFitRating = dto.CulturalFitRating,
-                Strengths = dto.Strengths,
-                Weaknesses = dto.Weaknesses,
-                Recommendation = dto.Recommendation,
-                Comments = dto.Comments,
-                CreatedBy = 1
-            };
-
-            _db.InterviewFeedbacks.Add(feedback);
-            await _db.SaveChangesAsync();
-
-            return Ok(ApiResponse<InterviewFeedback>.Ok(feedback, "Interview scorecard submitted successfully"));
+        [HttpPost("{id:int}/publish")]
+        public async Task<IActionResult> Publish(int id, [FromBody] PublishInterviewRequestBody body)
+        {
+            var publishedBy = CurrentUserId ?? throw new System.UnauthorizedAccessException("Unable to resolve the current user.");
+            var result = await mediator.Send(new PublishInterviewResultCommand(id, body.Passed, body.Remarks, publishedBy));
+            return Ok(ApiResponse<object>.Ok(result, "Interview result published successfully"));
         }
     }
 
-    public record SubmitFeedbackDto(
-        int ScheduleId,
-        int TechnicalRating,
-        int CommunicationRating,
-        int ProblemSolvingRating,
-        int CulturalFitRating,
-        string Strengths,
-        string Weaknesses,
-        string Recommendation,
-        string Comments
-    );
+    public record PublishInterviewRequestBody(bool Passed, string? Remarks);
 }

@@ -1,94 +1,51 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using STEP.Application.Common.Models;
-using STEP.Domain.Entities.Vacancy;
-using STEP.Infrastructure.Persistence;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using STEP.Application.Common.Models;
+using STEP.Application.Features.Vacancies.Commands.AssignQuestionPaperToRound;
+using STEP.Application.Features.Vacancies.Commands.CreateVacancy;
+using STEP.Application.Features.Vacancies.Queries.GetVacancies;
+using STEP.Application.Features.Vacancies.Queries.GetVacancyById;
 
 namespace STEP.Api.Controllers.v1
 {
-    public class VacanciesController : BaseApiController
+    [Authorize]
+    public class VacanciesController(ISender mediator) : BaseApiController
     {
-        private readonly StepDbContext _db;
-
-        public VacanciesController(StepDbContext db)
+        [HttpGet]
+        public async Task<IActionResult> GetVacancies(
+            [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20,
+            [FromQuery] string? search = null, [FromQuery] string? status = null)
         {
-            _db = db;
+            var result = await mediator.Send(new GetVacanciesQuery(pageIndex, pageSize, search, status));
+            var meta = new PaginationMeta { PageIndex = pageIndex, PageSize = pageSize, TotalCount = result.TotalCount };
+            return Ok(ApiResponse<object>.Ok(result.Items, "Vacancies retrieved successfully", meta));
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetVacancies([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetVacancyById(int id)
         {
-            var query = _db.Vacancies
-                .Include(v => v.Location)
-                .Include(v => v.VacancyStages)
-                .AsNoTracking();
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                query = query.Where(v => v.Title.Contains(search) || v.VacancyCode.Contains(search) || v.Department.Contains(search));
-            }
-
-            var totalCount = await query.CountAsync();
-            var items = await query.OrderByDescending(v => v.Id)
-                .Skip((pageIndex - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            var meta = new PaginationMeta { PageIndex = pageIndex, PageSize = pageSize, TotalCount = totalCount };
-            return Ok(ApiResponse<List<Vacancy>>.Ok(items, "Vacancies retrieved successfully", meta));
+            var vacancy = await mediator.Send(new GetVacancyByIdQuery(id));
+            return Ok(ApiResponse<object>.Ok(vacancy, "Vacancy retrieved successfully"));
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateVacancy([FromBody] CreateVacancyDto dto)
+        [Authorize(Policy = "Vacancy.Create")]
+        public async Task<IActionResult> CreateVacancy([FromBody] CreateVacancyCommand command)
         {
-            var vacancy = new Vacancy
-            {
-                VacancyCode = "VAC-" + System.DateTime.UtcNow.Ticks.ToString()[^6..],
-                Title = dto.Title,
-                Department = dto.Department,
-                LocationId = dto.LocationId,
-                MinExperienceYears = dto.MinExperienceYears,
-                MaxExperienceYears = dto.MaxExperienceYears,
-                OpeningsCount = dto.OpeningsCount,
-                Status = "Published",
-                TargetClosureDate = dto.TargetClosureDate,
-                CreatedBy = 1
-            };
+            var vacancy = await mediator.Send(command);
+            return Ok(ApiResponse<object>.Ok(vacancy, "Vacancy created successfully"));
+        }
 
-            int order = 1;
-            foreach (var stage in dto.Stages)
-            {
-                vacancy.VacancyStages.Add(new VacancyStage
-                {
-                    StageOrder = order++,
-                    StageName = stage.StageName,
-                    StageType = stage.StageType,
-                    PassMarkPercentage = stage.PassMarkPercentage,
-                    IsMandatory = stage.IsMandatory,
-                    CreatedBy = 1
-                });
-            }
-
-            _db.Vacancies.Add(vacancy);
-            await _db.SaveChangesAsync();
-
-            return Ok(ApiResponse<Vacancy>.Ok(vacancy, "Job Vacancy created with dynamic pipeline stages"));
+        [HttpPost("pipeline-rounds/{roundId:int}/question-paper")]
+        [Authorize(Policy = "Exam.Manage")]
+        public async Task<IActionResult> AssignQuestionPaperToRound(int roundId, [FromBody] AssignQuestionPaperRequestBody body)
+        {
+            await mediator.Send(new AssignQuestionPaperToRoundCommand(roundId, body.VacancyQuestionPaperId));
+            return Ok(ApiResponse<object>.Ok(new { }, "Question paper linked to pipeline round"));
         }
     }
 
-    public record CreateVacancyDto(
-        string Title,
-        string Department,
-        int LocationId,
-        decimal MinExperienceYears,
-        decimal MaxExperienceYears,
-        int OpeningsCount,
-        System.DateTime TargetClosureDate,
-        List<VacancyStageDto> Stages
-    );
-
-    public record VacancyStageDto(string StageName, string StageType, decimal? PassMarkPercentage, bool IsMandatory);
+    public record AssignQuestionPaperRequestBody(int VacancyQuestionPaperId);
 }

@@ -1,11 +1,42 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-export const ermsApi = createApi({
-  reducerPath: 'ermsApi',
+/**
+ * Matches STEP.Application.Common.Models.ApiResponse<T> exactly. ASP.NET Core's default
+ * System.Text.Json policy serializes all property names as camelCase — every field here (and in
+ * AuthResultData below) MUST be camelCase to match the real wire format, not the PascalCase C#
+ * property names. Mismatched casing here fails silently (TS treats missing properties as
+ * `undefined`, not a compile error) and previously broke login while still reporting success.
+ */
+export interface ApiEnvelope<T> {
+  success: boolean;
+  statusCode: number;
+  message: string;
+  data: T;
+  errors: string[] | null;
+  correlationId: string;
+}
+
+export interface AuthResultData {
+  accessToken: string;
+  expiresAtUtc: string;
+  refreshToken: string;
+  user: {
+    id: number;
+    employeeCode: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    permissions: string[];
+  };
+}
+
+export const stepApi = createApi({
+  reducerPath: 'stepApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:5000/api/v1', // default API port
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1',
     prepareHeaders: (headers) => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('erms_token') : null;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('step_token') : null;
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }
@@ -14,14 +45,14 @@ export const ermsApi = createApi({
   }),
   tagTypes: ['Vacancies', 'Candidates', 'Schedules', 'Reports'],
   endpoints: (builder) => ({
-    login: builder.mutation({
+    login: builder.mutation<ApiEnvelope<AuthResultData>, { email: string; password: string }>({
       query: (credentials) => ({
         url: '/auth/login',
         method: 'POST',
         body: credentials,
       }),
     }),
-    directorPinLogin: builder.mutation({
+    directorPinLogin: builder.mutation<ApiEnvelope<AuthResultData>, { pin: string }>({
       query: (data) => ({
         url: '/auth/director-pin-login',
         method: 'POST',
@@ -101,4 +132,4 @@ export const {
   useSendHeartbeatMutation,
   useSubmitExamMutation,
   useGetRecruitmentFunnelQuery,
-} = ermsApi;
+} = stepApi;

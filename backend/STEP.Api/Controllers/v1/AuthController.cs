@@ -1,75 +1,38 @@
 using System.Threading.Tasks;
-using STEP.Application.Common.Interfaces;
-using STEP.Application.Common.Models;
-using STEP.Domain.Entities.Staff;
-using STEP.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using STEP.Application.Common.Models;
+using STEP.Application.Features.Auth.DirectorPin;
+using STEP.Application.Features.Auth.Login;
+using STEP.Application.Features.Auth.RefreshToken;
 
 namespace STEP.Api.Controllers.v1
 {
-    public class AuthController : BaseApiController
+    public class AuthController(ISender mediator) : BaseApiController
     {
-        private readonly StepDbContext _db;
-        private readonly IJwtProvider _jwtProvider;
-
-        public AuthController(StepDbContext db, IJwtProvider jwtProvider)
-        {
-            _db = db;
-            _jwtProvider = jwtProvider;
-        }
-
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequestBody body)
         {
-            var user = await _db.Users
-                .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Role)
-                .FirstOrDefaultAsync(u => u.Email == request.Email);
-
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            {
-                return Unauthorized(ApiResponse<object>.Fail("Invalid credentials", statusCode: 401));
-            }
-
-            if (!user.IsActive)
-            {
-                return BadRequest(ApiResponse<object>.Fail("User account is inactive. Please contact HR Administrator."));
-            }
-
-            var roles = new[] { "HR", "Director", "Administrator" };
-            var permissions = new[] { "Vacancy.View", "Vacancy.Create", "Candidate.View", "Candidate.Approve", "Exam.Manage", "Report.View" };
-
-            var (accessToken, refreshToken) = _jwtProvider.GenerateTokens(user, roles, permissions);
-
-            return Ok(ApiResponse<object>.Ok(new
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                User = new
-                {
-                    user.Id,
-                    user.EmployeeCode,
-                    user.FirstName,
-                    user.LastName,
-                    user.Email
-                }
-            }, "Authentication successful"));
+            var result = await mediator.Send(new LoginCommand(body.Email, body.Password, HttpContext.Connection.RemoteIpAddress?.ToString()));
+            return Ok(ApiResponse<object>.Ok(result, "Authentication successful"));
         }
 
         [HttpPost("director-pin-login")]
-        public async Task<IActionResult> DirectorPinLogin([FromBody] DirectorPinRequest request)
+        public async Task<IActionResult> DirectorPinLogin([FromBody] DirectorPinRequestBody body)
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId);
-            if (user == null || string.IsNullOrEmpty(user.PinHash) || !BCrypt.Net.BCrypt.Verify(request.Pin, user.PinHash))
-            {
-                return Unauthorized(ApiResponse<object>.Fail("Invalid Director Authorization PIN", statusCode: 401));
-            }
+            var result = await mediator.Send(new DirectorPinLoginCommand(body.Pin, HttpContext.Connection.RemoteIpAddress?.ToString()));
+            return Ok(ApiResponse<object>.Ok(result, "Director PIN verified successfully"));
+        }
 
-            return Ok(ApiResponse<object>.Ok(new { Verified = true, SessionToken = System.Guid.NewGuid().ToString("N") }, "Director PIN verified successfully"));
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequestBody body)
+        {
+            var result = await mediator.Send(new RefreshTokenCommand(body.RefreshToken, HttpContext.Connection.RemoteIpAddress?.ToString()));
+            return Ok(ApiResponse<object>.Ok(result, "Token refreshed successfully"));
         }
     }
 
-    public record LoginRequest(string Email, string Password);
-    public record DirectorPinRequest(int UserId, string Pin);
+    public record LoginRequestBody(string Email, string Password);
+    public record DirectorPinRequestBody(string Pin);
+    public record RefreshTokenRequestBody(string RefreshToken);
 }

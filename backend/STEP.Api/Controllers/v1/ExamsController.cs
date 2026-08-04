@@ -1,149 +1,85 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using STEP.Application.Common.Models;
-using STEP.Domain.Entities.Exam;
-using STEP.Infrastructure.Persistence;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using STEP.Application.Common.Models;
+using STEP.Application.Features.Exams.Commands.EvaluateCandidateAnswer;
+using STEP.Application.Features.Exams.Commands.PublishAssessmentResult;
+using STEP.Application.Features.Exams.Commands.SaveExamAnswer;
+using STEP.Application.Features.Exams.Commands.StartExamSession;
+using STEP.Application.Features.Exams.Commands.SubmitExam;
+using STEP.Application.Features.Exams.Queries.GetExamEvaluationView;
+using STEP.Application.Features.Exams.Queries.ResumeExamSession;
 
 namespace STEP.Api.Controllers.v1
 {
-    public class ExamsController : BaseApiController
+    /// <summary>
+    /// Candidate-facing endpoints (start/resume/answer/submit) are intentionally anonymous —
+    /// candidates authenticate with CandidateCode + Passcode, not a staff JWT. Evaluation/publish
+    /// endpoints are staff-only.
+    /// </summary>
+    public class ExamsController(ISender mediator) : BaseApiController
     {
-        private readonly StepDbContext _db;
-
-        public ExamsController(StepDbContext db)
+        [HttpPost("start")]
+        public async Task<IActionResult> Start([FromBody] StartExamSessionRequestBody body)
         {
-            _db = db;
+            var testSource = string.IsNullOrWhiteSpace(body.TestSource) ? "Home" : body.TestSource;
+            var result = await mediator.Send(new StartExamSessionCommand(
+                body.CandidateCode, body.Passcode, testSource,
+                HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString()));
+            return Ok(ApiResponse<object>.Ok(result, "Assessment session ready"));
         }
 
-        [HttpGet("session/{token}")]
-        public async Task<IActionResult> GetExamSession(string token)
+        [HttpGet("resume/{sessionToken}")]
+        public async Task<IActionResult> Resume(string sessionToken)
         {
-            var session = await _db.ExamSessions
-                .Include(s => s.Candidate)
-                .FirstOrDefaultAsync(s => s.SessionToken == token);
-
-            if (session == null)
-            {
-                return NotFound(ApiResponse<object>.Fail("Invalid assessment session token", statusCode: 404));
-            }
-
-            if (session.ScheduledExpiryTime < DateTime.UtcNow)
-            {
-                session.Status = "AutoSubmitted";
-                await _db.SaveChangesAsync();
-                return BadRequest(ApiResponse<object>.Fail("Assessment session has expired."));
-            }
-
-            if (session.Status == "Created")
-            {
-                session.Status = "InProgress";
-                session.StartTime = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-            }
-
-            var questions = await _db.QuestionBanks
-                .Include(q => q.Options)
-                .AsNoTracking()
-                .Take(20)
-                .Select(q => new
-                {
-                    q.Id,
-                    q.QuestionType,
-                    q.Title,
-                    q.BodyText,
-                    q.CodeTemplate,
-                    q.Marks,
-                    Options = q.Options.Select(o => new { o.Id, o.OptionText })
-                })
-                .ToListAsync();
-
-            return Ok(ApiResponse<object>.Ok(new
-            {
-                SessionToken = session.SessionToken,
-                session.CandidateId,
-                CandidateName = $"{session.Candidate?.FirstName} {session.Candidate?.LastName}",
-                session.ScheduledExpiryTime,
-                session.Status,
-                Questions = questions
-            }, "Exam session loaded successfully. Anti-cheating proctoring active."));
+            var result = await mediator.Send(new ResumeExamSessionQuery(sessionToken));
+            return Ok(ApiResponse<object>.Ok(result, "Assessment session resumed"));
         }
 
-        [HttpPost("heartbeat")]
-        public async Task<IActionResult> ProcessHeartbeat([FromBody] HeartbeatDto dto)
+        [HttpPost("answers")]
+        public async Task<IActionResult> SaveAnswer([FromBody] SaveExamAnswerCommand command)
         {
-            var session = await _db.ExamSessions
-                .Include(s => s.Violations)
-                .FirstOrDefaultAsync(s => s.SessionToken == dto.SessionToken);
-
-            if (session == null)
-            {
-                return NotFound(ApiResponse<object>.Fail("Invalid session", statusCode: 404));
-            }
-
-            if (dto.ViolationType != null)
-            {
-                decimal weight = dto.ViolationType switch
-                {
-                    "TabSwitch" => 1.5m,
-                    "WindowBlur" => 1.0m,
-                    "CopyAttempt" => 2.0m,
-                    "PasteAttempt" => 2.0m,
-                    "DevToolsOpen" => 3.0m,
-                    _ => 0.5m
-                };
-
-                session.Violations.Add(new ExamViolation
-                {
-                    ViolationType = dto.ViolationType,
-                    SeverityWeight = weight,
-                    Details = dto.Details ?? string.Empty,
-                    Timestamp = DateTime.UtcNow,
-                    CreatedBy = 1
-                });
-
-                session.RiskScore += weight;
-
-                if (session.RiskScore >= 10.0m)
-                {
-                    session.Status = "Disqualified";
-                }
-            }
-
-            await _db.SaveChangesAsync();
-
-            return Ok(ApiResponse<object>.Ok(new
-            {
-                session.RiskScore,
-                session.Status,
-                IsDisqualified = session.Status == "Disqualified"
-            }, "Heartbeat logged successfully"));
+            await mediator.Send(command);
+            return Ok(ApiResponse<object>.Ok(new { }, "Answer saved"));
         }
 
         [HttpPost("submit")]
-        public async Task<IActionResult> SubmitExam([FromBody] SubmitExamDto dto)
+        public async Task<IActionResult> Submit([FromBody] SubmitExamRequestBody body)
         {
-            var session = await _db.ExamSessions.FirstOrDefaultAsync(s => s.SessionToken == dto.SessionToken);
-            if (session == null)
-            {
-                return NotFound(ApiResponse<object>.Fail("Invalid session token", statusCode: 404));
-            }
+            var result = await mediator.Send(new SubmitExamCommand(body.SessionToken));
+            return Ok(ApiResponse<object>.Ok(result, "Assessment submitted successfully"));
+        }
 
-            session.Status = "Submitted";
-            session.EndTime = DateTime.UtcNow;
-            session.FinalResult = "Pass"; // Evaluated by auto-grader
-            session.TotalObtainedMarks = 18.5m;
+        [HttpGet("{sessionId:int}/evaluation")]
+        [Authorize(Policy = "Exam.Manage")]
+        public async Task<IActionResult> GetEvaluation(int sessionId)
+        {
+            var result = await mediator.Send(new GetExamEvaluationViewQuery(sessionId));
+            return Ok(ApiResponse<object>.Ok(result, "Evaluation view retrieved"));
+        }
 
-            await _db.SaveChangesAsync();
+        [HttpPost("evaluate")]
+        [Authorize(Policy = "Exam.Manage")]
+        public async Task<IActionResult> EvaluateAnswer([FromBody] EvaluateAnswerRequestBody body)
+        {
+            var evaluatedBy = CurrentUserId ?? throw new System.UnauthorizedAccessException("Unable to resolve the current user.");
+            await mediator.Send(new EvaluateCandidateAnswerCommand(body.CandidateExamAnswerId, body.MarksObtained, body.EvaluatorRemarks, evaluatedBy));
+            return Ok(ApiResponse<object>.Ok(new { }, "Answer evaluated"));
+        }
 
-            return Ok(ApiResponse<object>.Ok(new { session.TotalObtainedMarks, session.FinalResult }, "Assessment submitted successfully. Thank you!"));
+        [HttpPost("{sessionId:int}/publish")]
+        [Authorize(Policy = "Exam.Manage")]
+        public async Task<IActionResult> Publish(int sessionId, [FromBody] PublishRequestBody body)
+        {
+            var publishedBy = CurrentUserId ?? throw new System.UnauthorizedAccessException("Unable to resolve the current user.");
+            var result = await mediator.Send(new PublishAssessmentResultCommand(sessionId, body.Remarks, publishedBy));
+            return Ok(ApiResponse<object>.Ok(result, "Assessment result published and locked"));
         }
     }
 
-    public record HeartbeatDto(string SessionToken, string? ViolationType, string? Details);
-    public record SubmitExamDto(string SessionToken, List<AnswerItemDto> Answers);
-    public record AnswerItemDto(int QuestionId, string? SubmittedText, string? SelectedOptionIds);
+    public record StartExamSessionRequestBody(string CandidateCode, string Passcode, string? TestSource);
+    public record SubmitExamRequestBody(string SessionToken);
+    public record EvaluateAnswerRequestBody(int CandidateExamAnswerId, decimal MarksObtained, string? EvaluatorRemarks);
+    public record PublishRequestBody(string? Remarks);
 }

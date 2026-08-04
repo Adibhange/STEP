@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using STEP.Api.Middleware;
+using STEP.Application;
+using STEP.Application.Common.Interfaces;
+using STEP.Infrastructure;
 using STEP.Persistence;
 
 // 1. Load Backend .env File
@@ -49,6 +53,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             errorNumbersToAdd: null);
     });
 });
+builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+
+// 3b. Application (MediatR/CQRS, FluentValidation, AutoMapper) & Infrastructure (JWT, password hashing)
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure();
 
 // 4. Read JWT Environment Variable Placeholders
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
@@ -78,7 +87,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Granular RBAC: policies gate on the "permission" claim baked into the JWT
+    // (see STEP.Infrastructure.Security.JwtTokenService), sourced from RolePermissions.
+    options.AddPolicy("User.Manage", policy => policy.RequireClaim("permission", "User.Manage"));
+    options.AddPolicy("MasterData.Manage", policy => policy.RequireClaim("permission", "MasterData.Manage"));
+    options.AddPolicy("Vacancy.Create", policy => policy.RequireClaim("permission", "Vacancy.Create"));
+    // Question paper publishing/import reuses Exam.Manage — no dedicated permission is seeded for it.
+    options.AddPolicy("Exam.Manage", policy => policy.RequireClaim("permission", "Exam.Manage"));
+    options.AddPolicy("Candidate.View", policy => policy.RequireClaim("permission", "Candidate.View"));
+    options.AddPolicy("Candidate.Approve", policy => policy.RequireClaim("permission", "Candidate.Approve"));
+    options.AddPolicy("Report.View", policy => policy.RequireClaim("permission", "Report.View"));
+});
 
 // 5. CORS Policy
 builder.Services.AddCors(options =>
@@ -93,16 +114,16 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 7. PHASE 0 STARTUP VERIFICATION ROUTINE (SQL Server & Environment Check via .env)
+// 7. STARTUP VERIFICATION ROUTINE (SQL Server & Environment Check via .env)
 using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
     logger.LogInformation("=========================================================================");
-    logger.LogInformation("STEP Enterprise ATS — Phase 0 Environment & SQL Connectivity Check");
+    logger.LogInformation("STEP Enterprise ATS — Phase 1+2 Environment & SQL Connectivity Check");
     logger.LogInformation("Connection Provider: Environment Variable (.env)");
-    logger.LogInformation("Target Database: InterviewTestPortal @ 192.168.2.5");
+    logger.LogInformation("Target Database: InterviewTestPortal @ 192.168.2.5 (schemas: staff/master/audit/vacancy/question)");
     logger.LogInformation("=========================================================================");
 
     try
@@ -114,8 +135,8 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("✅ Environment variables loaded successfully from .env file.");
             logger.LogInformation("✅ SQL Server connection successful using DB_CONNECTION environment variable!");
             logger.LogInformation("✅ Database 'InterviewTestPortal' is reachable and accessible.");
-            logger.LogInformation("✅ Existing database schema left 100% untouched (No scaffold/inspection).");
-            logger.LogInformation("✅ ApplicationDbContext is empty & ready for Code First development in Phase 1.");
+            logger.LogInformation("✅ STEP tables live under their own per-domain schemas — no pre-existing tables touched.");
+            logger.LogInformation("✅ Phase 1 (Identity, RBAC, Master Data) is active.");
         }
         else
         {
@@ -138,6 +159,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();

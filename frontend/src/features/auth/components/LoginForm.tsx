@@ -10,6 +10,18 @@ import React, {
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/design-system';
 import { useAppDispatch, notifySuccess, notifyError, notifyInfo } from '@/store';
+import { useLoginMutation, useDirectorPinLoginMutation, type ApiEnvelope, type AuthResultData } from '@/store/services/api';
+
+function extractErrorMessage(err: unknown, fallback: string): string {
+  const body = (err as { data?: Partial<ApiEnvelope<unknown>> } | undefined)?.data;
+  return body?.message || fallback;
+}
+
+function persistSession(payload: AuthResultData) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('step_token', payload.accessToken);
+  localStorage.setItem('step_refresh_token', payload.refreshToken);
+}
 
 type AuthMode = 'standard' | 'director';
 
@@ -179,6 +191,8 @@ const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComp
 export const LoginForm: React.FC = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const [login] = useLoginMutation();
+  const [directorPinLogin] = useDirectorPinLoginMutation();
   const [spotlightPos, setSpotlightPos] = useState({ x: 0, y: 0 });
   const [mode, setMode] = useState<AuthMode>('standard');
 
@@ -232,7 +246,7 @@ export const LoginForm: React.FC = () => {
     setTimeout(() => setShake(false), 520);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const eErr = validateEmail();
     const pErr = validatePassword();
@@ -246,28 +260,40 @@ export const LoginForm: React.FC = () => {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await login({ email: email.value, password: password.value }).unwrap();
+      persistSession(res.data);
       dispatch(notifySuccess({ title: 'Welcome back', description: 'Redirecting to your workspace…' }));
-      setTimeout(() => router.push('/dashboard'), 800);
-    }, 1600);
+      router.push('/dashboard');
+    } catch (err) {
+      triggerShake();
+      dispatch(notifyError({ title: 'Authentication Failed', description: extractErrorMessage(err, 'Invalid email or password.') }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePinComplete = useCallback(
-    (v: string) => {
+    async (v: string) => {
       if (v.length < 6) {
         triggerShake();
         dispatch(notifyError({ title: 'Invalid PIN', description: 'Please enter all 6 digits of your security PIN.' }));
         return;
       }
       setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
+      try {
+        const res = await directorPinLogin({ pin: v }).unwrap();
+        persistSession(res.data);
         dispatch(notifySuccess({ title: 'Director clearance verified', description: 'Accessing governance workspace…' }));
-        setTimeout(() => router.push('/dashboard'), 800);
-      }, 1500);
+        router.push('/dashboard');
+      } catch (err) {
+        triggerShake();
+        dispatch(notifyError({ title: 'Invalid PIN', description: extractErrorMessage(err, 'Invalid Director security PIN.') }));
+      } finally {
+        setLoading(false);
+      }
     },
-    [dispatch, router]
+    [dispatch, router, directorPinLogin]
   );
 
   const handleForgot = () => {
