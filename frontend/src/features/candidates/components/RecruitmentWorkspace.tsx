@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/design-system';
 import { WorkspaceHeader, type WorkspaceHeaderTab } from '@/features/shared/workspace-header/WorkspaceHeader';
 import { ActivityFeed } from '@/features/shared/activity-feed/ActivityFeed';
+import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 
 export interface RecruitmentWorkspaceProps {
   candidateId?: string;
@@ -137,49 +138,13 @@ export const RecruitmentWorkspace: React.FC<RecruitmentWorkspaceProps> = ({
 
         {/* ASSESSMENT TAB */}
         {activeTab === 'assessment' && (
-          <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-6 shadow-2xs flex flex-col gap-5">
-            <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-              <h3 className="text-[15px] font-extrabold text-[var(--text-primary)] font-heading">
-                Assessment Operational Workspace
-              </h3>
-              <span className="text-[11.5px] font-mono font-bold text-[var(--status-success-text)] bg-[var(--status-success-bg)] px-2.5 py-0.5 rounded-full border border-[var(--status-success)]">
-                Passed (92%)
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[12.5px]">
-              <div className="p-3 bg-[var(--surface-2)] rounded-[var(--radius-md)] border border-[var(--border-soft)]">
-                <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase block">Question Paper</span>
-                <span className="font-bold text-[var(--text-primary)] mt-1 block">React JS - 3 Years</span>
-              </div>
-              <div className="p-3 bg-[var(--surface-2)] rounded-[var(--radius-md)] border border-[var(--border-soft)]">
-                <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase block">Attempts</span>
-                <span className="font-bold text-[var(--text-primary)] mt-1 block">1 Attempt (18 Jul 2026)</span>
-              </div>
-              <div className="p-3 bg-[var(--surface-2)] rounded-[var(--radius-md)] border border-[var(--border-soft)]">
-                <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase block">Violations Log</span>
-                <span className="font-bold text-[var(--status-success-text)] mt-1 block">0 Violations (Clean)</span>
-              </div>
-              <div className="p-3 bg-[var(--surface-2)] rounded-[var(--radius-md)] border border-[var(--border-soft)]">
-                <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase block">Evaluation Mode</span>
-                <span className="font-bold text-[var(--text-primary)] mt-1 block">Auto & Manual Verified</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <h4 className="text-[13px] font-bold text-[var(--text-primary)] font-heading">Section Performance Breakdown</h4>
-              <div className="space-y-2 text-[12px]">
-                <div className="flex justify-between items-center p-2.5 bg-[var(--surface-2)] rounded-md">
-                  <span>MCQ Section (React & TypeScript)</span>
-                  <span className="font-mono font-bold text-[var(--status-success-text)]">48 / 50</span>
-                </div>
-                <div className="flex justify-between items-center p-2.5 bg-[var(--surface-2)] rounded-md">
-                  <span>Coding Challenge (Custom Hook & State Sync)</span>
-                  <span className="font-mono font-bold text-[var(--status-success-text)]">44 / 50</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <CandidateAssessmentEvaluationView
+            candidateId={candidateId}
+            candidateName="Anjali Sharma"
+            candidateCode="CND-2026-1042"
+            vacancyTitle="Senior React / Next.js Developer"
+            onBack={() => handleTabChange('overview')}
+          />
         )}
 
         {/* INTERVIEW TAB */}

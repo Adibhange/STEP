@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
+import { toast } from '@/design-system/feedback/toast';
 import { generateMockCandidates, distributeRandomABFlows } from '../utils/candidateGenerator';
 import { CandidateBulkItem } from '../types/vacancy.types';
 
@@ -45,6 +46,9 @@ export const CandidateBulkFlowAssignment: React.FC = () => {
   const handleRandomABSplitAll = () => {
     const updated = distributeRandomABFlows(candidates);
     setCandidates(updated);
+    toast.success('Random A/B Split Applied', {
+      description: 'Flow tracks randomly distributed 50/50 across candidates.',
+    });
   };
 
   return (

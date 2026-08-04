@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Icon } from '@/design-system';
+import { toast } from '@/design-system/feedback/toast';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { MASTER_DATA } from '@/mock/masters';
 import { USERS_MOCK } from '@/mock/users';
@@ -201,7 +202,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
 
   const handleRemoveRoundFromFlow = (flowId: string, roundIdx: number) => {
     if (driveType === 'Walk-in Drive' && roundIdx === 0) {
-      alert('Round 1 (Aptitude) is fixed and mandatory for Walk-in Drives.');
+      toast.warning('Mandatory Round', { description: 'Round 1 (Aptitude) is fixed and mandatory for Walk-in Drives.' });
       return;
     }
     setFlowVersions((prev) =>
@@ -215,7 +216,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
 
   const handleUpdateRound = (flowId: string, roundIdx: number, field: keyof PipelineRound, val: any) => {
     if (driveType === 'Walk-in Drive' && roundIdx === 0 && field === 'type' && val !== 'Aptitude') {
-      alert('Round 1 type must remain Aptitude for Walk-in Drives.');
+      toast.warning('Fixed Round Type', { description: 'Round 1 type must remain Aptitude for Walk-in Drives.' });
       return;
     }
     setFlowVersions((prev) =>
@@ -300,6 +301,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
   };
 
   const handleDownloadTemplate = async () => {
+    toast.info('Downloading Template', { description: 'Generating assessment pattern Excel template...' });
     await downloadAssessmentExcelTemplate(sections, grandTotalQuestions, grandTotalMarks);
   };
 
@@ -313,11 +315,13 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
         setTimeout(() => {
           setIsUploading(false);
           setUploadSuccess(true);
+          toast.success('Excel File Loaded', { description: `${file.name} successfully parsed into question sections.` });
         }, 800);
       } catch (err) {
         setTimeout(() => {
           setIsUploading(false);
           setUploadSuccess(true);
+          toast.success('Excel File Processed', { description: `${file.name} imported.` });
         }, 800);
       }
     }
@@ -345,7 +349,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
 
   const handleNext = () => {
     if (step === 1 && !title.trim()) {
-      alert('Please enter a Vacancy Title.');
+      toast.error('Vacancy Title Required', { description: 'Please enter a valid title for the vacancy before proceeding.' });
       return;
     }
     if (step < 4) setStep((s) => (s + 1) as any);
@@ -393,6 +397,10 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
         : undefined,
       status,
       closingDate: '2026-08-30',
+    });
+
+    toast.success('Vacancy Published', {
+      description: `"${title || 'New Vacancy'}" created successfully with ${openPositions} open position(s).`,
     });
     onClose();
   };

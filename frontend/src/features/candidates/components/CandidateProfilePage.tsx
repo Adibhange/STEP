@@ -3,6 +3,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/design-system';
+import { toast } from '@/design-system/feedback/toast';
+import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
+import { ScheduleTestModal } from '@/features/assessments/components/ScheduleTestModal';
 
 export interface StageAttempt {
   attempt: number;
@@ -333,6 +336,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [assignMode, setAssignMode] = useState('Google Meet');
   const [assignSuccessToast, setAssignSuccessToast] = useState(false);
 
+  // Candidate Assessment Evaluation & Schedule Test Modal State
+  const [showAssessmentEvaluationModal, setShowAssessmentEvaluationModal] = useState(false);
+  const [showScheduleTestModal, setShowScheduleTestModal] = useState(false);
+
   // Options for Dropdowns
   const directorOptions = [
     { value: 'Rajesh Sharma (Director of Engineering)', label: 'Rajesh Sharma (Director of Engineering)' },
@@ -455,8 +462,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const handleShare = () => {
     if (typeof window !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
-      setShowShareToast(true);
-      setTimeout(() => setShowShareToast(false), 2500);
+      toast.success('Link Copied', { description: 'Candidate profile link copied to clipboard.' });
     }
   };
 
@@ -466,8 +472,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   };
 
   const fireValidationToast = (msg: string) => {
-    setProfileValidationToast(msg);
-    setTimeout(() => setProfileValidationToast(null), 3000);
+    toast.error('Validation Error', { description: msg });
   };
 
   const handleSaveProfileEdit = (e: React.FormEvent) => {
@@ -535,14 +540,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     // All validations passed — save
     setCandidate({ ...editProfileForm });
     setShowEditProfileModal(false);
-    setProfileSaveSuccessToast(true);
-    setTimeout(() => setProfileSaveSuccessToast(false), 2500);
+    toast.success('Profile Saved', { description: 'Candidate profile details updated successfully.' });
   };
 
   const handleDeleteDocument = (docId: number, docName: string) => {
     setDocumentsData((prev) => prev.filter((d) => d.id !== docId));
-    setDocDeletedToast(`"${docName}" deleted successfully.`);
-    setTimeout(() => setDocDeletedToast(null), 2500);
+    toast.info('Document Deleted', { description: `"${docName}" removed from candidate profile.` });
   };
 
   const handleRolloutOffer = (e: React.FormEvent) => {
@@ -564,8 +567,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       )
     );
     setShowOfferModal(false);
-    setOfferSuccessToast(true);
-    setTimeout(() => setOfferSuccessToast(false), 3000);
+    toast.success('Offer Letter Rolled Out', { description: `Official offer dispatched to ${offerCandidateEmail}.` });
   };
 
   const handleSaveFeedback = (e: React.FormEvent) => {
@@ -634,8 +636,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     }
 
     setSelectedFeedbackStage(null);
-    setFeedbackSuccessToast(true);
-    setTimeout(() => setFeedbackSuccessToast(false), 2500);
+    toast.success('Feedback Saved', { description: 'Interviewer feedback and stage decision recorded.' });
   };
 
   const handleSaveAssign = (e: React.FormEvent) => {
@@ -662,62 +663,11 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     );
 
     setSelectedAssignStage(null);
-    setAssignSuccessToast(true);
-    setTimeout(() => setAssignSuccessToast(false), 2500);
+    toast.success('Interview Scheduled', { description: `Assigned ${assignedInterviewer} for ${assignDate} (${assignMode}).` });
   };
 
   return (
     <div className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[#f8fafc] min-h-screen text-[13px] font-sans relative">
-      {/* Toast Notifications */}
-      {showShareToast && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
-          <Icon name="check-circle" size="xs" className="text-emerald-400" />
-          <span>Candidate profile link copied to clipboard!</span>
-        </div>
-      )}
-
-      {profileSaveSuccessToast && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
-          <Icon name="check-circle" size="xs" className="text-emerald-400" />
-          <span>Candidate profile information updated successfully!</span>
-        </div>
-      )}
-
-      {profileValidationToast && (
-        <div className="fixed top-5 right-5 z-[60] bg-rose-600 text-white text-xs font-semibold px-4 py-3 rounded-lg shadow-2xl flex items-center gap-2.5 max-w-sm animate-in fade-in slide-in-from-top-3 duration-200">
-          <Icon name="alert-triangle" size="xs" className="text-rose-200 shrink-0" />
-          <span>{profileValidationToast}</span>
-        </div>
-      )}
-
-      {docDeletedToast && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
-          <Icon name="trash" size="xs" className="text-rose-400" />
-          <span>{docDeletedToast}</span>
-        </div>
-      )}
-
-      {offerSuccessToast && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
-          <Icon name="check-circle" size="xs" className="text-emerald-400" />
-          <span>Official offer letter generated & sent to {offerCandidateEmail}!</span>
-        </div>
-      )}
-
-      {feedbackSuccessToast && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
-          <Icon name="check-circle" size="xs" className="text-emerald-400" />
-          <span>Round feedback & decision updated successfully!</span>
-        </div>
-      )}
-
-      {assignSuccessToast && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
-          <Icon name="check-circle" size="xs" className="text-emerald-400" />
-          <span>Interviewer assigned and invite sent successfully!</span>
-        </div>
-      )}
-
       {/* ── Main 2-Column Section ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
         {/* LEFT COLUMN (4 cols / ~30%): Candidate Profile Overview & Documents */}
@@ -951,7 +901,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             {/* View Candidate Assignment Details Button */}
             <button
               type="button"
-              onClick={() => router.push(`/dashboard/candidates/${candidateId}/workspace`)}
+              onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation`)}
               className="h-8 px-2.5 sm:px-3 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs cursor-pointer w-full sm:w-auto justify-center sm:justify-start"
             >
               <Icon name="external-link" size="xs" />
@@ -1049,7 +999,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       {stage.actionLabel && !stage.isOfferRound && (
                         <button
                           type="button"
-                          className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-emerald-500 bg-white text-emerald-700 hover:bg-emerald-50 cursor-pointer"
+                          onClick={() => {
+                            if (stage.actionLabel === 'Schedule / Send Test' || stage.id === 2) {
+                              setShowScheduleTestModal(true);
+                            } else {
+                              setSelectedAssignStage(stage);
+                            }
+                          }}
+                          className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-emerald-500 bg-white text-emerald-700 hover:bg-emerald-50 cursor-pointer shadow-2xs"
                         >
                           <Icon name="calendar" size="xs" />
                           <span>{stage.actionLabel}</span>
@@ -2149,6 +2106,19 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             </div>
           </form>
         </div>
+      )}
+
+      {/* ── Schedule & Send Assessment Test Modal ───────────────────────────────── */}
+      {showScheduleTestModal && (
+        <ScheduleTestModal
+          candidateId={candidate.id}
+          candidateName={candidate.name}
+          candidateCode={candidate.id}
+          candidateEmail={candidate.email}
+          candidatePhone={candidate.phone}
+          vacancyTitle={candidate.appliedFor}
+          onClose={() => setShowScheduleTestModal(false)}
+        />
       )}
     </div>
   );
