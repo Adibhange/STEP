@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Badge } from '@/design-system';
-import { QUICK_NOTIFICATIONS, CURRENT_USER } from '@/mock/dashboard';
+import type { QuickNotification, CurrentUser } from '@/features/dashboard/types/dashboard.types';
 
 interface TopHeaderProps {
   onMobileMenuOpen: () => void;
@@ -22,7 +22,33 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = QUICK_NOTIFICATIONS.filter((n) => !n.read).length;
+  const [user, setUser] = useState<CurrentUser>({
+    name: 'Administrator',
+    email: 'admin@sthapatya.com',
+    role: 'System Administrator',
+    avatarInitials: 'SA',
+  });
+
+  const notifications: QuickNotification[] = [];
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const email = localStorage.getItem('step_email');
+      const role = localStorage.getItem('step_role');
+      if (email || role) {
+        const namePart = email ? email.split('@')[0] : 'User';
+        const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        setUser({
+          name: formattedName,
+          email: email || 'user@sthapatya.com',
+          role: role || 'Administrator',
+          avatarInitials: formattedName.slice(0, 2).toUpperCase(),
+        });
+      }
+    }
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -61,7 +87,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
     error: 'text-[var(--status-danger)]',
   };
 
-  // Route → breadcrumb label map
   const BREADCRUMB_MAP: { match: string; label: string; href: string }[] = [
     { match: '/dashboard/candidates', label: 'Candidates', href: '/dashboard/candidates' },
     { match: '/dashboard/question-papers', label: 'Question Papers Library', href: '/dashboard/question-papers' },
@@ -81,7 +106,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
     >
       {/* Left: Mobile Menu Trigger + Interactive Breadcrumb */}
       <div className="flex items-center gap-3">
-        {/* Mobile menu trigger */}
         <button
           type="button"
           className="lg:hidden p-1.5 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors focus-ring-step cursor-pointer"
@@ -91,9 +115,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           <Icon name="menu" size="sm" />
         </button>
 
-        {/* Page breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1 sm:gap-2 text-[var(--type-body-md-size)] select-none">
-          {/* STEP root */}
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
@@ -103,7 +125,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           </button>
           <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60 shrink-0" />
 
-          {/* Dashboard crumb — dimmed if on a sub-page, bold if on root */}
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
@@ -116,7 +137,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
             Dashboard
           </button>
 
-          {/* Dynamic sub-page crumb */}
           {activeCrumb && (
             <>
               <Icon name="chevron-right" size="xs" className="text-[var(--text-tertiary)] opacity-60 shrink-0" />
@@ -155,7 +175,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
             )}
           </button>
 
-          {/* Notification Panel */}
           <AnimatePresence>
             {notifOpen && (
               <motion.div
@@ -180,29 +199,35 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
                 </div>
 
                 <div className="max-h-80 overflow-y-auto divide-y divide-[var(--border-soft)] scrollbar-step">
-                  {QUICK_NOTIFICATIONS.map((n) => (
-                    <div
-                      key={n.id}
-                      className={`p-3 text-[12px] flex items-start gap-3 hover:bg-[var(--surface-hover)] transition-colors ${
-                        !n.read ? 'bg-[var(--accent-indigo-dim)]/20' : ''
-                      }`}
-                    >
-                      <div className="mt-0.5 shrink-0">
-                        <Icon
-                          name={(notifIconMap[n.type] || 'info') as any}
-                          size="xs"
-                          className={notifColorMap[n.type] || 'text-[var(--text-secondary)]'}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-[var(--text-primary)] leading-tight">{n.title}</div>
-                        <div className="text-[var(--text-secondary)] text-[11.5px] mt-0.5 leading-snug">
-                          {n.description}
-                        </div>
-                        <div className="text-[10px] text-[var(--text-tertiary)] mt-1 font-mono">{n.time}</div>
-                      </div>
+                  {notifications.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-[var(--text-tertiary)]">
+                      No notifications available.
                     </div>
-                  ))}
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`p-3 text-[12px] flex items-start gap-3 hover:bg-[var(--surface-hover)] transition-colors ${
+                          !n.read ? 'bg-[var(--accent-indigo-dim)]/20' : ''
+                        }`}
+                      >
+                        <div className="mt-0.5 shrink-0">
+                          <Icon
+                            name={(notifIconMap[n.type] || 'info') as any}
+                            size="xs"
+                            className={notifColorMap[n.type] || 'text-[var(--text-secondary)]'}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-[var(--text-primary)] leading-tight">{n.title}</div>
+                          <div className="text-[var(--text-secondary)] text-[11.5px] mt-0.5 leading-snug">
+                            {n.description}
+                          </div>
+                          <div className="text-[10px] text-[var(--text-tertiary)] mt-1 font-mono">{n.time}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </motion.div>
             )}
@@ -223,14 +248,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
             aria-haspopup="true"
           >
             <div className="w-7.5 h-7.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-[12px] flex items-center justify-center shadow-xs">
-              {CURRENT_USER.avatarInitials}
+              {user.avatarInitials}
             </div>
             <div className="hidden sm:flex flex-col text-left">
               <span className="text-[12.5px] font-bold text-[var(--text-primary)] leading-none font-heading">
-                {CURRENT_USER.name}
+                {user.name}
               </span>
               <span className="text-[10.5px] text-[var(--text-tertiary)] font-medium leading-tight">
-                {CURRENT_USER.role}
+                {user.role}
               </span>
             </div>
             <Icon

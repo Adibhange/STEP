@@ -4,8 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
-import { MASTER_DATA } from '@/mock/masters';
-import { USERS_MOCK } from '@/mock/users';
+import { useGetMasterDataByCategoryQuery, useGetUsersQuery, useCreateVacancyMutation } from '@/store/services/api';
 import { AssessmentSectionConfig, PipelineFlowVersion, PipelineRound } from '../types/vacancy.types';
 import { downloadAssessmentExcelTemplate, parseUploadedAssessmentExcel } from '../utils/excelGenerator';
 import { AddMasterTitleModal } from './AddMasterTitleModal';
@@ -13,7 +12,7 @@ import { AddMasterTitleModal } from './AddMasterTitleModal';
 interface CreateVacancyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (vacancyData: any) => void;
+  onSave?: (vacancyData: any) => void;
 }
 
 export const INITIAL_MASTER_TITLES = [
@@ -31,14 +30,23 @@ export const INITIAL_MASTER_TITLES = [
 export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, onClose, onSave }) => {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
-  // Master Data Options
-  const roleOptions = useMemo(() => (MASTER_DATA['roles'] || []).map((r) => ({ value: r.name, label: `${r.name} (${r.code || '—'})` })), []);
-  const expOptions = useMemo(() => (MASTER_DATA['experiences'] || []).map((e) => ({ value: e.name, label: e.name })), []);
-  const deptOptions = useMemo(() => (MASTER_DATA['departments'] || []).map((d) => ({ value: d.name, label: d.name })), []);
-  const empTypeOptions = useMemo(() => (MASTER_DATA['employmentTypes'] || []).map((et) => ({ value: et.name, label: et.name })), []);
-  const hiringLocOptions = useMemo(() => (MASTER_DATA['hiringLocations'] || []).map((hl) => ({ value: hl.name, label: `${hl.name} (${hl.code || '—'})` })), []);
-  const testLocOptions = useMemo(() => (MASTER_DATA['testLocations'] || []).map((tl) => ({ value: tl.name, label: `${tl.name} (${tl.code || '—'})` })), []);
-  const userOptions = useMemo(() => USERS_MOCK.map((u) => ({ value: u.name, label: `${u.name} — ${u.role}` })), []);
+  // Dynamic Master Data & Users API Queries
+  const { data: rolesRes } = useGetMasterDataByCategoryQuery('roles');
+  const { data: expRes } = useGetMasterDataByCategoryQuery('experiences');
+  const { data: deptRes } = useGetMasterDataByCategoryQuery('departments');
+  const { data: empTypeRes } = useGetMasterDataByCategoryQuery('employmentTypes');
+  const { data: hiringLocRes } = useGetMasterDataByCategoryQuery('hiringLocations');
+  const { data: testLocRes } = useGetMasterDataByCategoryQuery('testLocations');
+  const { data: usersRes } = useGetUsersQuery();
+  const [createVacancyApi] = useCreateVacancyMutation();
+
+  const roleOptions = useMemo(() => (rolesRes?.data || []).map((r) => ({ value: r.name, label: `${r.name} (${r.code || '—'})` })), [rolesRes]);
+  const expOptions = useMemo(() => (expRes?.data || []).map((e) => ({ value: e.name, label: e.name })), [expRes]);
+  const deptOptions = useMemo(() => (deptRes?.data || []).map((d) => ({ value: d.name, label: d.name })), [deptRes]);
+  const empTypeOptions = useMemo(() => (empTypeRes?.data || []).map((et) => ({ value: et.name, label: et.name })), [empTypeRes]);
+  const hiringLocOptions = useMemo(() => (hiringLocRes?.data || []).map((hl) => ({ value: hl.name, label: `${hl.name} (${hl.code || '—'})` })), [hiringLocRes]);
+  const testLocOptions = useMemo(() => (testLocRes?.data || []).map((tl) => ({ value: tl.name, label: `${tl.name} (${tl.code || '—'})` })), [testLocRes]);
+  const userOptions = useMemo(() => (usersRes?.data || []).map((u: any) => ({ value: `${u.firstName} ${u.lastName}`.trim(), label: `${u.firstName} ${u.lastName}`.trim() + ` — ${u.role}` })), [usersRes]);
 
   // ==================== STEP 1 STATE: Basic Info, Terms & Locations ====================
   const [title, setTitle] = useState('');
@@ -363,7 +371,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
     e.preventDefault();
     const isWalkIn = driveType === 'Walk-in Drive';
 
-    onSave({
+    onSave?.({
       title: title.trim() || 'New Vacancy',
       driveType,
       role,

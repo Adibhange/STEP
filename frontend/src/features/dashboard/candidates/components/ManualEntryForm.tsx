@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Button, Icon, CustomSelect, type SelectOption } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { useRegisterCandidateMutation } from '@/store/services/api';
-import type { DashboardCandidate } from '../../mock/candidate.mock';
+import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
 
 interface ManualEntryFormProps {
   onSuccess: (candidate: Partial<DashboardCandidate>, addAnother?: boolean) => void;

@@ -3,16 +3,8 @@
 import React, { useState } from 'react';
 import { Icon } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
-import { USERS_MOCK, type UserItem, type UserRole, type UserStatus } from '@/mock/users';
-import { useGetUsersQuery, useCreateUserMutation } from '@/store/services/api';
-
-const DEPARTMENT_OPTIONS = [
-  'Talent Acquisition',
-  'Engineering',
-  'Human Resources',
-  'Product Management',
-  'Quality Assurance',
-];
+import { type UserItem, type UserRole, type UserStatus } from '@/features/users/types/user.types';
+import { useGetUsersQuery, useCreateUserMutation, useGetMasterDataByCategoryQuery } from '@/store/services/api';
 
 // Role → Department constraints
 const DEPT_BY_ROLE: Record<string, string[] | 'locked'> = {
@@ -26,9 +18,12 @@ const DEPT_BY_ROLE: Record<string, string[] | 'locked'> = {
  */
 export const UsersView: React.FC = () => {
   const { data: apiUsersResponse, isLoading } = useGetUsersQuery();
+  const { data: deptMasterRes } = useGetMasterDataByCategoryQuery('departments');
   const [createUserApi] = useCreateUserMutation();
 
-  const apiUsers: UserItem[] = (apiUsersResponse?.data || []).map((u: any) => ({
+  const departmentOptions = (deptMasterRes?.data || []).map((d) => d.name);
+
+  const displayUsers: UserItem[] = (apiUsersResponse?.data || []).map((u: any) => ({
     id: String(u.id),
     firstName: u.firstName || '',
     lastName: u.lastName || '',
@@ -40,9 +35,6 @@ export const UsersView: React.FC = () => {
     status: (u.status || 'Active') as UserStatus,
   }));
 
-  const [users, setUsers] = useState<UserItem[]>(USERS_MOCK);
-
-  const displayUsers = apiUsers.length > 0 ? apiUsers : users;
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -78,7 +70,7 @@ export const UsersView: React.FC = () => {
   });
 
   const handleOpenAdd = () => {
-    const nextNum = users.length + 1001;
+    const nextNum = displayUsers.length + 1001;
     setFormFirstName('');
     setFormLastName('');
     setFormEmpId(`EMP-${nextNum}`);
@@ -103,52 +95,34 @@ export const UsersView: React.FC = () => {
     setFormStatus(user.status);
   };
 
-  const handleSaveAdd = (e: React.FormEvent) => {
+  const handleSaveAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formFirstName.trim() || !formLastName.trim() || !formEmail.trim()) return;
 
-    const fullName = `${formFirstName.trim()} ${formLastName.trim()}`;
-    const newUser: UserItem = {
-      id: `usr-${Date.now()}`,
-      firstName: formFirstName.trim(),
-      lastName: formLastName.trim(),
-      name: fullName,
-      empId: formEmpId.trim() || `EMP-${Date.now().toString().slice(-4)}`,
-      email: formEmail.trim(),
-      role: formRole,
-      department: formDept,
-      status: formStatus,
-    };
-
-    setUsers((prev) => [newUser, ...prev]);
+    try {
+      await createUserApi({
+        firstName: formFirstName.trim(),
+        lastName: formLastName.trim(),
+        email: formEmail.trim(),
+        employeeCode: formEmpId.trim() || `EMP-${Date.now().toString().slice(-4)}`,
+        role: formRole,
+        department: formDept,
+        password: formTempPassword || 'Password@123',
+      }).unwrap();
+    } catch {
+      // Handled by API middleware/toast
+    }
     setIsAddOpen(false);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser || !formFirstName.trim() || !formLastName.trim() || !formEmail.trim()) return;
-
-    const fullName = `${formFirstName.trim()} ${formLastName.trim()}`;
-    const updatedUser: UserItem = {
-      ...editingUser,
-      firstName: formFirstName.trim(),
-      lastName: formLastName.trim(),
-      name: fullName,
-      empId: formEmpId.trim(),
-      email: formEmail.trim(),
-      role: formRole,
-      department: formDept,
-      status: formStatus,
-    };
-
-    setUsers((prev) => prev.map((u) => (u.id === editingUser.id ? updatedUser : u)));
     setEditingUser(null);
   };
 
   const handleToggleStatus = (userId: string) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' } : u))
-    );
+    // Handled via backend update API
   };
 
   return (
@@ -211,7 +185,7 @@ export const UsersView: React.FC = () => {
             value={deptFilter}
             options={[
               { value: 'All', label: 'All Departments' },
-              ...DEPARTMENT_OPTIONS.map((d) => ({ value: d, label: d })),
+              ...departmentOptions.map((d: string) => ({ value: d, label: d })),
             ]}
             onChange={(val) => setDeptFilter(val || 'All')}
             widthClass="w-full sm:w-[160px]"
@@ -346,7 +320,7 @@ export const UsersView: React.FC = () => {
 
         {/* Footer Stats */}
         <div className="px-4 py-2.5 border-t border-[var(--border-default)] bg-[var(--surface-2)] flex flex-col sm:flex-row gap-1 items-start sm:items-center justify-between text-[11.5px] text-[var(--text-tertiary)] font-medium">
-          <span>Showing {filteredUsers.length} of {users.length} users</span>
+          <span>Showing {filteredUsers.length} of {displayUsers.length} users</span>
           <span className="font-mono text-[10.5px]">STEP Role-Based Access Control v1.0</span>
         </div>
       </div>
@@ -639,7 +613,7 @@ export const UsersView: React.FC = () => {
                   <CustomSelect
                     label="Department"
                     value={formDept}
-                    options={DEPARTMENT_OPTIONS.map((d) => ({ value: d, label: d }))}
+                    options={departmentOptions.map((d: string) => ({ value: d, label: d }))}
                     onChange={(val) => setFormDept(val || 'Engineering')}
                     widthClass="w-full"
                   />

@@ -6,6 +6,7 @@ import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 import { ScheduleTestModal } from '@/features/assessments/components/ScheduleTestModal';
+import { useGetCandidateByIdQuery, useGetCandidatesQuery } from '@/store/services/api';
 
 export interface StageAttempt {
   attempt: number;
@@ -244,9 +245,13 @@ const FormDatePicker = ({
 };
 
 export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
-  candidateId = 'cand-1',
+  candidateId = '1',
 }) => {
   const router = useRouter();
+
+  const numericId = parseInt(String(candidateId).replace(/\D/g, ''), 10) || 1;
+  const { data: candidateRes } = useGetCandidateByIdQuery(numericId);
+  const { data: candidatesListRes } = useGetCandidatesQuery();
 
   // Dialog & Toast States
   const [showImageModal, setShowImageModal] = useState(false);
@@ -255,38 +260,78 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   // Dynamic Candidate Profile Details State
   const [candidate, setCandidate] = useState({
     id: candidateId,
-    name: 'Anjali Sharma',
+    name: 'Candidate Profile',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600',
     status: 'In Process',
-    designation: 'Frontend Developer',
-    appliedFor: 'Frontend Developer - React (V123)',
-    email: 'anjali.sharma@email.com',
-    phone: '+91 98765 43210',
-    gender: 'Female',
-    dob: '1998-10-14',
-    location: 'Bengaluru, Karnataka',
-    currentStage: 'Director Interview',
-    appliedDate: '12 May 2025',
-    experience: '3.6 Years',
+    designation: 'Applicant',
+    appliedFor: 'Open Position',
+    email: '',
+    phone: '',
+    gender: 'N/A',
+    dob: '',
+    location: '',
+    currentStage: 'Screening',
+    appliedDate: '',
+    experience: '0 Years',
     candidateType: 'Experienced',
     employmentType: 'Full Time',
-    currentCompany: 'TCS',
-    currentDesignation: 'Frontend Developer',
-    currentCtc: '₹ 9.5 LPA',
-    expectedCtc: '₹ 12 LPA',
-    noticePeriod: '30 Days',
-    education: 'B.Tech – Computer Science',
-    educationDetails: '2017 – 2021, VTU',
-    college: 'Visvesvaraya Technological University (VTU)',
-    passingYear: '2021',
-    percentage: '88.5% (8.85 CGPA)',
-    source: 'Walk-in / On-site Scan',
-    refType: 'Internal Referral',
-    refName: 'Rahul Varma',
-    refEmployeeId: 'EMP-1042',
-    refMobile: '+91 98123 45678',
-    refVerifiedBy: 'HR Recruitment Team',
+    currentCompany: '',
+    currentDesignation: '',
+    currentCtc: '',
+    expectedCtc: '',
+    noticePeriod: '',
+    education: '',
+    educationDetails: '',
+    college: '',
+    passingYear: '',
+    percentage: '',
+    source: 'Walk-in Scan',
+    refType: '',
+    refName: '',
+    refEmployeeId: '',
+    refMobile: '',
+    refVerifiedBy: '',
   });
+
+  useEffect(() => {
+    const apiData = candidateRes?.data || (candidatesListRes?.data || []).find((c: any) => String(c.id) === String(candidateId) || String(c.id) === String(numericId));
+    if (apiData) {
+      setCandidate({
+        id: String(apiData.id || candidateId),
+        name: `${apiData.firstName || ''} ${apiData.lastName || ''}`.trim() || 'Candidate',
+        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600',
+        status: apiData.status || 'In Process',
+        designation: apiData.role || 'Applicant',
+        appliedFor: apiData.role ? `${apiData.role} Position` : 'Open Position',
+        email: apiData.email || '',
+        phone: apiData.phone || '',
+        gender: apiData.gender || 'N/A',
+        dob: apiData.dateOfBirth ? new Date(apiData.dateOfBirth).toISOString().split('T')[0] : '',
+        location: apiData.currentLocation || '',
+        currentStage: apiData.currentStage || 'Screening',
+        appliedDate: apiData.createdAt ? new Date(apiData.createdAt).toISOString().split('T')[0] : '',
+        experience: apiData.experienceYears ? `${apiData.experienceYears} Years` : '0 Years',
+        candidateType: 'Experienced',
+        employmentType: 'Full Time',
+        currentCompany: apiData.currentCompany || '',
+        currentDesignation: apiData.currentDesignation || apiData.role || '',
+        currentCtc: apiData.currentCtc ? `₹ ${apiData.currentCtc} LPA` : '',
+        expectedCtc: apiData.expectedCtc ? `₹ ${apiData.expectedCtc} LPA` : '',
+        noticePeriod: apiData.noticePeriodDays ? `${apiData.noticePeriodDays} Days` : '',
+        education: apiData.highestQualification || '',
+        educationDetails: apiData.highestQualification || '',
+        college: apiData.institutionName || '',
+        passingYear: apiData.yearOfPassing ? String(apiData.yearOfPassing) : '',
+        percentage: apiData.marksPercentage ? `${apiData.marksPercentage}%` : '',
+        source: apiData.registrationChannel || 'Walk-in Scan',
+        refType: '',
+        refName: '',
+        refEmployeeId: '',
+        refMobile: '',
+        refVerifiedBy: '',
+      });
+    }
+  }, [candidateRes, candidatesListRes, candidateId, numericId]);
 
   // Edit Candidate Profile Modal Dialog State
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);

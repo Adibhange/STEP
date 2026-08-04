@@ -8,48 +8,44 @@ import { TablePagination } from '../shared/TablePagination';
 import { CandidateTable } from './CandidateTable';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { CANDIDATE_FILTERS } from '../config/candidateFilters';
-import { DASHBOARD_CANDIDATES } from '../mock/candidate.mock';
 import { useGetCandidatesQuery } from '@/store/services/api';
 import type { ActiveFilter } from '../shared/FilterBar';
-import type { DashboardCandidate } from '../mock/candidate.mock';
+import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
 
 const ROWS_PER_PAGE_DEFAULT = 10;
 
 /**
  * STEP Enterprise CandidateWorkspace
  *
- * Header Actions:
- * - Export button with crisp Excel badge icon & clear text
+ * Sourced 100% dynamically from backend candidates API.
  */
 export const CandidateWorkspace: React.FC = () => {
   const router = useRouter();
-  const { data: apiCandidatesResponse } = useGetCandidatesQuery();
-  const [candidatesList, setCandidatesList] = useState<DashboardCandidate[]>(DASHBOARD_CANDIDATES);
+  const { data: apiCandidatesResponse, isLoading } = useGetCandidatesQuery();
 
   const apiCandidates: DashboardCandidate[] = useMemo(() => {
     return (apiCandidatesResponse?.data || []).map((c: any, index: number) => ({
-      id: typeof c.id === 'number' ? c.id : index + 100,
-      code: c.candidateCode || `CND-2026-${c.id || index}`,
+      id: typeof c.id === 'number' || typeof c.id === 'string' ? c.id : index + 1,
+      code: c.candidateCode || `CND-2026-${c.id || index + 1}`,
       name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Candidate',
-      email: c.email || 'candidate@example.com',
-      mobile: c.phone || '+91 9876543210',
-      role: c.role || 'Senior Frontend Engineer',
-      experience: c.experienceYears ? `${c.experienceYears} Years` : '3 Years',
-      experienceYears: c.experienceYears || 3,
+      email: c.email || '',
+      mobile: c.phone || '',
+      role: c.role || 'Candidate',
+      experience: c.experienceYears ? `${c.experienceYears} Years` : '0 Years',
+      experienceYears: c.experienceYears || 0,
       source: (c.registrationChannel === 'Walk-in' ? 'WalkIn' : 'HomeTest') as any,
       stage: (c.currentStage || 'Screening') as any,
       currentRound: (c.currentStage || 'Screening') as any,
-      assignedInterviewer: 'Aditya Bhange',
-      status: (c.status === 'Offered' ? 'Offered' : c.status === 'Rejected' ? 'Rejected' : 'Screening') as any,
-      hiringLocation: c.currentLocation || 'Mumbai HQ',
-      testLocation: 'Mumbai Test Center',
+      assignedInterviewer: c.assignedInterviewer || 'Unassigned',
+      status: (c.status || 'Screening') as any,
+      hiringLocation: c.currentLocation || 'Primary Center',
+      testLocation: 'Test Center',
       riskScore: 0,
-      city: c.currentLocation || 'Mumbai',
-      appliedDate: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '2026-08-01',
+      city: c.currentLocation || '',
+      appliedDate: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
     }));
   }, [apiCandidatesResponse]);
 
-  const activeCandidates = apiCandidates.length > 0 ? apiCandidates : candidatesList;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -73,9 +69,9 @@ export const CandidateWorkspace: React.FC = () => {
     setCurrentPage(1);
   }, []);
 
-  // Client-side filtering
+  // Client-side filtering over database response
   const filteredCandidates = useMemo<DashboardCandidate[]>(() => {
-    let result = activeCandidates;
+    let result = apiCandidates;
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -108,7 +104,7 @@ export const CandidateWorkspace: React.FC = () => {
     }
 
     return result;
-  }, [search, activeFilters]);
+  }, [search, activeFilters, apiCandidates]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredCandidates.length / rowsPerPage));
@@ -124,10 +120,8 @@ export const CandidateWorkspace: React.FC = () => {
       className="bg-[var(--surface-1)] rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-[var(--shadow-xs)] flex flex-col relative z-0"
       aria-label="Candidate workspace"
     >
-      {/* ── Header Row: Title | ←Scrollable Filters→ | Search + Actions ─── */}
+      {/* Header Row */}
       <div className="flex items-center justify-between gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[var(--border-default)] bg-[var(--surface-1)] rounded-t-[var(--radius-lg)] relative z-30 overflow-visible min-w-0">
-
-        {/* LEFT: Candidates Title + Badge — always visible */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <h2 className="text-sm sm:text-[var(--type-h3-size)] font-extrabold text-[var(--text-primary)] tracking-tight font-heading">
             Candidates
@@ -137,28 +131,22 @@ export const CandidateWorkspace: React.FC = () => {
           </span>
         </div>
 
-        {/* MIDDLE: Filters — visible only on md+, scrollable, fades at edges */}
         <div className="flex-1 min-w-0 relative hidden md:block">
           <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-[var(--surface-1)] to-transparent z-10" />
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-[var(--surface-1)] to-transparent z-10" />
-          <div
-            className="overflow-x-auto scrollbar-none flex items-center gap-2 px-1 relative z-20"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
+          <div className="overflow-x-auto scrollbar-none flex items-center gap-2 px-1 relative z-20">
             <FilterBar
               filters={CANDIDATE_FILTERS}
               activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onReset={handleFilterReset}
               resultCount={filteredCandidates.length}
-              totalCount={DASHBOARD_CANDIDATES.length}
+              totalCount={apiCandidates.length}
             />
           </div>
         </div>
 
-        {/* RIGHT: Search + Export + Add — always visible */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Compact Search */}
           <div
             className={`relative flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-full border
               transition-all duration-150 ease-out w-28 sm:w-44 md:w-52 xl:w-64 shrink-0
@@ -194,7 +182,6 @@ export const CandidateWorkspace: React.FC = () => {
             )}
           </div>
 
-          {/* Export .xlsx */}
           <button
             type="button"
             className="h-8 w-8 sm:w-auto px-0 sm:px-3 flex items-center justify-center gap-2 rounded-full border border-[var(--border-default)]
@@ -210,7 +197,6 @@ export const CandidateWorkspace: React.FC = () => {
             <span className="hidden sm:inline">Export .xlsx</span>
           </button>
 
-          {/* Add Candidate */}
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
@@ -226,54 +212,40 @@ export const CandidateWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Filter Row (small screens only) — drops below header on mobile ── */}
       <div className="md:hidden border-b border-[var(--border-default)] bg-[var(--surface-1)]">
-        <div
-          className="overflow-x-auto scrollbar-none flex items-center gap-2 px-4 py-2.5"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
+        <div className="overflow-x-auto scrollbar-none flex items-center gap-2 px-4 py-2.5">
           <FilterBar
             filters={CANDIDATE_FILTERS}
             activeFilters={activeFilters}
             onFilterChange={handleFilterChange}
             onReset={handleFilterReset}
             resultCount={filteredCandidates.length}
-            totalCount={candidatesList.length}
+            totalCount={apiCandidates.length}
           />
         </div>
       </div>
 
-      {/* ── Candidate Table (z-10 context) ─────────────────────────────────── */}
       <div className="relative z-10">
         <CandidateTable
           candidates={paginatedCandidates}
-          loading={false}
+          loading={isLoading}
           filterKey={filterKey}
           onView={(c) => router.push(`/dashboard/candidates/${c.id}`)}
-          onResume={(c) => console.info('Resume', c.code)}
-          onEdit={(c) => console.info('Edit', c.code)}
-          onDelete={(c) => console.info('Delete', c.code)}
-          onDownload={(c) => console.info('Download', c.code)}
         />
       </div>
 
-      {/* ── Pagination ───────────────────────────────────────────────────── */}
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}
         totalRecords={filteredCandidates.length}
         rowsPerPage={rowsPerPage}
         onPageChange={setCurrentPage}
-        onRowsPerPageChange={() => {}}
+        onRowsPerPageChange={(n) => setRowsPerPage(n)}
       />
 
-      {/* ── Add Candidate Modal Dialog ────────────────────────────────────── */}
       <AddCandidateDialog
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onCandidateAdded={(newCandidate) => {
-          setCandidatesList((prev) => [newCandidate as DashboardCandidate, ...prev]);
-        }}
       />
     </section>
   );

@@ -1,4 +1,4 @@
-import { MASTER_DATA, type MasterRecord } from '@/mock/masters';
+import { type MasterRecord } from '@/types/master.types';
 
 /**
  * STEP Enterprise Platform — Master Data Configuration Service
@@ -7,7 +7,7 @@ import { MASTER_DATA, type MasterRecord } from '@/mock/masters';
  */
 
 export function getMasterDataStore(): Record<string, MasterRecord[]> {
-  return MASTER_DATA;
+  return {};
 }
 
 export function addMasterRecord(
@@ -41,7 +41,7 @@ export function updateMasterRecord(
 export function deleteMasterRecord(
   dataStore: Record<string, MasterRecord[]>,
   categoryKey: string,
-  recordId: string
+  recordId: string | number
 ): Record<string, MasterRecord[]> {
   return {
     ...dataStore,

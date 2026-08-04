@@ -5,7 +5,7 @@ import { Icon } from '@/design-system';
 import { PipelineFlowVersions } from './PipelineFlowVersions';
 import { AssessmentPatternBuilder } from './AssessmentPatternBuilder';
 import { CandidateBulkFlowAssignment } from './CandidateBulkFlowAssignment';
-import type { VacancyItem } from '@/mock/vacancies';
+import type { VacancyItem } from '../types/vacancy.types';
 
 interface VacancyDetailDialogProps {
   vacancy: (VacancyItem & { driveType?: 'Walk-in Drive' | 'Direct / Sourced Hiring' }) | null;

@@ -10,7 +10,7 @@ import {
   type CandidateStatus,
 } from '../config/status.config';
 import { CANDIDATE_COLUMNS, type CandidateColumnId } from '../config/candidateColumns';
-import type { DashboardCandidate } from '../mock/candidate.mock';
+import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
 
 interface CandidateTableProps {
   candidates: DashboardCandidate[];

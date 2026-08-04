@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { MetricCard } from './MetricCard';
-import type { KpiItem } from '../mock/kpi.mock';
+import type { KpiItem } from '@/features/dashboard/types/dashboard.types';
 
 interface MetricGridProps {
   items: KpiItem[];

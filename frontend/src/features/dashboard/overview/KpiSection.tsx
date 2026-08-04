@@ -2,28 +2,27 @@
 
 import React from 'react';
 import { MetricGrid } from '../shared/MetricGrid';
-import { KPI_DATA, type KpiItem } from '@/features/dashboard/mock/kpi.mock';
+import { type KpiItem } from '@/features/dashboard/types/dashboard.types';
 import { useGetRecruitmentFunnelQuery } from '@/store/services/api';
 
 /**
  * STEP Enterprise KpiSection
  *
  * Renders the KPI metric grid for the dashboard overview.
- * Uses MetricGrid which is reusable across all future dashboard modules.
+ * Sourced 100% dynamically from backend recruitment funnel API.
  */
 export const KpiSection: React.FC = () => {
-  const { data: funnelResponse } = useGetRecruitmentFunnelQuery();
+  const { data: funnelResponse, isLoading, isError } = useGetRecruitmentFunnelQuery();
 
   const dynamicKpiData: KpiItem[] = React.useMemo(() => {
-    if (!funnelResponse?.data) return KPI_DATA;
-    const f = funnelResponse.data;
+    const f = funnelResponse?.data;
     return [
       {
         id: 'total',
         title: 'Total Candidates',
-        count: f.totalApplications ?? 500,
-        trend: 12,
-        trendLabel: 'this week',
+        count: f?.totalApplications ?? 0,
+        trend: 0,
+        trendLabel: 'total',
         subMetric: 'Active Candidates',
         icon: 'users',
         colorToken: '--accent-indigo',
@@ -32,9 +31,9 @@ export const KpiSection: React.FC = () => {
       {
         id: 'screening',
         title: 'Screening',
-        count: f.assessmentPassed ?? 143,
-        trend: 29,
-        trendLabel: '%',
+        count: f?.assessmentPassed ?? 0,
+        trend: 0,
+        trendLabel: 'passed',
         subMetric: 'Assessments Passed',
         icon: 'filter',
         colorToken: '--accent-cyan',
@@ -43,9 +42,9 @@ export const KpiSection: React.FC = () => {
       {
         id: 'in-interview',
         title: 'In Interview',
-        count: f.interviewCleared ?? 97,
-        trend: 8,
-        trendLabel: 'vs last week',
+        count: f?.interviewCleared ?? 0,
+        trend: 0,
+        trendLabel: 'cleared',
         subMetric: 'Interviews Cleared',
         icon: 'mic',
         colorToken: '--accent-violet',
@@ -54,9 +53,9 @@ export const KpiSection: React.FC = () => {
       {
         id: 'offered',
         title: 'Offered',
-        count: f.offersIssued ?? 19,
-        trend: 4,
-        trendLabel: 'vs last month',
+        count: f?.offersIssued ?? 0,
+        trend: 0,
+        trendLabel: 'issued',
         subMetric: 'Offers Issued',
         icon: 'send',
         colorToken: '--accent-blue',
@@ -65,10 +64,10 @@ export const KpiSection: React.FC = () => {
       {
         id: 'on-hold',
         title: 'On Hold',
-        count: f.onHoldCount ?? 32,
-        trend: 2,
-        trendLabel: 'vs last month',
-        subMetric: '5 pending feedback',
+        count: f?.onHoldCount ?? 0,
+        trend: 0,
+        trendLabel: 'on hold',
+        subMetric: 'Pending feedback',
         icon: 'pause-circle',
         colorToken: '--status-warning',
         bgToken: '--status-warning-bg',
@@ -76,10 +75,10 @@ export const KpiSection: React.FC = () => {
       {
         id: 'rejected',
         title: 'Rejected',
-        count: f.rejectedCount ?? 87,
-        trend: -11,
-        trendLabel: 'vs last month',
-        subMetric: '11 this week',
+        count: f?.rejectedCount ?? 0,
+        trend: 0,
+        trendLabel: 'archived',
+        subMetric: 'Rejected Candidates',
         icon: 'x-circle',
         colorToken: '--status-danger',
         bgToken: '--status-danger-bg',
@@ -87,16 +86,34 @@ export const KpiSection: React.FC = () => {
       {
         id: 'hired',
         title: 'Hired',
-        count: f.joinedCount ?? 14,
-        trend: 7,
-        trendLabel: 'vs last month',
-        subMetric: '3 joined today',
+        count: f?.joinedCount ?? 0,
+        trend: 0,
+        trendLabel: 'joined',
+        subMetric: 'Joined Candidates',
         icon: 'check-circle',
         colorToken: '--status-success',
         bgToken: '--status-success-bg',
       },
     ];
   }, [funnelResponse]);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 animate-pulse">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-28 bg-[var(--surface-2)] rounded-[var(--radius-lg)]" />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-4 rounded-lg bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] text-xs font-semibold">
+        Failed to load recruitment metrics from database.
+      </div>
+    );
+  }
 
   return (
     <section aria-label="Key performance indicators">

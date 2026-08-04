@@ -7,6 +7,8 @@ import { WorkspaceHeader, type WorkspaceHeaderTab } from '@/features/shared/work
 import { ActivityFeed } from '@/features/shared/activity-feed/ActivityFeed';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 
+import { useGetCandidateByIdQuery } from '@/store/services/api';
+
 export interface RecruitmentWorkspaceProps {
   candidateId?: string;
 }
@@ -21,10 +23,14 @@ const WORKSPACE_TABS: WorkspaceHeaderTab[] = [
 ];
 
 export const RecruitmentWorkspace: React.FC<RecruitmentWorkspaceProps> = ({
-  candidateId = 'cand-1',
+  candidateId = '1',
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const numericId = parseInt(String(candidateId).replace(/\D/g, ''), 10) || 1;
+  const { data: candidateRes } = useGetCandidateByIdQuery(numericId);
+  const cand = candidateRes?.data;
+
   const initialTab = searchParams?.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -40,20 +46,23 @@ export const RecruitmentWorkspace: React.FC<RecruitmentWorkspaceProps> = ({
     router.push(`/dashboard/candidates/${candidateId}/workspace?tab=${tabId}`, { scroll: false });
   };
 
+  const candName = cand ? `${cand.firstName || ''} ${cand.lastName || ''}`.trim() : 'Candidate Workspace';
+  const candCode = cand?.candidateCode || `CND-2026-${candidateId}`;
+  const candRole = cand?.role || 'Applicant';
+
   return (
     <div className="flex flex-col gap-5 pb-16">
       {/* ── 1. Workspace Header ────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 pt-3">
         <WorkspaceHeader
-          title="Aditya Bhange — Recruitment Workspace"
-          status="In Interview"
+          title={`${candName} — Recruitment Workspace`}
+          status={cand?.currentStage || 'Screening'}
           statusVariant="info"
           onBack={() => router.push(`/dashboard/candidates/${candidateId}`)}
           backLabel="Back to Profile"
           metadata={[
-            { label: 'ID', value: 'CAND-2026-089' },
-            { label: 'Role', value: 'Senior React Developer', icon: 'briefcase' },
-            { label: 'Vacancy', value: 'VAC-2026-101', icon: 'briefcase' },
+            { label: 'ID', value: candCode },
+            { label: 'Role', value: candRole, icon: 'briefcase' },
           ]}
           tabs={WORKSPACE_TABS}
           activeTab={activeTab}

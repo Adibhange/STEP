@@ -48,7 +48,7 @@ export interface CandidateAssessmentEvaluationViewProps {
   onFinalizeScore?: (finalScore: number, finalPercentage: number, status: 'Passed' | 'Failed') => void;
 }
 
-export const MOCK_EVALUATION_ATTEMPTS: AssessmentEvaluationAttempt[] = [
+export const DEFAULT_EVALUATION_ATTEMPTS: AssessmentEvaluationAttempt[] = [
   {
     attemptNumber: 1,
     attemptDate: '15 May 2025 • 10:30 AM',
@@ -280,10 +280,10 @@ ORDER BY HiringLocationId, AppliedDate;`,
 
 export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEvaluationViewProps> = ({
   candidateId = '1',
-  candidateName = 'Anjali Sharma',
-  candidateCode = 'CND-2026-1042',
-  vacancyTitle = 'Senior React / Next.js Developer',
-  attempts = MOCK_EVALUATION_ATTEMPTS,
+  candidateName = 'Candidate',
+  candidateCode = 'CND-2026',
+  vacancyTitle = 'Assessment Evaluation',
+  attempts = [],
   onBack,
   onClose,
   onFinalizeScore,

@@ -24,12 +24,7 @@ export interface ScheduleTestModalProps {
   }) => void;
 }
 
-const MOCK_OFFICE_LOCATIONS = [
-  { value: 'Mumbai HQ — Tech Lab Desk #14 (Floor 4)', label: 'Mumbai HQ — Tech Lab Desk #14 (Floor 4)' },
-  { value: 'Bengaluru Innovation Center — Room 3B', label: 'Bengaluru Innovation Center — Room 3B' },
-  { value: 'Pune Tech Park — Venue Desk #08', label: 'Pune Tech Park — Venue Desk #08' },
-  { value: 'Hyderabad Regional Office — Assessment Lab A', label: 'Hyderabad Regional Office — Assessment Lab A' },
-];
+import { useGetMasterDataByCategoryQuery } from '@/store/services/api';
 
 const TIME_SLOT_OPTIONS = [
   { value: '09:00', label: '09:00 AM' },
@@ -294,8 +289,22 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
   const [accessCode, setAccessCode] = useState(candidateCode);
   const [passcode, setPasscode] = useState('8942');
 
+  const { data: testLocationsRes } = useGetMasterDataByCategoryQuery('testLocations');
+  const officeLocationOptions = useMemo(() => {
+    return (testLocationsRes?.data || []).map((tl) => ({
+      value: `${tl.name} (${tl.code || 'CENTER'})`,
+      label: `${tl.name} (${tl.code || 'CENTER'})`,
+    }));
+  }, [testLocationsRes]);
+
   // ── Office Test Venue ───────────────────────────────────────────────────────
-  const [selectedVenue, setSelectedVenue] = useState(MOCK_OFFICE_LOCATIONS[0].value);
+  const [selectedVenue, setSelectedVenue] = useState('');
+
+  useEffect(() => {
+    if (officeLocationOptions.length > 0 && !selectedVenue) {
+      setSelectedVenue(officeLocationOptions[0].value);
+    }
+  }, [officeLocationOptions, selectedVenue]);
 
   // ── Delivery Checkboxes ─────────────────────────────────────────────────────
   const [sendEmail, setSendEmail] = useState(true);
@@ -476,7 +485,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
               /* If Office: Custom Popover Venue Selection */
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-700">Office Test Center Venue</label>
-                <FormSelect value={selectedVenue} onChange={setSelectedVenue} options={MOCK_OFFICE_LOCATIONS} />
+                <FormSelect value={selectedVenue} onChange={setSelectedVenue} options={officeLocationOptions} />
               </div>
             )}
           </div>

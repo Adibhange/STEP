@@ -10,7 +10,7 @@ import {
 } from '@/design-system';
 import { ManualEntryForm } from './components/ManualEntryForm';
 import { ExcelUploadForm } from './components/ExcelUploadForm';
-import type { DashboardCandidate } from '../mock/candidate.mock';
+import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
 
 interface AddCandidateDialogProps {
   isOpen: boolean;

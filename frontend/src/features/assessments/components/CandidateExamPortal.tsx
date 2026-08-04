@@ -49,7 +49,7 @@ export const ASSESSMENT_ROUNDS: AssessmentRoundConfig[] = [
   { roundNumber: 4, roundTitle: 'Round 4: System Design Architecture', shortTitle: 'Round 4: Subjective', durationMinutes: 15, questionCount: 1, totalMarks: 20 },
 ];
 
-export const MOCK_EXAM_QUESTIONS: ExamQuestion[] = [
+export const EXAM_QUESTIONS: ExamQuestion[] = [
   {
     id: 'eq-1',
     number: 1,
@@ -359,7 +359,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
     if (currentRoundIdx < ASSESSMENT_ROUNDS.length - 1) {
       const nextRound = ASSESSMENT_ROUNDS[currentRoundIdx + 1];
-      const firstQIdx = MOCK_EXAM_QUESTIONS.findIndex((q) => q.roundNumber === nextRound.roundNumber);
+      const firstQIdx = EXAM_QUESTIONS.findIndex((q) => q.roundNumber === nextRound.roundNumber);
 
       setActiveRoundNumber(nextRound.roundNumber);
       setRoundTimeLeftSeconds(nextRound.durationMinutes * 60);
@@ -442,8 +442,8 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
   // Next Question / Next Round Action
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < MOCK_EXAM_QUESTIONS.length - 1) {
-      const nextQ = MOCK_EXAM_QUESTIONS[currentQuestionIndex + 1];
+    if (currentQuestionIndex < EXAM_QUESTIONS.length - 1) {
+      const nextQ = EXAM_QUESTIONS[currentQuestionIndex + 1];
       if (nextQ.roundNumber > activeRoundNumber) {
         // Advancing to next round manually!
         const nextRoundConfig = ASSESSMENT_ROUNDS.find((r) => r.roundNumber === nextQ.roundNumber);
@@ -486,15 +486,15 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   const roundSeconds = String(roundTimeLeftSeconds % 60).padStart(2, '0');
   const isRoundTimerCritical = roundTimeLeftSeconds < 120; // < 2 mins
 
-  const currentQ = MOCK_EXAM_QUESTIONS[currentQuestionIndex];
+  const currentQ = EXAM_QUESTIONS[currentQuestionIndex];
   const answeredCount = Object.keys(answers).length;
 
   // Group questions by Round for palette display
   const roundsList = [
-    { number: 1, title: 'ROUND 1: MCQS', questions: MOCK_EXAM_QUESTIONS.filter((q) => q.roundNumber === 1) },
-    { number: 2, title: 'ROUND 2: CODING', questions: MOCK_EXAM_QUESTIONS.filter((q) => q.roundNumber === 2) },
-    { number: 3, title: 'ROUND 3: SQL', questions: MOCK_EXAM_QUESTIONS.filter((q) => q.roundNumber === 3) },
-    { number: 4, title: 'ROUND 4: SUBJECTIVE', questions: MOCK_EXAM_QUESTIONS.filter((q) => q.roundNumber === 4) },
+    { number: 1, title: 'ROUND 1: MCQS', questions: EXAM_QUESTIONS.filter((q) => q.roundNumber === 1) },
+    { number: 2, title: 'ROUND 2: CODING', questions: EXAM_QUESTIONS.filter((q) => q.roundNumber === 2) },
+    { number: 3, title: 'ROUND 3: SQL', questions: EXAM_QUESTIONS.filter((q) => q.roundNumber === 3) },
+    { number: 4, title: 'ROUND 4: SUBJECTIVE', questions: EXAM_QUESTIONS.filter((q) => q.roundNumber === 4) },
   ];
 
   // ── MULTI-TAB LOCKED SCREEN ───────────────────────────────────────────────
@@ -627,7 +627,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Total Questions</span>
-              <p className="font-bold text-slate-900 mt-0.5">{MOCK_EXAM_QUESTIONS.length} Questions</p>
+              <p className="font-bold text-slate-900 mt-0.5">{EXAM_QUESTIONS.length} Questions</p>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Total Marks</span>
@@ -716,7 +716,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           <div className="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 gap-3 text-xs font-mono text-left">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Questions Answered</span>
-              <p className="font-bold text-slate-900 mt-0.5">{answeredCount} / {MOCK_EXAM_QUESTIONS.length}</p>
+              <p className="font-bold text-slate-900 mt-0.5">{answeredCount} / {EXAM_QUESTIONS.length}</p>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Security Audit Log</span>
@@ -843,7 +843,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
                   <div className="grid grid-cols-4 gap-2">
                     {rnd.questions.map((q) => {
-                      const idx = MOCK_EXAM_QUESTIONS.findIndex((item) => item.id === q.id);
+                      const idx = EXAM_QUESTIONS.findIndex((item) => item.id === q.id);
                       const isAnswered = answers[q.id] !== undefined;
                       const isFlagged = flaggedQuestions.has(q.id);
                       const isCurrentQ = idx === currentQuestionIndex;
@@ -900,7 +900,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
               {/* Question Number Badge */}
               <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs font-mono font-bold">
-                Question {currentQ.number} of {MOCK_EXAM_QUESTIONS.length}
+                Question {currentQ.number} of {EXAM_QUESTIONS.length}
               </span>
             </div>
 
@@ -1052,7 +1052,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
                 type="button"
                 disabled={
                   currentQuestionIndex === 0 ||
-                  MOCK_EXAM_QUESTIONS[currentQuestionIndex - 1].roundNumber < activeRoundNumber
+                  EXAM_QUESTIONS[currentQuestionIndex - 1].roundNumber < activeRoundNumber
                 }
                 onClick={() => setCurrentQuestionIndex((i) => i - 1)}
                 className="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-800 font-bold text-xs transition-colors cursor-pointer"
@@ -1066,10 +1066,10 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
                 className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20 flex items-center gap-1.5"
               >
                 <span>
-                  {currentQuestionIndex === MOCK_EXAM_QUESTIONS.length - 1
+                  {currentQuestionIndex === EXAM_QUESTIONS.length - 1
                     ? 'Save & Submit Exam'
-                    : currentQuestionIndex < MOCK_EXAM_QUESTIONS.length - 1 &&
-                      MOCK_EXAM_QUESTIONS[currentQuestionIndex + 1].roundNumber > activeRoundNumber
+                    : currentQuestionIndex < EXAM_QUESTIONS.length - 1 &&
+                      EXAM_QUESTIONS[currentQuestionIndex + 1].roundNumber > activeRoundNumber
                     ? `Finish Round ${activeRoundNumber} & Next Round`
                     : 'Save & Next Question'}
                 </span>

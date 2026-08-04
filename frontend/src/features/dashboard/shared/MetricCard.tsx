@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { StatsCard } from '@/features/shared/stats-card/StatsCard';
-import type { KpiItem } from '@/mock/dashboard';
+import type { KpiItem } from '@/features/dashboard/types/dashboard.types';
 
 interface MetricCardProps {
   item: KpiItem;

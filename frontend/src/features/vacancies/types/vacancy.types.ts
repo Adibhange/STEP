@@ -1,7 +1,7 @@
 /**
  * STEP Enterprise Platform — Centralized Vacancies Feature Type Definitions
  *
- * Single source of truth for Assessment Sections, Pipeline Flow Versions, and Candidate Directory models.
+ * Single source of truth for Vacancy Models, Assessment Sections, Pipeline Flow Versions, and Candidate Directory models.
  * Aligned 1:1 with C# ASP.NET Core DTOs and EF Core Domain Models.
  */
 
@@ -39,4 +39,73 @@ export interface CandidateBulkItem {
   appliedDate: string;
   flowVersion: string;
   status: 'Pending' | 'Assigned' | 'In Evaluation';
+}
+
+export interface VacancyItem {
+  id: string;
+  code: string;
+  title: string;
+  driveType?: 'Walk-in Drive' | 'Direct / Sourced Hiring';
+  role: string;
+  department: string;
+  employmentType: string;
+  experience: string;
+  hiringLocation: string;
+  testLocation: string;
+  workMode: 'On-site' | 'Hybrid' | 'Remote';
+  openPositions: number;
+  positionsCount?: number;
+  status: 'Open' | 'Draft' | 'Paused' | 'Closed' | 'Archived';
+  createdAt: string;
+  closingDate: string;
+  assignedRecruiter: string;
+  hiringManager: string;
+  
+  // Pipeline metrics
+  appliedCount: number;
+  assessmentCount: number;
+  interviewCount: number;
+  offeredCount: number;
+  joinedCount: number;
+
+  // Question paper
+  questionPaperId?: string;
+  questionPaperTitle?: string;
+  assessmentDurationMinutes?: number;
+  passingCriteriaPercentage?: number;
+
+  // Walk-in Drive details
+  walkInDrive?: {
+    enabled: boolean;
+    name: string;
+    venue: string;
+    date: string;
+    time: string;
+    capacity: number;
+    registrationDeadline: string;
+    status: 'Scheduled' | 'Completed' | 'Cancelled';
+  };
+
+  // QR Registration analytics
+  qrAnalytics?: {
+    qrCodeUrl: string;
+    registrationUrl: string;
+    enabled: boolean;
+    registrationDeadline: string;
+    totalScans: number;
+    successfulRegistrations: number;
+    expiredRegistrations: number;
+    conversionRate: number;
+    lastScanTime: string;
+  };
+
+  // Activity feed
+  activities: Array<{
+    id: string;
+    timestamp: string;
+    user: string;
+    type: 'create' | 'assign' | 'walkin' | 'qr' | 'status' | 'candidate';
+    title: string;
+    description: string;
+  }>;
 }

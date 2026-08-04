@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
-import type { MasterRecord } from '@/mock/masters';
+import type { MasterRecord } from '@/types/master.types';
 
 export interface MasterColumn {
   key: keyof MasterRecord | string;
@@ -20,17 +20,11 @@ export interface MasterTableProps {
   exampleCode?: string;
   onAdd?: (newRecord: Omit<MasterRecord, 'id' | 'updatedAt'>) => void;
   onEdit?: (record: MasterRecord) => void;
-  onToggleStatus?: (recordId: string) => void;
-  onDelete?: (recordId: string) => void;
+  onToggleStatus?: (recordId: string | number) => void;
+  onDelete?: (recordId: string | number) => void;
 }
 
-/**
- * Generate a clean, unique short code from record name (e.g. "Data Analyst" -> "DA").
- * - Only uses words that start with a letter (ignores words starting with digits/symbols like "(1–3").
- * - Falls back to first 3 alpha chars of the name if only one meaningful word found.
- * - Ensures no duplicates exist in the current category dataset.
- */
-function generateUniqueCode(name: string, records: MasterRecord[], currentId?: string): string {
+function generateUniqueCode(name: string, records: MasterRecord[], currentId?: string | number): string {
   const allWords = name.trim().split(/\s+/).filter(Boolean);
   const letterWords = allWords.filter((w) => /^[a-zA-Z]/.test(w));
 
@@ -109,7 +103,7 @@ export const MasterTable: React.FC<MasterTableProps> = ({
   const handleOpenEdit = (record: MasterRecord) => {
     setEditingRecord(record);
     setFormName(record.name);
-    setFormStatus(record.status);
+    setFormStatus(record.status || 'Active');
   };
 
   const handleSaveAdd = (e: React.FormEvent) => {

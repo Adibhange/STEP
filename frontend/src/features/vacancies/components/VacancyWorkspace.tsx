@@ -7,7 +7,7 @@ import { WorkspaceHeader, type WorkspaceHeaderTab } from '@/features/shared/work
 import { PipelineFlowVersions } from './PipelineFlowVersions';
 import { AssessmentPatternBuilder } from './AssessmentPatternBuilder';
 import { CandidateBulkFlowAssignment } from './CandidateBulkFlowAssignment';
-import type { VacancyItem } from '@/mock/vacancies';
+import type { VacancyItem } from '../types/vacancy.types';
 
 interface VacancyWorkspaceProps {
   vacancy: VacancyItem;

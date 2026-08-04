@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { MasterTable } from './MasterTable';
-import { MASTER_DATA, type MasterRecord } from '@/mock/masters';
+import type { MasterRecord } from '@/types/master.types';
+import { useGetMasterDataByCategoryQuery } from '@/store/services/api';
 
 export interface CategoryDef {
   key: string;
@@ -62,8 +63,6 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
     exampleName: 'SQL & Database Queries',
     exampleCode: 'SQL',
   },
-
-  // Locations Group
   {
     key: 'hiringLocations',
     title: 'Hiring Locations',
@@ -86,45 +85,23 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
 
 export const ConfigurationPanel: React.FC = () => {
   const [activeCategoryKey, setActiveCategoryKey] = useState<string>('roles');
-  const [dataStore, setDataStore] = useState<Record<string, MasterRecord[]>>(MASTER_DATA);
+  const { data: masterResponse, isLoading, isError } = useGetMasterDataByCategoryQuery(activeCategoryKey);
 
   const activeCategory = CONFIG_CATEGORIES.find((c) => c.key === activeCategoryKey) || CONFIG_CATEGORIES[0];
-  const activeRecords = dataStore[activeCategoryKey] || [];
 
-  const handleAdd = (newRec: Omit<MasterRecord, 'id' | 'updatedAt'>) => {
-    const created: MasterRecord = {
-      ...newRec,
-      id: `${activeCategoryKey}-${Date.now()}`,
-      updatedAt: new Date().toISOString().split('T')[0],
-    };
-    setDataStore((prev) => ({
-      ...prev,
-      [activeCategoryKey]: [created, ...(prev[activeCategoryKey] || [])],
+  const activeRecords: MasterRecord[] = useMemo(() => {
+    return (masterResponse?.data || []).map((m: any) => ({
+      id: m.id,
+      category: m.category || activeCategoryKey,
+      code: m.code || '',
+      name: m.name || '',
+      description: m.description || '',
+      displayOrder: m.displayOrder || 1,
+      status: m.isActive ? 'Active' : 'Inactive',
+      isActive: m.isActive ?? true,
+      updatedAt: m.updatedAt || '',
     }));
-  };
-
-  const handleEdit = (updatedRec: MasterRecord) => {
-    setDataStore((prev) => ({
-      ...prev,
-      [activeCategoryKey]: (prev[activeCategoryKey] || []).map((r) => (r.id === updatedRec.id ? updatedRec : r)),
-    }));
-  };
-
-  const handleToggleStatus = (id: string) => {
-    setDataStore((prev) => ({
-      ...prev,
-      [activeCategoryKey]: (prev[activeCategoryKey] || []).map((r) =>
-        r.id === id ? { ...r, status: r.status === 'Active' ? 'Inactive' : 'Active' } : r
-      ),
-    }));
-  };
-
-  const handleDelete = (id: string) => {
-    setDataStore((prev) => ({
-      ...prev,
-      [activeCategoryKey]: (prev[activeCategoryKey] || []).filter((r) => r.id !== id),
-    }));
-  };
+  }, [masterResponse, activeCategoryKey]);
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -132,7 +109,7 @@ export const ConfigurationPanel: React.FC = () => {
       <div className="bg-[var(--surface-1)] border border-[var(--border-default)] p-2 rounded-[var(--radius-lg)] shadow-2xs flex items-center gap-2 overflow-x-auto scrollbar-step w-full">
         {CONFIG_CATEGORIES.map((cat) => {
           const isActive = cat.key === activeCategoryKey;
-          const count = (dataStore[cat.key] || []).length;
+          const count = cat.key === activeCategoryKey ? activeRecords.length : 0;
           return (
             <button
               key={cat.key}
@@ -146,28 +123,44 @@ export const ConfigurationPanel: React.FC = () => {
             >
               <Icon name={cat.icon as any} size="xs" />
               <span>{cat.title}</span>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-[var(--surface-2)] text-[var(--text-tertiary)]'}`}>
-                {count}
-              </span>
+              {isActive && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/20 text-white">
+                  {count}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
+      {isLoading && (
+        <div className="p-8 text-center text-xs text-[var(--text-tertiary)] font-mono animate-pulse">
+          Loading master records for {activeCategory.title}...
+        </div>
+      )}
+
+      {isError && (
+        <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] text-xs font-semibold">
+          Failed to load master records from backend database.
+        </div>
+      )}
+
       {/* Master Data Table */}
-      <div className="w-full">
-        <MasterTable
-          title={activeCategory.title}
-          description={activeCategory.description}
-          data={activeRecords}
-          exampleName={activeCategory.exampleName}
-          exampleCode={activeCategory.exampleCode}
-          onAdd={handleAdd}
-          onEdit={handleEdit}
-          onToggleStatus={handleToggleStatus}
-          onDelete={handleDelete}
-        />
-      </div>
+      {!isLoading && !isError && (
+        <div className="w-full">
+          <MasterTable
+            title={activeCategory.title}
+            description={activeCategory.description}
+            data={activeRecords}
+            exampleName={activeCategory.exampleName}
+            exampleCode={activeCategory.exampleCode}
+            onAdd={() => {}}
+            onEdit={() => {}}
+            onToggleStatus={() => {}}
+            onDelete={() => {}}
+          />
+        </div>
+      )}
     </div>
   );
 };
