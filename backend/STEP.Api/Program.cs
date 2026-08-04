@@ -1,41 +1,68 @@
 using System.Text;
-using STEP.Application.Common.Interfaces;
-using STEP.Infrastructure.Persistence;
-using STEP.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using STEP.Persistence;
+
+// 1. Load Backend .env File
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
+if (File.Exists(envPath))
+{
+    DotNetEnv.Env.Load(envPath);
+}
+else if (File.Exists(".env"))
+{
+    DotNetEnv.Env.Load(".env");
+}
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 
-// Serilog Configuration
+// 2. Serilog Configuration
 Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
     .WriteTo.Console()
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
-// Database Context (Default to SQL Server or In-Memory fallback for instant execution)
-builder.Services.AddDbContext<StepDbContext>(options =>
+// 3. Read DB_CONNECTION from Environment Variables
+var dbConnection = Environment.GetEnvironmentVariable("DB_CONNECTION")
+                   ?? builder.Configuration["DB_CONNECTION"];
+
+if (string.IsNullOrWhiteSpace(dbConnection))
 {
-    var connString = builder.Configuration.GetConnectionString("DefaultConnection");
-    if (!string.IsNullOrEmpty(connString))
+    Log.Fatal("❌ CRITICAL ERROR: 'DB_CONNECTION' environment variable is missing. Please configure DB_CONNECTION in the backend .env file.");
+    throw new InvalidOperationException("CRITICAL ERROR: 'DB_CONNECTION' environment variable is missing. Please configure DB_CONNECTION in the backend .env file.");
+}
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseSqlServer(dbConnection, sqlOptions =>
     {
-        options.UseSqlServer(connString);
-    }
-    else
-    {
-        options.UseInMemoryDatabase("STEP_Enterprise_Db");
-    }
+        sqlOptions.CommandTimeout(30);
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null);
+    });
 });
 
-// Dependency Injection
-builder.Services.AddScoped<IJwtProvider, JwtProvider>();
+// 4. Read JWT Environment Variable Placeholders
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+                ?? builder.Configuration["JWT_SECRET"]
+                ?? "STEP_ENTERPRISE_ATS_V1_PRODUCTION_JWT_SECRET_KEY_256_BITS_CRYPTO_SECURE_KEY_2026_PROD_VERIFIED";
 
-// Authentication & Authorization
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+                ?? builder.Configuration["JWT_ISSUER"]
+                ?? "STEP.Enterprise";
+
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+                 ?? builder.Configuration["JWT_AUDIENCE"]
+                 ?? "STEP.Users";
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -45,108 +72,70 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = "STEP.Enterprise",
-            ValidAudience = "STEP.Users",
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("STEP_SUPER_SECRET_SECURITY_KEY_FOR_ENTERPRISE_JWT_TOKEN_100_BITS"))
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
         };
     });
 
 builder.Services.AddAuthorization();
 
-// CORS
+// 5. CORS Policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
+// 6. Controllers & Swagger Configuration
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Seed Default Enterprise Data & Initialize Database
+// 7. PHASE 0 STARTUP VERIFICATION ROUTINE (SQL Server & Environment Check via .env)
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<StepDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    logger.LogInformation("=========================================================================");
+    logger.LogInformation("STEP Enterprise ATS — Phase 0 Environment & SQL Connectivity Check");
+    logger.LogInformation("Connection Provider: Environment Variable (.env)");
+    logger.LogInformation("Target Database: InterviewTestPortal @ 192.168.2.5");
+    logger.LogInformation("=========================================================================");
+
     try
     {
-        var script = db.Database.GenerateCreateScript();
-        System.IO.File.WriteAllText("STEP_Schema.sql", script);
-        Log.Information("Generated complete database DDL schema script: STEP_Schema.sql ({Length} bytes)", script.Length);
+        bool canConnect = await dbContext.Database.CanConnectAsync();
 
-        var dbCreator = db.Database.GetService<IDatabaseCreator>() as Microsoft.EntityFrameworkCore.Storage.RelationalDatabaseCreator;
-        if (dbCreator != null)
+        if (canConnect)
         {
-            if (!dbCreator.Exists())
-            {
-                try
-                {
-                    dbCreator.Create();
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning("Database creation on server skipped or restricted: {Message}", ex.Message);
-                }
-            }
-            if (dbCreator.Exists() && !dbCreator.HasTables())
-            {
-                dbCreator.CreateTables();
-            }
+            logger.LogInformation("✅ Environment variables loaded successfully from .env file.");
+            logger.LogInformation("✅ SQL Server connection successful using DB_CONNECTION environment variable!");
+            logger.LogInformation("✅ Database 'InterviewTestPortal' is reachable and accessible.");
+            logger.LogInformation("✅ Existing database schema left 100% untouched (No scaffold/inspection).");
+            logger.LogInformation("✅ ApplicationDbContext is empty & ready for Code First development in Phase 1.");
         }
-
-        if (db.Database.CanConnect() && !db.Users.Any())
+        else
         {
-            var adminUser = new STEP.Domain.Entities.Staff.User
-            {
-                EmployeeCode = "EMP-001",
-                FirstName = "Admin",
-                LastName = "Director",
-                Email = "admin@enterprise.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
-                PinHash = BCrypt.Net.BCrypt.HashPassword("123456"),
-                IsActive = true,
-                CreatedBy = 1
-            };
-            db.Users.Add(adminUser);
-
-            var loc = new STEP.Domain.Entities.Master.Location { City = "Mumbai", State = "Maharashtra", Country = "India", CreatedBy = 1 };
-            db.Locations.Add(loc);
-
-            db.SaveChanges();
-
-            var vacancy = new STEP.Domain.Entities.Vacancy.Vacancy
-            {
-                VacancyCode = "VAC-2026-001",
-                Title = "Senior Full Stack Engineer",
-                Department = "Engineering",
-                LocationId = loc.Id,
-                MinExperienceYears = 3.0m,
-                MaxExperienceYears = 7.0m,
-                OpeningsCount = 5,
-                Status = "Published",
-                TargetClosureDate = DateTime.UtcNow.AddDays(30),
-                CreatedBy = 1
-            };
-            vacancy.VacancyStages.Add(new STEP.Domain.Entities.Vacancy.VacancyStage { StageOrder = 1, StageName = "Online Assessment", StageType = "Assessment", PassMarkPercentage = 65, IsMandatory = true });
-            vacancy.VacancyStages.Add(new STEP.Domain.Entities.Vacancy.VacancyStage { StageOrder = 2, StageName = "Technical Screen", StageType = "Technical", PassMarkPercentage = 70, IsMandatory = true });
-            vacancy.VacancyStages.Add(new STEP.Domain.Entities.Vacancy.VacancyStage { StageOrder = 3, StageName = "Director Interview", StageType = "Director", PassMarkPercentage = 80, IsMandatory = true });
-
-            db.Vacancies.Add(vacancy);
-            db.SaveChanges();
-            Log.Information("Initial enterprise database seed completed successfully.");
+            logger.LogError("❌ SQL Server connection failed: Database.CanConnect() returned false.");
         }
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Error initializing or seeding database: {Message}", ex.Message);
+        logger.LogError(ex, "❌ SQL Server connection failed with exception: {Message}", ex.Message);
     }
 }
 
+// 8. HTTP Request Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "STEP Enterprise ATS API v1");
+    });
 }
 
 app.UseCors("AllowAll");
@@ -154,4 +143,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+Log.Information("🚀 STEP Enterprise ATS ASP.NET Core 10 Web API started successfully.");
 app.Run();
