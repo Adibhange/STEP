@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Icon } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { USERS_MOCK, type UserItem, type UserRole, type UserStatus } from '@/mock/users';
+import { useGetUsersQuery, useCreateUserMutation } from '@/store/services/api';
 
 const DEPARTMENT_OPTIONS = [
   'Talent Acquisition',
@@ -24,7 +25,24 @@ const DEPT_BY_ROLE: Record<string, string[] | 'locked'> = {
  * STEP Enterprise Users & Access Control Module
  */
 export const UsersView: React.FC = () => {
+  const { data: apiUsersResponse, isLoading } = useGetUsersQuery();
+  const [createUserApi] = useCreateUserMutation();
+
+  const apiUsers: UserItem[] = (apiUsersResponse?.data || []).map((u: any) => ({
+    id: String(u.id),
+    firstName: u.firstName || '',
+    lastName: u.lastName || '',
+    name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'User',
+    empId: u.employeeCode || u.empId || `EMP-${u.id}`,
+    email: u.email || '',
+    role: (u.role || 'Interviewer') as UserRole,
+    department: u.department || 'Engineering',
+    status: (u.status || 'Active') as UserStatus,
+  }));
+
   const [users, setUsers] = useState<UserItem[]>(USERS_MOCK);
+
+  const displayUsers = apiUsers.length > 0 ? apiUsers : users;
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -46,7 +64,7 @@ export const UsersView: React.FC = () => {
   const [formDept, setFormDept] = useState<string>('Engineering');
   const [formStatus, setFormStatus] = useState<UserStatus>('Active');
 
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = displayUsers.filter((u) => {
     const matchSearch =
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()) ||

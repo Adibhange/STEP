@@ -1,35 +1,34 @@
-import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react';
-import { mockCandidates } from '@/mock/candidate.mock';
-import { mockVacancies } from '@/mock/vacancy.mock';
-import { mockQuestions } from '@/mock/question.mock';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const baseApi = createApi({
   reducerPath: 'baseApi',
-  baseQuery: fakeBaseQuery(),
+  baseQuery: fetchBaseQuery({
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5125/api/v1',
+    prepareHeaders: (headers) => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('step_token') : null;
+      if (token) {
+        headers.set('authorization', `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
   tagTypes: ['Candidates', 'Vacancies', 'Questions'],
   endpoints: (builder) => ({
-    getCandidates: builder.query<typeof mockCandidates, void>({
-      async queryFn() {
-        // Simulate network latency (150ms)
-        await new Promise((res) => setTimeout(res, 150));
-        return { data: mockCandidates };
-      },
+    getCandidates: builder.query<any, void>({
+      query: () => '/candidates',
+      transformResponse: (response: any) => response.data || [],
       providesTags: ['Candidates'],
     }),
 
-    getVacancies: builder.query<typeof mockVacancies, void>({
-      async queryFn() {
-        await new Promise((res) => setTimeout(res, 150));
-        return { data: mockVacancies };
-      },
+    getVacancies: builder.query<any, void>({
+      query: () => '/vacancies',
+      transformResponse: (response: any) => response.data || [],
       providesTags: ['Vacancies'],
     }),
 
-    getQuestions: builder.query<typeof mockQuestions, void>({
-      async queryFn() {
-        await new Promise((res) => setTimeout(res, 150));
-        return { data: mockQuestions };
-      },
+    getQuestions: builder.query<any, number | void>({
+      query: (paperId) => (paperId ? `/questionpapers/${paperId}` : '/questionpapers/1'),
+      transformResponse: (response: any) => response.data?.questions || [],
       providesTags: ['Questions'],
     }),
   }),

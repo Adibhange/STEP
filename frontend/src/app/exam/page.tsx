@@ -1,16 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CandidateExamPortal } from '@/features/assessments/components/CandidateExamPortal';
 
-export default function CandidateExamPage() {
+function ExamContent() {
   const searchParams = useSearchParams();
   const candidateIdParam = searchParams?.get('id') || 'CND-2026-1042';
   const tokenParam = searchParams?.get('token') || 'EXAM-MUM-2026-X89';
   const testModeParam = searchParams?.get('mode');
 
-  // Determine test execution mode based on URL query parameters
   const isOfficeMode = testModeParam === 'office' || (searchParams?.has('token') && testModeParam !== 'home');
   const testMode = isOfficeMode ? 'In Office' : 'From Home';
 
@@ -26,5 +25,13 @@ export default function CandidateExamPage() {
       durationMinutes={60}
       passingPercentage={70}
     />
+  );
+}
+
+export default function CandidateExamPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm font-medium">Loading Assessment Portal...</div>}>
+      <ExamContent />
+    </Suspense>
   );
 }

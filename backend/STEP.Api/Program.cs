@@ -101,10 +101,17 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Report.View", policy => policy.RequireClaim("permission", "Report.View"));
 });
 
-// 5. CORS Policy
+// 5. CORS Policy for Next.js Frontend
+var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries);
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddPolicy("AllowAll", p => p
+        .WithOrigins(allowedOrigins)
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials());
 });
 
 // 6. Controllers & Swagger Configuration

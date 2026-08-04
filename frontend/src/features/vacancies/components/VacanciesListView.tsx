@@ -5,6 +5,7 @@ import { Icon } from '@/design-system';
 import { CreateVacancyModal } from './CreateVacancyModal';
 import { VacancyDetailDialog } from './VacancyDetailDialog';
 import { VACANCIES_MOCK, type VacancyItem } from '@/mock/vacancies';
+import { useGetVacanciesQuery } from '@/store/services/api';
 
 /**
  * STEP Enterprise VacanciesListView
@@ -13,6 +14,7 @@ import { VACANCIES_MOCK, type VacancyItem } from '@/mock/vacancies';
  * Displays drive type badges (Walk-in Drive vs Direct Hiring) and opens Hiring Hub Workspace in a Modal Dialog.
  */
 export const VacanciesListView: React.FC = () => {
+  const { data: apiVacanciesResponse } = useGetVacanciesQuery();
   const [vacancies, setVacancies] = useState<VacancyItem[]>(VACANCIES_MOCK);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -20,7 +22,36 @@ export const VacanciesListView: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedVacancy, setSelectedVacancy] = useState<VacancyItem | null>(null);
 
-  const filteredVacancies = vacancies.filter((v) => {
+  const apiVacancies: VacancyItem[] = (apiVacanciesResponse?.data || []).map((v: any) => ({
+    id: String(v.id),
+    code: v.vacancyCode || `VAC-2026-${v.id}`,
+    title: v.title || 'Untitled Vacancy',
+    role: v.title || 'Engineering',
+    department: v.department || 'Engineering',
+    employmentType: v.employmentType || 'Full-Time Permanent',
+    experience: v.experience || '3-5 Years',
+    hiringLocation: v.hiringLocation || 'Mumbai HQ',
+    testLocation: v.testLocation || 'Mumbai Center',
+    workMode: (v.workMode || 'Hybrid') as any,
+    openPositions: v.openingsCount || v.positionsCount || 1,
+    positionsCount: v.openingsCount || v.positionsCount || 1,
+    status: (v.status || 'Open') as any,
+    driveType: v.driveType || 'Walk-in Drive',
+    createdAt: v.createdAt ? new Date(v.createdAt).toISOString().split('T')[0] : '2026-08-01',
+    closingDate: v.closingDate ? new Date(v.closingDate).toISOString().split('T')[0] : '2026-12-31',
+    assignedRecruiter: v.assignedRecruiter || 'Aditya Bhange',
+    hiringManager: v.hiringManager || 'Rajesh Sharma',
+    appliedCount: v.appliedCount || 0,
+    assessmentCount: v.assessmentCount || 0,
+    interviewCount: v.interviewCount || 0,
+    offeredCount: v.offeredCount || 0,
+    joinedCount: v.joinedCount || 0,
+    activities: [],
+  }));
+
+  const displayVacancies = apiVacancies.length > 0 ? apiVacancies : vacancies;
+
+  const filteredVacancies = displayVacancies.filter((v) => {
     const matchSearch =
       v.title.toLowerCase().includes(search.toLowerCase()) ||
       v.code.toLowerCase().includes(search.toLowerCase()) ||

@@ -13,8 +13,16 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Ignore React components or functions in action payloads if passed
-        ignoredActionPaths: ['payload.action.label', 'payload.action.onClick', 'payload.undoAction.label', 'payload.undoAction.onClick'],
+        // Ignore React components, functions, or RTK Query baseQueryMeta (Request/Response objects) in actions
+        ignoredActionPaths: [
+          'payload.action.label',
+          'payload.action.onClick',
+          'payload.undoAction.label',
+          'payload.undoAction.onClick',
+          'meta.baseQueryMeta.request',
+          'meta.baseQueryMeta.response',
+          'meta.baseQueryMeta',
+        ],
         ignoredPaths: ['notification.queue', 'notification.history'],
       },
     }).concat(baseApi.middleware, stepApi.middleware),

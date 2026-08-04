@@ -9,6 +9,7 @@ import { CandidateTable } from './CandidateTable';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { CANDIDATE_FILTERS } from '../config/candidateFilters';
 import { DASHBOARD_CANDIDATES } from '../mock/candidate.mock';
+import { useGetCandidatesQuery } from '@/store/services/api';
 import type { ActiveFilter } from '../shared/FilterBar';
 import type { DashboardCandidate } from '../mock/candidate.mock';
 
@@ -22,7 +23,33 @@ const ROWS_PER_PAGE_DEFAULT = 10;
  */
 export const CandidateWorkspace: React.FC = () => {
   const router = useRouter();
+  const { data: apiCandidatesResponse } = useGetCandidatesQuery();
   const [candidatesList, setCandidatesList] = useState<DashboardCandidate[]>(DASHBOARD_CANDIDATES);
+
+  const apiCandidates: DashboardCandidate[] = useMemo(() => {
+    return (apiCandidatesResponse?.data || []).map((c: any, index: number) => ({
+      id: typeof c.id === 'number' ? c.id : index + 100,
+      code: c.candidateCode || `CND-2026-${c.id || index}`,
+      name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Candidate',
+      email: c.email || 'candidate@example.com',
+      mobile: c.phone || '+91 9876543210',
+      role: c.role || 'Senior Frontend Engineer',
+      experience: c.experienceYears ? `${c.experienceYears} Years` : '3 Years',
+      experienceYears: c.experienceYears || 3,
+      source: (c.registrationChannel === 'Walk-in' ? 'WalkIn' : 'HomeTest') as any,
+      stage: (c.currentStage || 'Screening') as any,
+      currentRound: (c.currentStage || 'Screening') as any,
+      assignedInterviewer: 'Aditya Bhange',
+      status: (c.status === 'Offered' ? 'Offered' : c.status === 'Rejected' ? 'Rejected' : 'Screening') as any,
+      hiringLocation: c.currentLocation || 'Mumbai HQ',
+      testLocation: 'Mumbai Test Center',
+      riskScore: 0,
+      city: c.currentLocation || 'Mumbai',
+      appliedDate: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '2026-08-01',
+    }));
+  }, [apiCandidatesResponse]);
+
+  const activeCandidates = apiCandidates.length > 0 ? apiCandidates : candidatesList;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -48,7 +75,7 @@ export const CandidateWorkspace: React.FC = () => {
 
   // Client-side filtering
   const filteredCandidates = useMemo<DashboardCandidate[]>(() => {
-    let result = candidatesList;
+    let result = activeCandidates;
 
     if (search.trim()) {
       const q = search.toLowerCase();

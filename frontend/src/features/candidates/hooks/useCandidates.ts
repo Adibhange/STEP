@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { CANDIDATES_MOCK } from '@/mock/candidates';
+import { useGetCandidatesQuery } from '@/store/services/api';
 
 export const useCandidates = () => {
-  const [candidates] = useState(CANDIDATES_MOCK);
-  return { candidates };
+  const { data: apiResponse, isLoading, error, refetch } = useGetCandidatesQuery();
+  const candidates = apiResponse?.data || [];
+  return { candidates, isLoading, error, refetch };
 };
