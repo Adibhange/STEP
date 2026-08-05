@@ -5,9 +5,7 @@ using STEP.Domain.Entities.Master;
 namespace STEP.Persistence.Seed
 {
     /// <summary>
-    /// Seeds the five Phase 1 master-data taxonomies with the same records the frontend currently
-    /// renders from src/features/settings/mock/master.mock.ts, so the two stay in lockstep once
-    /// the settings screen is wired to the real API.
+    /// Seeds the master-data taxonomies with clean enterprise defaults.
     /// </summary>
     public static class MasterDataSeedData
     {
@@ -16,31 +14,25 @@ namespace STEP.Persistence.Seed
         public static void Seed(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<MasterRole>().HasData(
-                Row<MasterRole>(1, "Software Engineer", "SE-01", "Core application developer"),
-                Row<MasterRole>(2, "Senior Frontend Engineer", "SFE-02", "React/TypeScript specialist"),
-                Row<MasterRole>(3, "DevOps Specialist", "DE-03", "Cloud infrastructure & CI/CD"),
-                Row<MasterRole>(4, "QA Automation Engineer", "QA-04", "Automated test suite author"),
-                Row<MasterRole>(5, "Product Manager", "PM-05", "Product roadmap & strategy", isActive: false)
+                Row<MasterRole>(1, ".NET Developer", "DOTNET", "C# .NET Enterprise Software Developer"),
+                Row<MasterRole>(2, "Data Analyst", "DATA", "Data Analytics & Engineering"),
+                Row<MasterRole>(3, "Software Engineer", "SE", "Full Stack Web Developer"),
+                Row<MasterRole>(4, "DevOps Specialist", "DEVOPS", "Cloud Infrastructure & Automation")
             );
 
             modelBuilder.Entity<MasterDepartment>().HasData(
-                Row<MasterDepartment>(1, "Engineering", "ENG", "Core Tech & Development"),
-                Row<MasterDepartment>(2, "Product Management", "PRD", "UX & Product Strategy"),
-                Row<MasterDepartment>(3, "Talent Acquisition", "TA", "Recruitment & HR"),
-                Row<MasterDepartment>(4, "Quality Assurance", "QA", "Software Quality")
+                Row<MasterDepartment>(1, "Production", "PROD", "Core Production Operations"),
+                Row<MasterDepartment>(2, "AMC", "AMC", "Annual Maintenance Contracts"),
+                Row<MasterDepartment>(3, "HR & IT", "HRIT", "Human Resources & Technology Services")
             );
 
             modelBuilder.Entity<MasterHiringLocation>().HasData(
-                Row<MasterHiringLocation>(1, "Mumbai HQ", "BOM", "Main Corporate Tower"),
-                Row<MasterHiringLocation>(2, "Pune Tech Park", "PNQ", "Hinjawadi IT Hub"),
-                Row<MasterHiringLocation>(3, "Bengaluru Innovation Center", "BLR", "Outer Ring Road Lab"),
-                Row<MasterHiringLocation>(4, "Remote India", "REM", "Work from Anywhere (India)")
+                Row<MasterHiringLocation>(1, "Pune Office", "PUNE", "Pune Corporate HQ & Assessment Hub")
             );
 
             modelBuilder.Entity<MasterTestLocation>().HasData(
-                Row<MasterTestLocation>(1, "Mumbai Test Center 1", "TC-BOM-1", "Lab A & B"),
-                Row<MasterTestLocation>(2, "Pune Assessment Hub", "TC-PNQ-1", "Capacity 150"),
-                Row<MasterTestLocation>(3, "Online Remote Proctored", "TC-ONLINE", "Webcam AI Proctored")
+                Row<MasterTestLocation>(1, "Pune Office - Main Center", "TC-PUNE-1", "Lab A & B (Capacity 150)"),
+                Row<MasterTestLocation>(2, "Online Remote Proctored", "TC-ONLINE", "Webcam AI Proctored Assessment")
             );
 
             modelBuilder.Entity<MasterEmploymentType>().HasData(

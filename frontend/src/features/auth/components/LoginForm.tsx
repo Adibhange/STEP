@@ -21,6 +21,10 @@ function persistSession(payload: AuthResultData) {
   if (typeof window === 'undefined') return;
   localStorage.setItem('step_token', payload.accessToken);
   localStorage.setItem('step_refresh_token', payload.refreshToken);
+  localStorage.setItem('step_email', payload.user?.email || '');
+  localStorage.setItem('step_role', payload.user?.role || '');
+  localStorage.setItem('step_name', `${payload.user?.firstName || ''} ${payload.user?.lastName || ''}`.trim());
+  localStorage.setItem('step_emp_code', payload.user?.employeeCode || '');
 }
 
 type AuthMode = 'standard' | 'director';

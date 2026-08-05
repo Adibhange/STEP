@@ -7,12 +7,20 @@ using STEP.Application.Features.QuestionPapers.Commands.CreateQuestionPaper;
 using STEP.Application.Features.QuestionPapers.Commands.ImportVacancyQuestions;
 using STEP.Application.Features.QuestionPapers.Commands.PublishQuestionPaper;
 using STEP.Application.Features.QuestionPapers.Queries.GetQuestionPaperById;
+using STEP.Application.Features.QuestionPapers.Queries.GetQuestionPapers;
 
 namespace STEP.Api.Controllers.v1
 {
     [Authorize]
     public class QuestionPapersController(ISender mediator) : BaseApiController
     {
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var papers = await mediator.Send(new GetQuestionPapersQuery());
+            return Ok(ApiResponse<object>.Ok(papers, "Question papers retrieved successfully"));
+        }
+
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {

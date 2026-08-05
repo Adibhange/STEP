@@ -1,17 +1,16 @@
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
 using STEP.Domain.Entities.Master;
 
-namespace STEP.Application.Features.MasterData.Commands.ToggleMasterDataStatus
+namespace STEP.Application.Features.MasterData.Commands.DeleteMasterData
 {
-    public class ToggleMasterDataStatusCommandHandler(IApplicationDbContext db)
-        : IRequestHandler<ToggleMasterDataStatusCommand, bool>
+    public class DeleteMasterDataCommandHandler(IApplicationDbContext db)
+        : IRequestHandler<DeleteMasterDataCommand, bool>
     {
-        public async Task<bool> Handle(ToggleMasterDataStatusCommand request, CancellationToken cancellationToken)
+        public async Task<bool> Handle(DeleteMasterDataCommand request, CancellationToken cancellationToken)
         {
             MasterDataEntity? entity = request.Category.ToLowerInvariant() switch
             {
@@ -27,11 +26,11 @@ namespace STEP.Application.Features.MasterData.Commands.ToggleMasterDataStatus
             if (entity is null)
                 throw new NotFoundException("MasterDataEntity", request.Id);
 
-            entity.IsActive = !entity.IsActive;
+            entity.IsDeleted = true;
 
             await db.SaveChangesAsync(cancellationToken);
 
-            return entity.IsActive;
+            return true;
         }
     }
 }

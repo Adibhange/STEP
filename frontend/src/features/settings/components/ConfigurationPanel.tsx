@@ -5,7 +5,13 @@ import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { MasterTable } from './MasterTable';
 import type { MasterRecord } from '@/types/master.types';
-import { useGetMasterDataByCategoryQuery, useToggleMasterDataStatusMutation } from '@/store/services/api';
+import {
+  useGetMasterDataByCategoryQuery,
+  useToggleMasterDataStatusMutation,
+  useCreateMasterDataMutation,
+  useUpdateMasterDataMutation,
+  useDeleteMasterDataMutation,
+} from '@/store/services/api';
 
 export interface CategoryDef {
   key: string;
@@ -78,7 +84,10 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
 export const ConfigurationPanel: React.FC = () => {
   const [activeCategoryKey, setActiveCategoryKey] = useState<string>('roles');
   const { data: masterResponse, isLoading, isError } = useGetMasterDataByCategoryQuery(activeCategoryKey);
+  const [createMasterDataApi] = useCreateMasterDataMutation();
+  const [updateMasterDataApi] = useUpdateMasterDataMutation();
   const [toggleStatusApi] = useToggleMasterDataStatusMutation();
+  const [deleteMasterDataApi] = useDeleteMasterDataMutation();
 
   const activeCategory = CONFIG_CATEGORIES.find((c) => c.key === activeCategoryKey) || CONFIG_CATEGORIES[0];
 
@@ -137,17 +146,35 @@ export const ConfigurationPanel: React.FC = () => {
     }
   };
 
-  const handleEditRecord = (updated: MasterRecord) => {
+  const handleEditRecord = async (updated: MasterRecord) => {
+    const prevRecords = [...records];
     setRecords((prev) =>
       prev.map((r) => (String(r.id) === String(updated.id) ? { ...updated, updatedAt: new Date().toISOString().split('T')[0] } : r))
     );
-    toast.success(`Updated ${updated.name}`, {
-      description: `Master record changes saved successfully.`,
-    });
+
+    try {
+      await updateMasterDataApi({
+        category: activeCategoryKey,
+        id: updated.id,
+        name: updated.name,
+        code: updated.code,
+        description: updated.description || '',
+        isActive: updated.status === 'Active',
+      }).unwrap();
+
+      toast.success(`Updated ${updated.name}`, {
+        description: `Master record changes saved successfully.`,
+      });
+    } catch {
+      setRecords(prevRecords);
+      toast.error(`Failed to update ${updated.name}`, {
+        description: 'Could not save master record changes. Please try again.',
+      });
+    }
   };
 
-  const handleAddRecord = (newRec: Omit<MasterRecord, 'id' | 'updatedAt'>) => {
-    const created: MasterRecord = {
+  const handleAddRecord = async (newRec: Omit<MasterRecord, 'id' | 'updatedAt'>) => {
+    const createdTemp: MasterRecord = {
       id: String(Date.now()),
       category: activeCategoryKey,
       code: newRec.code,
@@ -157,17 +184,46 @@ export const ConfigurationPanel: React.FC = () => {
       isActive: (newRec.status || 'Active') === 'Active',
       updatedAt: new Date().toISOString().split('T')[0],
     };
-    setRecords((prev) => [created, ...prev]);
-    toast.success(`Created ${newRec.name}`, {
-      description: `New master taxonomy record added successfully.`,
-    });
+    setRecords((prev) => [createdTemp, ...prev]);
+
+    try {
+      await createMasterDataApi({
+        category: activeCategoryKey,
+        name: newRec.name,
+        code: newRec.code,
+        description: newRec.description || '',
+        isActive: (newRec.status || 'Active') === 'Active',
+      }).unwrap();
+
+      toast.success(`Created ${newRec.name}`, {
+        description: `New master taxonomy record added successfully.`,
+      });
+    } catch {
+      setRecords((prev) => prev.filter((r) => r.id !== createdTemp.id));
+      toast.error(`Failed to create ${newRec.name}`, {
+        description: 'Could not save master record to backend database. Please try again.',
+      });
+    }
   };
 
-  const handleDeleteRecord = (recordId: string | number) => {
+  const handleDeleteRecord = async (recordId: string | number) => {
+    const currentRecord = records.find((r) => String(r.id) === String(recordId));
+    // Optimistic UI removal
     setRecords((prev) => prev.filter((r) => String(r.id) !== String(recordId)));
-    toast.success(`Record removed`, {
-      description: `Master record deleted successfully.`,
-    });
+    try {
+      await deleteMasterDataApi({ category: activeCategoryKey, id: recordId }).unwrap();
+      toast.success(`Record removed`, {
+        description: `${currentRecord?.name || 'Master record'} deleted successfully from database.`,
+      });
+    } catch {
+      // Rollback on failure
+      if (currentRecord) {
+        setRecords((prev) => [...prev, currentRecord]);
+      }
+      toast.error(`Failed to delete record`, {
+        description: 'Could not delete record from backend. Please try again.',
+      });
+    }
   };
 
   return (

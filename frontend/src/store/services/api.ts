@@ -15,14 +15,21 @@ export interface ApiEnvelope<T> {
   correlationId: string;
 }
 
+export interface UserSummaryData {
+  id: number;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  permissions: string[];
+}
+
 export interface AuthResultData {
   accessToken: string;
   refreshToken: string;
   expiresAtUtc?: string;
-  userId: number;
-  email: string;
-  role: string;
-  permissions: string[];
+  user: UserSummaryData;
 }
 
 export interface MasterRecord {
@@ -85,9 +92,16 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 
       const responseEnvelope = refreshResult.data as ApiEnvelope<AuthResultData> | undefined;
       if (responseEnvelope && responseEnvelope.success && responseEnvelope.data?.accessToken) {
-        localStorage.setItem('step_token', responseEnvelope.data.accessToken);
-        if (responseEnvelope.data.refreshToken) {
-          localStorage.setItem('step_refresh_token', responseEnvelope.data.refreshToken);
+        const newData = responseEnvelope.data;
+        localStorage.setItem('step_token', newData.accessToken);
+        if (newData.refreshToken) {
+          localStorage.setItem('step_refresh_token', newData.refreshToken);
+        }
+        if (newData.user) {
+          localStorage.setItem('step_email', newData.user.email || '');
+          localStorage.setItem('step_role', newData.user.role || '');
+          localStorage.setItem('step_name', `${newData.user.firstName || ''} ${newData.user.lastName || ''}`.trim());
+          localStorage.setItem('step_emp_code', newData.user.employeeCode || '');
         }
         // Retry initial request with new token
         result = await rawBaseQuery(args, api, extraOptions);
@@ -149,6 +163,29 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['MasterData'],
     }),
+    createMasterData: builder.mutation<ApiEnvelope<MasterRecord>, { category: string; name: string; code: string; description?: string; isActive?: boolean }>({
+      query: ({ category, ...body }) => ({
+        url: `/masterdata/${category}`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['MasterData'],
+    }),
+    updateMasterData: builder.mutation<ApiEnvelope<MasterRecord>, { category: string; id: string | number; name: string; code: string; description?: string; isActive: boolean }>({
+      query: ({ category, id, ...body }) => ({
+        url: `/masterdata/${category}/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['MasterData'],
+    }),
+    deleteMasterData: builder.mutation<ApiEnvelope<any>, { category: string; id: string | number }>({
+      query: ({ category, id }) => ({
+        url: `/masterdata/${category}/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['MasterData'],
+    }),
 
     // --- Users Endpoints ---
     getUsers: builder.query<ApiEnvelope<UserItem[]>, void>({
@@ -194,6 +231,10 @@ export const stepApi = createApi({
     }),
 
     // --- Question Papers Endpoints ---
+    getQuestionPapers: builder.query<ApiEnvelope<any[]>, void>({
+      query: () => '/questionpapers',
+      providesTags: ['QuestionPapers'],
+    }),
     getQuestionPaperById: builder.query<ApiEnvelope<any>, number>({
       query: (id) => `/questionpapers/${id}`,
       providesTags: (result, error, id) => [{ type: 'QuestionPapers', id }],
@@ -382,12 +423,16 @@ export const {
   useRefreshTokenMutation,
   useGetMasterDataByCategoryQuery,
   useToggleMasterDataStatusMutation,
+  useCreateMasterDataMutation,
+  useUpdateMasterDataMutation,
+  useDeleteMasterDataMutation,
   useGetUsersQuery,
   useCreateUserMutation,
   useGetVacanciesQuery,
   useGetVacancyByIdQuery,
   useCreateVacancyMutation,
   useAssignQuestionPaperToRoundMutation,
+  useGetQuestionPapersQuery,
   useGetQuestionPaperByIdQuery,
   useCreateQuestionPaperMutation,
   usePublishQuestionPaperMutation,

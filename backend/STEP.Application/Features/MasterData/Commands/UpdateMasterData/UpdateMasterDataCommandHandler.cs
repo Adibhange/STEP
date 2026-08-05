@@ -1,17 +1,18 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
+using STEP.Application.Features.MasterData.Common;
 using STEP.Domain.Entities.Master;
 
-namespace STEP.Application.Features.MasterData.Commands.ToggleMasterDataStatus
+namespace STEP.Application.Features.MasterData.Commands.UpdateMasterData
 {
-    public class ToggleMasterDataStatusCommandHandler(IApplicationDbContext db)
-        : IRequestHandler<ToggleMasterDataStatusCommand, bool>
+    public class UpdateMasterDataCommandHandler(IApplicationDbContext db)
+        : IRequestHandler<UpdateMasterDataCommand, MasterDataItemDto>
     {
-        public async Task<bool> Handle(ToggleMasterDataStatusCommand request, CancellationToken cancellationToken)
+        public async Task<MasterDataItemDto> Handle(UpdateMasterDataCommand request, CancellationToken cancellationToken)
         {
             MasterDataEntity? entity = request.Category.ToLowerInvariant() switch
             {
@@ -27,11 +28,21 @@ namespace STEP.Application.Features.MasterData.Commands.ToggleMasterDataStatus
             if (entity is null)
                 throw new NotFoundException("MasterDataEntity", request.Id);
 
-            entity.IsActive = !entity.IsActive;
+            entity.Name = request.Name;
+            entity.Code = request.Code;
+            entity.Description = request.Description;
+            entity.IsActive = request.IsActive;
 
             await db.SaveChangesAsync(cancellationToken);
 
-            return entity.IsActive;
+            return new MasterDataItemDto(
+                entity.Id.ToString(),
+                entity.Name,
+                entity.Code,
+                entity.Description,
+                entity.IsActive ? "Active" : "Inactive",
+                DateTime.UtcNow.ToString("yyyy-MM-dd")
+            );
         }
     }
 }

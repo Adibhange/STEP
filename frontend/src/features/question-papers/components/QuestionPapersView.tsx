@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { QuestionPaper, PaperStatus } from '../types/question-paper.types';
 import { QuestionPaperViewDialog } from './QuestionPaperViewDialog';
-import { useGetVacanciesQuery } from '@/store/services/api';
+import { useGetVacanciesQuery, useGetQuestionPapersQuery } from '@/store/services/api';
 
 const PAGE_SIZE = 20;
 
@@ -19,7 +19,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const QuestionPapersView: React.FC = () => {
-  const { data: vacanciesRes, isLoading, isError } = useGetVacanciesQuery();
+  const { data: qpRes, isLoading: isLoadingQP } = useGetQuestionPapersQuery();
+  const { data: vacanciesRes, isLoading: isLoadingVacancies, isError } = useGetVacanciesQuery();
+  const isLoading = isLoadingQP || isLoadingVacancies;
+
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
   const [statusFilter, setStatusFilter] = useState<'All' | PaperStatus>('All');
@@ -27,6 +30,33 @@ export const QuestionPapersView: React.FC = () => {
   const [selectedPaper, setSelectedPaper] = useState<QuestionPaper | null>(null);
 
   const papers: QuestionPaper[] = useMemo(() => {
+    if (qpRes?.data && qpRes.data.length > 0) {
+      return qpRes.data.map((qp: any) => ({
+        id: String(qp.id),
+        title: qp.title || `Paper #${qp.id}`,
+        category: qp.category || 'Engineering',
+        vacancyId: String(qp.vacancyId || ''),
+        vacancyTitle: qp.paperCode || `Vacancy #${qp.vacancyId}`,
+        status: (qp.status || 'Active') as PaperStatus,
+        totalQuestions: qp.totalQuestions || (qp.questions?.length ?? 25),
+        totalMarks: qp.totalMarks || 100,
+        durationMins: qp.durationMinutes || 45,
+        lastUpdated: qp.publishedAt ? new Date(qp.publishedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        sections: [
+          {
+            id: `sec-${qp.id}-1`,
+            sectionTitle: 'Questions',
+            questionType: 'SINGLE_CHOICE',
+            totalQuestions: qp.totalQuestions || 25,
+            timeLimitMinutes: qp.durationMinutes || 45,
+            marksPerQuestion: 4,
+            totalMarks: qp.totalMarks || 100,
+            questions: qp.questions || [],
+          },
+        ],
+      }));
+    }
+
     return (vacanciesRes?.data || [])
       .filter((v: any) => v.title)
       .map((v: any) => ({
@@ -63,7 +93,7 @@ export const QuestionPapersView: React.FC = () => {
           },
         ],
       }));
-  }, [vacanciesRes]);
+  }, [qpRes, vacanciesRes]);
 
   const allCategories = useMemo(() => {
     return ['All Categories', ...Array.from(new Set(papers.map((p) => p.category)))];

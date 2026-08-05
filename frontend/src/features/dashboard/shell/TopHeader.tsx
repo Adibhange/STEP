@@ -36,18 +36,28 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
 
   const notifications: QuickNotification[] = [];
 
+  const isDirector = user.role?.toLowerCase().includes('director') ?? false;
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const storedName = localStorage.getItem('step_name');
       const email = localStorage.getItem('step_email');
       const role = localStorage.getItem('step_role');
-      if (email || role) {
-        const namePart = email ? email.split('@')[0] : 'User';
-        const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+
+      if (storedName || email || role) {
+        const displayName = storedName || (email ? email.split('@')[0] : 'User');
+        const initials = displayName
+          .split(' ')
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase();
+
         setUser({
-          name: formattedName,
+          name: displayName,
           email: email || 'user@sthapatya.com',
-          role: role || 'Administrator',
-          avatarInitials: formattedName.slice(0, 2).toUpperCase(),
+          role: role || 'User',
+          avatarInitials: initials || displayName.slice(0, 2).toUpperCase(),
         });
       }
     }
@@ -320,8 +330,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                   >
-                    <Icon name="lock" size="xs" className="text-[var(--text-tertiary)]" />
-                    <span>Change Password</span>
+                    <Icon name={isDirector ? 'shield' : 'lock'} size="xs" className="text-[var(--text-tertiary)]" />
+                    <span>{isDirector ? 'Change PIN' : 'Change Password'}</span>
                   </button>
 
                   <button
@@ -365,6 +375,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
+        isDirector={isDirector}
       />
     </header>
   );

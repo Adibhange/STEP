@@ -29,9 +29,9 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
   const { data: rolesRes } = useGetMasterDataByCategoryQuery('roles');
   const { data: expRes } = useGetMasterDataByCategoryQuery('experiencelevels');
   const { data: deptRes } = useGetMasterDataByCategoryQuery('departments');
-  const { data: empTypeRes } = useGetMasterDataByCategoryQuery('employmentTypes');
-  const { data: hiringLocRes } = useGetMasterDataByCategoryQuery('hiringLocations');
-  const { data: testLocRes } = useGetMasterDataByCategoryQuery('testLocations');
+  const { data: empTypeRes } = useGetMasterDataByCategoryQuery('employmenttypes');
+  const { data: hiringLocRes } = useGetMasterDataByCategoryQuery('hiringlocations');
+  const { data: testLocRes } = useGetMasterDataByCategoryQuery('testlocations');
   const { data: usersRes } = useGetUsersQuery();
   const [createVacancyApi] = useCreateVacancyMutation();
 

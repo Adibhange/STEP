@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using STEP.Domain.Entities.Identity;
@@ -7,11 +8,7 @@ namespace STEP.Persistence.Seed
 {
     /// <summary>
     /// Deterministic Phase 1 seed data: RBAC roles, permissions, role-permission grants,
-    /// and two bootstrap users so the login flow is testable end-to-end from a fresh database.
-    ///
-    /// Seed credentials (DEVELOPMENT ONLY — rotate before any real production use):
-    ///   admin@sthapatya.in    / ChangeMe@2026   (Role: Administrator)
-    ///   director@sthapatya.in / ChangeMe@2026   (Role: Director, PIN: 123456)
+    /// and single HR user (hr@sthapatya.com / user@123).
     /// </summary>
     public static class IdentitySeedData
     {
@@ -54,65 +51,47 @@ namespace STEP.Persistence.Seed
                 })
             );
 
-            var grantId = 0;
-            RolePermission[] Grants(int roleId, params string[] onlyCodes) => BuildGrants(roleId, PermissionSeed, ref grantId, onlyCodes);
+            var grants = new List<RolePermission>();
+            var grantIdCounter = 1;
 
-            modelBuilder.Entity<RolePermission>().HasData(
-                Grants(RoleAdministratorId) // Administrator: everything
-                .Concat(Grants(RoleDirectorId)) // Director: everything (approval authority)
-                .Concat(Grants(RoleHRId, "Vacancy.View", "Vacancy.Create", "Candidate.View", "Candidate.Approve", "Report.View"))
-                .Concat(Grants(RoleInterviewerId, "Candidate.View", "Exam.Manage"))
-            );
+            void AddGrants(int roleId, params string[] onlyCodes)
+            {
+                var source = onlyCodes.Length == 0
+                    ? PermissionSeed
+                    : Array.FindAll(PermissionSeed, p => Array.IndexOf(onlyCodes, $"{p.Module}.{p.Action}") >= 0);
+
+                foreach (var p in source)
+                {
+                    grants.Add(new RolePermission
+                    {
+                        Id = grantIdCounter++,
+                        RoleId = roleId,
+                        PermissionId = p.Id,
+                        CreatedAt = SeedTimestamp
+                    });
+                }
+            }
+
+            AddGrants(RoleDirectorId, "Vacancy.View", "Vacancy.Create", "Candidate.View", "Candidate.Approve", "Report.View", "User.Manage", "MasterData.Manage");
+            AddGrants(RoleHRId, "Vacancy.View", "Vacancy.Create", "Candidate.View", "Candidate.Approve", "Report.View", "User.Manage", "MasterData.Manage");
+            AddGrants(RoleInterviewerId, "Candidate.View", "Exam.Manage");
+
+            modelBuilder.Entity<RolePermission>().HasData(grants);
 
             modelBuilder.Entity<User>().HasData(
                 new User
                 {
                     Id = 1,
                     EmployeeCode = "EMP-0001",
-                    FirstName = "System",
-                    LastName = "Administrator",
-                    Email = "admin@sthapatya.in",
-                    PasswordHash = "$2a$11$s0pq2G6y4vyN5Z8EzMTFJuJZ64133EjeIW8knPKKM4CReDLR8RH4W", // ChangeMe@2026
-                    RoleId = RoleAdministratorId,
-                    IsActive = true,
-                    CreatedAt = SeedTimestamp
-                },
-                new User
-                {
-                    Id = 2,
-                    EmployeeCode = "EMP-0002",
-                    FirstName = "Founding",
-                    LastName = "Director",
-                    Email = "director@sthapatya.in",
-                    PasswordHash = "$2a$11$s0pq2G6y4vyN5Z8EzMTFJuJZ64133EjeIW8knPKKM4CReDLR8RH4W", // ChangeMe@2026
-                    PinHash = "$2a$11$TxikHLXy.5Ppfke6QsCUhe0X2TYdTURsmuVS5GxfZiOWz2EpFI6gq", // 123456
-                    RoleId = RoleDirectorId,
+                    FirstName = "HR",
+                    LastName = "Specialist",
+                    Email = "hr@sthapatya.com",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("user@123"), // user@123
+                    RoleId = RoleHRId,
                     IsActive = true,
                     CreatedAt = SeedTimestamp
                 }
             );
-        }
-
-        private static RolePermission[] BuildGrants(int roleId, (int Id, string Module, string Action)[] all, ref int grantIdCounter, params string[] onlyCodes)
-        {
-            var source = onlyCodes.Length == 0
-                ? all
-                : Array.FindAll(all, p => Array.IndexOf(onlyCodes, $"{p.Module}.{p.Action}") >= 0);
-
-            var result = new RolePermission[source.Length];
-            for (int i = 0; i < source.Length; i++)
-            {
-                grantIdCounter++;
-                result[i] = new RolePermission
-                {
-                    Id = grantIdCounter,
-                    RoleId = roleId,
-                    PermissionId = source[i].Id,
-                    CreatedAt = SeedTimestamp
-                };
-            }
-
-            return result;
         }
     }
 }

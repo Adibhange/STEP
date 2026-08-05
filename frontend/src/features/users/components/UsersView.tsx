@@ -15,13 +15,7 @@ const ROLE_ID_MAP: Record<string, number> = {
   Interviewer: 4,
 };
 
-const DEPT_ID_MAP: Record<string, number> = {
-  Engineering: 1,
-  'Product Management': 2,
-  'Talent Acquisition': 3,
-  'Human Resources': 3,
-  'Quality Assurance': 4,
-};
+// Department IDs are resolved dynamically from master data API at runtime
 
 // Role → Department constraints
 const DEPT_BY_ROLE: Record<string, string[] | 'locked'> = {
@@ -40,6 +34,14 @@ export const UsersView: React.FC = () => {
   const [createUserApi] = useCreateUserMutation();
 
   const departmentOptions = (deptMasterRes?.data || []).map((d) => d.name);
+
+  // Resolve department name → DB ID dynamically from master data
+  const resolveDeptId = (deptName: string): number | undefined => {
+    const found = (deptMasterRes?.data || []).find(
+      (d: any) => d.name.toLowerCase() === deptName.toLowerCase()
+    );
+    return found ? found.id : undefined;
+  };
 
   const displayUsers: UserItem[] = (apiUsersResponse?.data || []).map((u: any) => ({
     id: String(u.id),
@@ -124,7 +126,7 @@ export const UsersView: React.FC = () => {
         email: formEmail.trim(),
         tempPassword: formTempPassword || 'TempPass@2026',
         roleId: ROLE_ID_MAP[formRole] || 4,
-        departmentId: DEPT_ID_MAP[formDept] || 1,
+        departmentId: resolveDeptId(formDept),
         pin: formPin.trim() || undefined,
       }).unwrap();
 
@@ -136,17 +138,22 @@ export const UsersView: React.FC = () => {
       );
       setIsAddOpen(false);
     } catch (err: any) {
+      // Backend returns: { success: false, message: string, errors: string[] }
       const errMsg =
+        (Array.isArray(err?.data?.errors) && err.data.errors.length > 0
+          ? err.data.errors.join(' ')
+          : null) ||
         err?.data?.message ||
-        err?.data?.errors?.Email?.[0] ||
-        err?.data?.errors?.TempPassword?.[0] ||
-        'Failed to create user in backend database. Please check fields.';
+        (err?.status === 403 ? 'Access denied: You do not have permission to manage users.' : null) ||
+        (err?.status === 401 ? 'Session expired. Please log in again.' : null) ||
+        `Request failed (HTTP ${err?.status ?? 'unknown'}). Check console for details.`;
       dispatch(
         notifyError({
           title: 'User Creation Failed',
           description: errMsg,
         })
       );
+      console.error('[CreateUser] API error:', err);
     }
   };
 

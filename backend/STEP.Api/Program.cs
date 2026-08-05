@@ -176,6 +176,7 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("✅ Database 'InterviewTestPortal' is reachable and accessible.");
             logger.LogInformation("✅ STEP tables live under their own per-domain schemas — no pre-existing tables touched.");
             logger.LogInformation("✅ Phase 1 (Identity, RBAC, Master Data) is active.");
+            await STEP.Persistence.Seed.DbInitializer.EnsureUserPasswordAsync(dbContext);
         }
         else
         {
