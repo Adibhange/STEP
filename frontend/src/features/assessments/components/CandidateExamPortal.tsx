@@ -395,7 +395,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   }, [isTimerRunning, examStep, activeRoundNumber]);
 
   // Handle Home candidate login form submit
-  const handleCandidateLogin = (e: React.FormEvent) => {
+  const handleCandidateLogin = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!loginCode.trim() || !loginPasscode.trim()) {
       setLoginError('Please enter both Candidate ID and Passcode.');

@@ -95,7 +95,7 @@ export const UsersView: React.FC = () => {
     setFormStatus(user.status);
   };
 
-  const handleSaveAdd = async (e: React.FormEvent) => {
+  const handleSaveAdd = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formFirstName.trim() || !formLastName.trim() || !formEmail.trim()) return;
 
@@ -115,7 +115,7 @@ export const UsersView: React.FC = () => {
     setIsAddOpen(false);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingUser || !formFirstName.trim() || !formLastName.trim() || !formEmail.trim()) return;
     setEditingUser(null);

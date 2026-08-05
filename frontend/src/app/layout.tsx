@@ -3,8 +3,8 @@ import { AppProvider } from '@/providers/AppProvider';
 import { NotificationProvider } from '@/components/providers/NotificationProvider';
 
 export const metadata = {
-  title: 'STEP - Sthapatya Talent Excellence Platform',
-  description: 'Precision-built enterprise talent operations platform for Sthapatya.',
+  title: 'STEP — Sthapatya Talent Excellence Platform | SCIPL',
+  description: 'Official enterprise talent operations and assessment platform for Sthapatya Consultants (I) Pvt. Ltd. (SCIPL).',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -5,6 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Badge } from '@/design-system';
 import type { QuickNotification, CurrentUser } from '@/features/dashboard/types/dashboard.types';
+import { useIdleTimerContext } from '@/hooks/useIdleTimer';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface TopHeaderProps {
   onMobileMenuOpen: () => void;
@@ -17,8 +19,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
   const router = useRouter();
   const pathname = usePathname();
 
+  const { isIdle, formattedTime, resetTimer } = useIdleTimerContext();
+
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -128,11 +133,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
-            className={`text-[11px] sm:text-[13.5px] tracking-tight font-heading cursor-pointer transition-colors ${
-              isDashboardRoot
+            className={`text-[11px] sm:text-[13.5px] tracking-tight font-heading cursor-pointer transition-colors ${isDashboardRoot
                 ? 'font-bold text-[var(--text-primary)]'
                 : 'font-medium text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:underline'
-            }`}
+              }`}
           >
             Dashboard
           </button>
@@ -152,8 +156,21 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
         </nav>
       </div>
 
-      {/* Right: Notifications + Profile */}
+      {/* Right: Idle Badge + Notifications + Profile */}
       <div className="flex items-center gap-3">
+        {/* Live Idle 15-Min Auto-Logout Badge */}
+        {isIdle && (
+          <button
+            type="button"
+            onClick={resetTimer}
+            title="Auto-logout timer. Click or move mouse to reset."
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)] text-[var(--status-warning-text)] text-xs font-bold font-mono cursor-pointer hover:opacity-90 transition-all shadow-xs animate-pulse"
+          >
+            <Icon name="alert-triangle" size="xs" />
+            <span>{formattedTime}</span>
+          </button>
+        )}
+
         {/* Notification Bell Trigger */}
         <div className="relative" ref={notifRef}>
           <button
@@ -207,9 +224,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
                     notifications.map((n) => (
                       <div
                         key={n.id}
-                        className={`p-3 text-[12px] flex items-start gap-3 hover:bg-[var(--surface-hover)] transition-colors ${
-                          !n.read ? 'bg-[var(--accent-indigo-dim)]/20' : ''
-                        }`}
+                        className={`p-3 text-[12px] flex items-start gap-3 hover:bg-[var(--surface-hover)] transition-colors ${!n.read ? 'bg-[var(--accent-indigo-dim)]/20' : ''
+                          }`}
                       >
                         <div className="mt-0.5 shrink-0">
                           <Icon
@@ -261,13 +277,95 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
             <Icon
               name="chevron-down"
               size="xs"
-              className={`text-[var(--text-tertiary)] transition-transform duration-150 ${
-                profileOpen ? 'rotate-180 text-[var(--text-primary)]' : ''
-              }`}
+              className={`text-[var(--text-tertiary)] transition-transform duration-150 ${profileOpen ? 'rotate-180 text-[var(--text-primary)]' : ''
+                }`}
             />
           </button>
+
+          <AnimatePresence>
+            {profileOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98, y: 4 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="absolute right-0 top-full mt-2 w-64 bg-[var(--surface-1)] border border-[var(--border-default)]
+                  rounded-[var(--radius-lg)] shadow-[var(--shadow-xl)] z-50 overflow-hidden origin-top-right divide-y divide-[var(--border-default)]"
+              >
+                {/* User info header */}
+                <div className="p-3.5 bg-[var(--surface-2)] flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-[13px] flex items-center justify-center shrink-0 shadow-xs">
+                    {user.avatarInitials}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[13px] font-bold text-[var(--text-primary)] truncate font-heading leading-tight">
+                      {user.name}
+                    </span>
+                    <span className="text-[11px] text-[var(--text-tertiary)] truncate font-medium">
+                      {user.email}
+                    </span>
+                    <span className="text-[10px] text-[var(--accent-indigo)] font-semibold uppercase tracking-wider mt-0.5">
+                      {user.role}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="p-1.5 space-y-0.5 text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      setIsChangePasswordOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                  >
+                    <Icon name="lock" size="xs" className="text-[var(--text-tertiary)]" />
+                    <span>Change Password</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      router.push('/dashboard/settings');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                  >
+                    <Icon name="settings" size="xs" className="text-[var(--text-tertiary)]" />
+                    <span>System Settings</span>
+                  </button>
+                </div>
+
+                {/* Sign out */}
+                <div className="p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      if (typeof window !== 'undefined') {
+                        localStorage.removeItem('step_token');
+                        localStorage.removeItem('step_role');
+                        localStorage.removeItem('step_email');
+                      }
+                      router.push('/');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-[var(--status-danger)] hover:bg-[var(--status-danger-bg)] transition-colors cursor-pointer font-semibold"
+                  >
+                    <Icon name="log-out" size="xs" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </header>
   );
 };

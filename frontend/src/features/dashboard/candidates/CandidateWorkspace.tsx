@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { Icon } from '@/design-system';
-import { FilterBar } from '../shared/FilterBar';
-import { TablePagination } from '../shared/TablePagination';
-import { CandidateTable } from './CandidateTable';
-import { AddCandidateDialog } from './AddCandidateDialog';
-import { CANDIDATE_FILTERS } from '../config/candidateFilters';
-import { useGetCandidatesQuery } from '@/store/services/api';
-import type { ActiveFilter } from '../shared/FilterBar';
-import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
+import React, { useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Icon } from "@/design-system";
+import { FilterBar } from "../shared/FilterBar";
+import { TablePagination } from "../shared/TablePagination";
+import { CandidateTable } from "./CandidateTable";
+import { AddCandidateDialog } from "./AddCandidateDialog";
+import { CANDIDATE_FILTERS } from "../config/candidateFilters";
+import { useGetCandidatesQuery } from "@/store/services/api";
+import type { ActiveFilter } from "../shared/FilterBar";
+import type { DashboardCandidate } from "@/features/dashboard/types/dashboard.types";
 
 const ROWS_PER_PAGE_DEFAULT = 10;
 
@@ -25,29 +25,34 @@ export const CandidateWorkspace: React.FC = () => {
 
   const apiCandidates: DashboardCandidate[] = useMemo(() => {
     return (apiCandidatesResponse?.data || []).map((c: any, index: number) => ({
-      id: typeof c.id === 'number' || typeof c.id === 'string' ? c.id : index + 1,
+      id:
+        typeof c.id === "number" || typeof c.id === "string" ? c.id : index + 1,
       code: c.candidateCode || `CND-2026-${c.id || index + 1}`,
-      name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Candidate',
-      email: c.email || '',
-      mobile: c.phone || '',
-      role: c.role || 'Candidate',
-      experience: c.experienceYears ? `${c.experienceYears} Years` : '0 Years',
+      name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || "Candidate",
+      email: c.email || "",
+      mobile: c.phone || "",
+      role: c.role || "Candidate",
+      experience: c.experienceYears ? `${c.experienceYears} Years` : "0 Years",
       experienceYears: c.experienceYears || 0,
-      source: (c.registrationChannel === 'Walk-in' ? 'WalkIn' : 'HomeTest') as any,
-      stage: (c.currentStage || 'Screening') as any,
-      currentRound: (c.currentStage || 'Screening') as any,
-      assignedInterviewer: c.assignedInterviewer || 'Unassigned',
-      status: (c.status || 'Screening') as any,
-      hiringLocation: c.currentLocation || 'Primary Center',
-      testLocation: 'Test Center',
+      source: (c.registrationChannel === "Walk-in"
+        ? "WalkIn"
+        : "HomeTest") as any,
+      stage: (c.currentStage || "Screening") as any,
+      currentRound: (c.currentStage || "Screening") as any,
+      assignedInterviewer: c.assignedInterviewer || "Unassigned",
+      status: (c.status || "Screening") as any,
+      hiringLocation: c.currentLocation || "Primary Center",
+      testLocation: "Test Center",
       riskScore: 0,
-      city: c.currentLocation || '',
-      appliedDate: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
+      city: c.currentLocation || "",
+      appliedDate: c.createdAt
+        ? new Date(c.createdAt).toISOString().split("T")[0]
+        : "",
     }));
   }, [apiCandidatesResponse]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilter>({});
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,7 +65,7 @@ export const CandidateWorkspace: React.FC = () => {
 
   const handleFilterReset = useCallback(() => {
     setActiveFilters({});
-    setSearch('');
+    setSearch("");
     setCurrentPage(1);
   }, []);
 
@@ -80,7 +85,7 @@ export const CandidateWorkspace: React.FC = () => {
           c.name.toLowerCase().includes(q) ||
           c.email.toLowerCase().includes(q) ||
           c.code.toLowerCase().includes(q) ||
-          c.role.toLowerCase().includes(q)
+          c.role.toLowerCase().includes(q),
       );
     }
 
@@ -91,10 +96,14 @@ export const CandidateWorkspace: React.FC = () => {
       result = result.filter((c) => c.stage === activeFilters.stage);
     }
     if (activeFilters.hiringLocation) {
-      result = result.filter((c) => c.hiringLocation === activeFilters.hiringLocation);
+      result = result.filter(
+        (c) => c.hiringLocation === activeFilters.hiringLocation,
+      );
     }
     if (activeFilters.testLocation) {
-      result = result.filter((c) => c.testLocation === activeFilters.testLocation);
+      result = result.filter(
+        (c) => c.testLocation === activeFilters.testLocation,
+      );
     }
     if (activeFilters.status) {
       result = result.filter((c) => c.status === activeFilters.status);
@@ -107,10 +116,17 @@ export const CandidateWorkspace: React.FC = () => {
   }, [search, activeFilters, apiCandidates]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredCandidates.length / rowsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredCandidates.length / rowsPerPage),
+  );
   const paginatedCandidates = useMemo(
-    () => filteredCandidates.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage),
-    [filteredCandidates, currentPage, rowsPerPage]
+    () =>
+      filteredCandidates.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage,
+      ),
+    [filteredCandidates, currentPage, rowsPerPage],
   );
 
   const filterKey = `${currentPage}-${JSON.stringify(activeFilters)}-${search}`;
@@ -150,12 +166,17 @@ export const CandidateWorkspace: React.FC = () => {
           <div
             className={`relative flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-full border
               transition-all duration-150 ease-out w-28 sm:w-44 md:w-52 xl:w-64 shrink-0
-              ${searchFocused
-                ? 'border-[var(--border-focus)] shadow-[0_0_0_3px_var(--focus-glow)] bg-[var(--surface-1)]'
-                : 'border-[var(--border-default)] hover:border-[var(--border-strong)] bg-[var(--surface-2)]'
+              ${
+                searchFocused
+                  ? "border-[var(--border-focus)] shadow-[0_0_0_3px_var(--focus-glow)] bg-[var(--surface-1)]"
+                  : "border-[var(--border-default)] hover:border-[var(--border-strong)] bg-[var(--surface-2)]"
               }`}
           >
-            <Icon name="search" size="xs" className={`shrink-0 transition-opacity duration-150 ${searchFocused ? 'opacity-100 text-[var(--accent-indigo)]' : 'opacity-60 text-[var(--text-tertiary)]'}`} />
+            <Icon
+              name="search"
+              size="xs"
+              className={`shrink-0 transition-opacity duration-150 ${searchFocused ? "opacity-100 text-[var(--accent-indigo)]" : "opacity-60 text-[var(--text-tertiary)]"}`}
+            />
             <input
               type="search"
               placeholder="Search candidates..."
@@ -169,11 +190,17 @@ export const CandidateWorkspace: React.FC = () => {
             {search ? (
               <button
                 type="button"
-                onClick={() => { setSearch(''); setCurrentPage(1); }}
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                onClick={() => {
+                  setSearch("");
+                  setCurrentPage(1);
+                }}
+                className="text-(--text-tertiary) hover:text-(--text-primary) transition-colors cursor-pointer"
                 aria-label="Clear search"
               >
-                <Icon name="x" size="xs" />
+                <Icon
+                  name="x"
+                  size="xs"
+                />
               </button>
             ) : (
               <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--surface-3)] border border-[var(--border-default)] text-[9.5px] font-mono font-bold text-[var(--text-tertiary)] shrink-0">
@@ -206,8 +233,13 @@ export const CandidateWorkspace: React.FC = () => {
             aria-label="Add new candidate"
             title="Add new candidate"
           >
-            <Icon name="plus" size="xs" />
-            <span className="whitespace-nowrap hidden sm:inline">Add Candidate</span>
+            <Icon
+              name="plus"
+              size="xs"
+            />
+            <span className="whitespace-nowrap hidden sm:inline">
+              Add Candidate
+            </span>
           </button>
         </div>
       </div>

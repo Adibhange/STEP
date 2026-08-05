@@ -367,8 +367,8 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
     if (step > 1) setStep((s) => (s - 1) as any);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
     const isWalkIn = driveType === 'Walk-in Drive';
 
     onSave?.({

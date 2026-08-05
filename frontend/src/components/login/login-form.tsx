@@ -232,7 +232,7 @@ export const LoginForm: React.FC = () => {
     setTimeout(() => setShake(false), 520);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const eErr = validateEmail();
     const pErr = validatePassword();

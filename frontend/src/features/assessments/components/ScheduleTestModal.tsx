@@ -322,7 +322,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
   };
 
   // Submit & Schedule Action
-  const handleScheduleSubmit = (e: React.FormEvent) => {
+  const handleScheduleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const startFormatted = TIME_SLOT_OPTIONS.find((t) => t.value === startTime)?.label || `${startTime} AM`;

@@ -246,7 +246,7 @@ export const LoginForm: React.FC = () => {
     setTimeout(() => setShake(false), 520);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const eErr = validateEmail();
     const pErr = validatePassword();
@@ -418,7 +418,7 @@ export const LoginForm: React.FC = () => {
                   <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'linear-gradient(135deg,#4f46e5 0%,#6366f1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 900, color: '#ffffff', boxShadow: '0 2px 8px rgba(99,102,241,0.25)' }}>S</span>
                   <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.04em', lineHeight: 1 }}>STEP</span>
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(15,23,42,0.45)', background: 'rgba(15,23,42,0.04)', padding: '4px 10px', borderRadius: '9999px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Enterprise Platform</span>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(15,23,42,0.45)', background: 'rgba(15,23,42,0.04)', padding: '4px 10px', borderRadius: '9999px', letterSpacing: '0.04em' }}>Sthapatya Talent Excellence Platform</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.035em', lineHeight: 1.15, margin: 0 }}>Welcome back.</h1>

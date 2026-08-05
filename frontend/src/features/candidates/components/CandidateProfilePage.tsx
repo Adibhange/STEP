@@ -520,7 +520,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     toast.error('Validation Error', { description: msg });
   };
 
-  const handleSaveProfileEdit = (e: React.FormEvent) => {
+  const handleSaveProfileEdit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const f = editProfileForm;
@@ -593,7 +593,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     toast.info('Document Deleted', { description: `"${docName}" removed from candidate profile.` });
   };
 
-  const handleRolloutOffer = (e: React.FormEvent) => {
+  const handleRolloutOffer = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setOfferStatus('rolled_out');
     setCandidate((prev) => ({ ...prev, status: 'Offered' }));
@@ -615,7 +615,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     toast.success('Offer Letter Rolled Out', { description: `Official offer dispatched to ${offerCandidateEmail}.` });
   };
 
-  const handleSaveFeedback = (e: React.FormEvent) => {
+  const handleSaveFeedback = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFeedbackStage) return;
 
@@ -684,7 +684,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     toast.success('Feedback Saved', { description: 'Interviewer feedback and stage decision recorded.' });
   };
 
-  const handleSaveAssign = (e: React.FormEvent) => {
+  const handleSaveAssign = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedAssignStage) return;
 

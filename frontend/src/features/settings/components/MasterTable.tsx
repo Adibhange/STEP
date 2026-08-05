@@ -106,7 +106,7 @@ export const MasterTable: React.FC<MasterTableProps> = ({
     setFormStatus(record.status || 'Active');
   };
 
-  const handleSaveAdd = (e: React.FormEvent) => {
+  const handleSaveAdd = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formName.trim()) return;
 
@@ -121,7 +121,7 @@ export const MasterTable: React.FC<MasterTableProps> = ({
     setIsAddOpen(false);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingRecord || !formName.trim()) return;
 

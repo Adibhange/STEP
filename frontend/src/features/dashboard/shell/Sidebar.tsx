@@ -48,6 +48,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
     onMobileClose();
   }, [pathname, onMobileClose]);
 
+  const [isHeaderHovered, setIsHeaderHovered] = useState(false);
+
   const sections = (Object.keys(NAV_SECTIONS) as Array<keyof typeof NAV_SECTIONS>).map((sectionKey) => ({
     key: sectionKey,
     label: NAV_SECTIONS[sectionKey],
@@ -66,9 +68,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
         ${collapsed ? 'w-[64px]' : 'w-[var(--sidebar-width)]'}`}
     >
       {/* Brand Logo */}
-      <div className="flex items-center gap-[var(--space-sm)] px-[var(--space-md)] border-b border-[var(--border-default)] shrink-0 h-[var(--header-height)] overflow-hidden">
+      <div
+        onMouseEnter={() => setIsHeaderHovered(true)}
+        onMouseLeave={() => setIsHeaderHovered(false)}
+        className="flex items-center gap-[var(--space-sm)] px-[var(--space-md)] border-b border-[var(--border-default)] shrink-0 h-[var(--header-height)] overflow-hidden cursor-pointer"
+      >
         <span
-          className="w-8 h-8 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--accent-indigo-hover)] to-[var(--accent-indigo)] flex items-center justify-center text-white font-black text-base shrink-0 transition-transform duration-150 active:scale-95 cursor-pointer"
+          className="w-8 h-8 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--accent-indigo-hover)] to-[var(--accent-indigo)] flex items-center justify-center text-white font-black text-base shrink-0 transition-transform duration-150 active:scale-95 shadow-xs"
           aria-label="STEP"
         >
           S
@@ -78,12 +84,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
             initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.15 }}
-            className="flex flex-col min-w-0"
+            className="flex flex-col min-w-0 flex-1 overflow-hidden"
           >
             <span className="font-black text-[var(--text-primary)] text-base tracking-tight leading-none">STEP</span>
-            <span className="text-[10px] font-bold text-[var(--text-tertiary)] tracking-wider uppercase mt-0.5 truncate">
-              Talent Platform
-            </span>
+            
+            {/* Option 1: Hover Marquee Auto-Scroll Container */}
+            <div className="w-full overflow-hidden relative mt-0.5">
+              <motion.div
+                animate={isHeaderHovered ? { x: ['0%', '-52%', '0%'] } : { x: '0%' }}
+                transition={
+                  isHeaderHovered
+                    ? { duration: 4.5, ease: 'easeInOut', repeat: Infinity, repeatDelay: 0.5 }
+                    : { duration: 0.3, ease: 'easeOut' }
+                }
+                className="whitespace-nowrap text-[10px] font-bold tracking-wider uppercase inline-block"
+              >
+                <span className={isHeaderHovered ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'}>
+                  STHAPATYA TALENT EXCELLENCE PLATFORM
+                </span>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </div>
@@ -110,32 +130,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
             ))}
           </div>
         ))}
-      </div>
-
-      {/* User Profile at bottom */}
-      <div className="border-t border-[var(--border-default)] px-[var(--space-sm)] py-[var(--space-sm)] shrink-0">
-        <button
-          type="button"
-          className={`w-full flex items-center rounded-[var(--radius-md)] hover:bg-[var(--surface-hover)] transition-all duration-150 active:scale-[0.98]
-            ${collapsed ? 'justify-center p-[var(--space-xs)]' : 'gap-[var(--space-sm)] px-[var(--space-sm)] py-[var(--space-xs)]'}`}
-        >
-          <span className="w-7 h-7 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo-hover)] flex items-center justify-center text-[11px] font-black shrink-0 border border-[var(--accent-indigo)] border-opacity-30">
-            AB
-          </span>
-          {!collapsed && (
-            <div className="flex flex-col items-start min-w-0 flex-1">
-              <span className="text-[var(--type-body-md-size)] font-semibold text-[var(--text-primary)] truncate w-full text-left">
-                Aditya Bhange
-              </span>
-              <span className="text-[var(--type-label-size)] text-[var(--text-tertiary)] truncate w-full text-left">
-                Recruitment Director
-              </span>
-            </div>
-          )}
-          {!collapsed && (
-            <Icon name="chevrons-up-down" size="xs" className="text-[var(--text-tertiary)] shrink-0" />
-          )}
-        </button>
       </div>
     </nav>
   );
@@ -209,17 +203,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
                   </div>
                 ))}
               </div>
-              <div className="border-t border-[var(--border-default)] px-[var(--space-sm)] py-[var(--space-sm)]">
-                <div className="flex items-center gap-[var(--space-sm)] px-[var(--space-sm)] py-[var(--space-xs)]">
-                  <span className="w-7 h-7 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo-hover)] flex items-center justify-center text-[11px] font-black shrink-0">
-                    AB
-                  </span>
-                  <div className="flex flex-col items-start min-w-0 flex-1">
-                    <span className="text-[var(--type-body-md-size)] font-semibold text-[var(--text-primary)] truncate w-full">Aditya Bhange</span>
-                    <span className="text-[var(--type-label-size)] text-[var(--text-tertiary)] truncate w-full">Recruitment Director</span>
-                  </div>
-                </div>
-              </div>
             </nav>
           </div>
         </div>
@@ -246,10 +229,9 @@ const NavItemRow: React.FC<NavItemRowProps> = ({ item, active, collapsed }) => {
         relative group flex items-center mx-2 my-0.5 rounded-[var(--radius-md)]
         transition-all duration-150 focus-ring-step overflow-hidden
         ${collapsed ? 'justify-center px-0 py-1.5 h-9' : 'gap-2.5 px-3 py-1.5'}
-        ${
-          active
-            ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo-hover)] font-semibold'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+        ${active
+          ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo-hover)] font-semibold'
+          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
         }
       `}
     >

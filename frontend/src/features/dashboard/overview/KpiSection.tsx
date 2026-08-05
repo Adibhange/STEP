@@ -12,7 +12,7 @@ import { useGetRecruitmentFunnelQuery } from '@/store/services/api';
  * Sourced 100% dynamically from backend recruitment funnel API.
  */
 export const KpiSection: React.FC = () => {
-  const { data: funnelResponse, isLoading, isError } = useGetRecruitmentFunnelQuery();
+  const { data: funnelResponse, isLoading } = useGetRecruitmentFunnelQuery();
 
   const dynamicKpiData: KpiItem[] = React.useMemo(() => {
     const f = funnelResponse?.data;
@@ -99,19 +99,9 @@ export const KpiSection: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 animate-pulse">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-28 bg-[var(--surface-2)] rounded-[var(--radius-lg)]" />
-        ))}
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="p-4 rounded-lg bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] text-xs font-semibold">
-        Failed to load recruitment metrics from database.
-      </div>
+      <section aria-label="Key performance indicators">
+        <MetricGrid items={[]} loading={true} />
+      </section>
     );
   }
 

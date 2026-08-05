@@ -94,7 +94,7 @@ export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = () => {
     );
   };
 
-  const handleAddFlowVersion = (e: React.FormEvent) => {
+  const handleAddFlowVersion = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newVersionName.trim()) return;
 

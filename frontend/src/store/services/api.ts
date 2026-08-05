@@ -88,14 +88,14 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       } else {
         localStorage.removeItem('step_token');
         localStorage.removeItem('step_refresh_token');
-        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/exam')) {
-          window.location.href = '/login';
+        if (typeof window !== 'undefined' && window.location.pathname !== '/' && !window.location.pathname.startsWith('/exam') && !window.location.pathname.startsWith('/apply')) {
+          window.location.href = '/';
         }
       }
     } else {
       localStorage.removeItem('step_token');
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/exam')) {
-        window.location.href = '/login';
+      if (typeof window !== 'undefined' && window.location.pathname !== '/' && !window.location.pathname.startsWith('/exam') && !window.location.pathname.startsWith('/apply')) {
+        window.location.href = '/';
       }
     }
   }
