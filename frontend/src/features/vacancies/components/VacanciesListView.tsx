@@ -5,7 +5,8 @@ import { Icon } from '@/design-system';
 import { CreateVacancyModal } from './CreateVacancyModal';
 import { VacancyDetailDialog } from './VacancyDetailDialog';
 import type { VacancyItem } from '../types/vacancy.types';
-import { useGetVacanciesQuery } from '@/store/services/api';
+import { useGetVacanciesQuery, useCreateVacancyMutation, useGetCandidatesQuery } from '@/store/services/api';
+import { useAppDispatch, notifySuccess, notifyError } from '@/store';
 
 /**
  * STEP Enterprise VacanciesListView
@@ -15,7 +16,10 @@ import { useGetVacanciesQuery } from '@/store/services/api';
  * Sourced 100% dynamically from backend database API.
  */
 export const VacanciesListView: React.FC = () => {
+  const dispatch = useAppDispatch();
   const { data: apiVacanciesResponse, isLoading, isError } = useGetVacanciesQuery();
+  const { data: candidatesRes } = useGetCandidatesQuery();
+  const [createVacancyApi] = useCreateVacancyMutation();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [driveFilter, setDriveFilter] = useState<string>('All');
@@ -23,33 +27,46 @@ export const VacanciesListView: React.FC = () => {
   const [selectedVacancy, setSelectedVacancy] = useState<VacancyItem | null>(null);
 
   const apiVacancies: VacancyItem[] = useMemo(() => {
-    return (apiVacanciesResponse?.data || []).map((v: any) => ({
-      id: String(v.id),
-      code: v.vacancyCode || `VAC-2026-${v.id}`,
-      title: v.title || 'Untitled Vacancy',
-      role: v.title || 'Engineering',
-      department: v.department || 'Engineering',
-      employmentType: v.employmentType || 'Full-Time Permanent',
-      experience: v.experience || '3-5 Years',
-      hiringLocation: v.hiringLocation || 'Mumbai HQ',
-      testLocation: v.testLocation || 'Mumbai Center',
-      workMode: (v.workMode || 'Hybrid') as any,
-      openPositions: v.openingsCount || v.positionsCount || 1,
-      positionsCount: v.openingsCount || v.positionsCount || 1,
-      status: (v.status || 'Open') as any,
-      driveType: v.driveType || 'Walk-in Drive',
-      createdAt: v.createdAt ? new Date(v.createdAt).toISOString().split('T')[0] : '',
-      closingDate: v.closingDate ? new Date(v.closingDate).toISOString().split('T')[0] : '',
-      assignedRecruiter: v.assignedRecruiter || 'Recruitment Team',
-      hiringManager: v.hiringManager || 'Engineering Lead',
-      appliedCount: v.appliedCount || 0,
-      assessmentCount: v.assessmentCount || 0,
-      interviewCount: v.interviewCount || 0,
-      offeredCount: v.offeredCount || 0,
-      joinedCount: v.joinedCount || 0,
-      activities: [],
-    }));
-  }, [apiVacanciesResponse]);
+    const allCandidates = candidatesRes?.data || [];
+    return (apiVacanciesResponse?.data || []).map((v: any) => {
+      const vacancyCandidates = allCandidates.filter((c: any) => {
+        const cVacId = c.vacancyId ?? c.vacancy?.id;
+        return cVacId !== null && cVacId !== undefined && String(cVacId) === String(v.id);
+      });
+      const dynamicApplied = vacancyCandidates.length;
+      const dynamicScreening = vacancyCandidates.filter((c: any) => c.currentStage === 'Screening' || c.currentStage === 'Applied').length;
+      const dynamicInterview = vacancyCandidates.filter((c: any) => c.currentStage?.toLowerCase().includes('interview')).length;
+      const dynamicOffered = vacancyCandidates.filter((c: any) => c.status === 'Offered').length;
+      const dynamicJoined = vacancyCandidates.filter((c: any) => c.status === 'Joined').length;
+
+      return {
+        id: String(v.id),
+        code: v.vacancyCode || `VAC-2026-${v.id}`,
+        title: v.title || 'Untitled Vacancy',
+        role: v.title || 'Engineering',
+        department: v.department || 'Engineering',
+        employmentType: v.employmentType || 'Full-Time Permanent',
+        experience: v.experience || '3-5 Years',
+        hiringLocation: v.hiringLocation || 'Mumbai HQ',
+        testLocation: v.testLocation || 'Mumbai Center',
+        workMode: (v.workMode || 'Hybrid') as any,
+        openPositions: v.openingsCount || v.positionsCount || 1,
+        positionsCount: v.openingsCount || v.positionsCount || 1,
+        status: (v.status || 'Open') as any,
+        driveType: v.driveType || 'Walk-in Drive',
+        createdAt: v.createdAt ? new Date(v.createdAt).toISOString().split('T')[0] : '',
+        closingDate: v.closingDate ? new Date(v.closingDate).toISOString().split('T')[0] : '',
+        assignedRecruiter: v.assignedRecruiter || 'Recruitment Team',
+        hiringManager: v.hiringManager || 'Engineering Lead',
+        appliedCount: v.appliedCount && v.appliedCount > 0 ? v.appliedCount : dynamicApplied,
+        assessmentCount: v.assessmentCount && v.assessmentCount > 0 ? v.assessmentCount : dynamicScreening,
+        interviewCount: v.interviewCount && v.interviewCount > 0 ? v.interviewCount : dynamicInterview,
+        offeredCount: v.offeredCount && v.offeredCount > 0 ? v.offeredCount : dynamicOffered,
+        joinedCount: v.joinedCount && v.joinedCount > 0 ? v.joinedCount : dynamicJoined,
+        activities: [],
+      };
+    });
+  }, [apiVacanciesResponse, candidatesRes]);
 
   const filteredVacancies = useMemo(() => {
     return apiVacancies.filter((v) => {
@@ -68,6 +85,44 @@ export const VacanciesListView: React.FC = () => {
       return matchSearch && matchStatus && matchDrive;
     });
   }, [apiVacancies, search, statusFilter, driveFilter]);
+
+  const handleSaveVacancy = async (vacancyData: any) => {
+    try {
+      await createVacancyApi({
+        title: vacancyData.title,
+        masterRoleId: 1,
+        departmentId: 1,
+        hiringLocationId: 1,
+        employmentTypeId: 1,
+        driveType: vacancyData.driveType || 'Walk-in Drive',
+        workMode: vacancyData.workMode || 'Hybrid',
+        totalOpenings: vacancyData.openPositions || 1,
+        minExperienceYears: 1,
+        maxExperienceYears: 10,
+        jobDescription: `${vacancyData.title} - ${vacancyData.department}`,
+        closingDate: vacancyData.closingDate || '2026-08-30',
+        status: vacancyData.status || 'Open',
+        testLocationIds: [1],
+        pipelineFlows: [],
+        assessmentSections: [],
+      }).unwrap();
+
+      dispatch(
+        notifySuccess({
+          title: 'Vacancy Created',
+          description: `Successfully published "${vacancyData.title}" to the database.`,
+        })
+      );
+      setIsCreateOpen(false);
+    } catch (err: any) {
+      dispatch(
+        notifyError({
+          title: 'Vacancy Creation Failed',
+          description: err?.data?.message || 'Failed to save vacancy to backend.',
+        })
+      );
+    }
+  };
 
   const statusVariantMap: Record<string, string> = {
     Open: 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success)]',
@@ -272,7 +327,11 @@ export const VacanciesListView: React.FC = () => {
       )}
 
       {/* Create Vacancy Wizard Modal */}
-      <CreateVacancyModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
+      <CreateVacancyModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSave={handleSaveVacancy}
+      />
 
       {/* Vacancy Hiring Hub Detail Dialog Modal */}
       <VacancyDetailDialog

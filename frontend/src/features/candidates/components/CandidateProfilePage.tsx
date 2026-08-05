@@ -261,7 +261,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [candidate, setCandidate] = useState({
     id: candidateId,
     name: 'Candidate Profile',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600',
+    avatar: '',
     status: 'In Process',
     designation: 'Applicant',
     appliedFor: 'Open Position',
@@ -293,30 +293,49 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     refVerifiedBy: '',
   });
 
+  const nameInitials = useMemo(() => {
+    if (!candidate.name) return 'CD';
+    const parts = candidate.name.trim().split(/\s+/);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return parts[0].substring(0, 2).toUpperCase();
+  }, [candidate.name]);
+
+  // Read Permanent Assigned Pipeline Flow Version for this candidate
+  const assignedFlowVersionName = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`step_candidate_flow_${numericId}`) || localStorage.getItem(`step_candidate_flow_${candidateId}`);
+      if (saved) return saved;
+    }
+    return numericId % 2 === 0
+      ? 'Flow Version 1 (Standard Aptitude First)'
+      : 'Flow Version 2 (Fast-Track Technical First)';
+  }, [candidateId, numericId]);
+
   useEffect(() => {
     const apiData = candidateRes?.data || (candidatesListRes?.data || []).find((c: any) => String(c.id) === String(candidateId) || String(c.id) === String(numericId));
     if (apiData) {
+      const isFresher = apiData.totalExperienceYears === 0 || apiData.experienceYears === 0;
       setCandidate({
         id: String(apiData.id || candidateId),
         name: `${apiData.firstName || ''} ${apiData.lastName || ''}`.trim() || 'Candidate',
-        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600',
+        avatar: apiData.avatarUrl || '',
         status: apiData.status || 'In Process',
-        designation: apiData.role || 'Applicant',
-        appliedFor: apiData.role ? `${apiData.role} Position` : 'Open Position',
+        designation: apiData.vacancyTitle || apiData.role || 'Applicant',
+        appliedFor: apiData.vacancyTitle ? apiData.vacancyTitle : 'Open Position',
         email: apiData.email || '',
         phone: apiData.phone || '',
         gender: apiData.gender || 'N/A',
         dob: apiData.dateOfBirth ? new Date(apiData.dateOfBirth).toISOString().split('T')[0] : '',
         location: apiData.currentLocation || '',
         currentStage: apiData.currentStage || 'Screening',
-        appliedDate: apiData.createdAt ? new Date(apiData.createdAt).toISOString().split('T')[0] : '',
-        experience: apiData.experienceYears ? `${apiData.experienceYears} Years` : '0 Years',
-        candidateType: 'Experienced',
+        appliedDate: apiData.createdAt ? new Date(apiData.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+        experience: isFresher ? 'Fresher (0 Yrs)' : `${apiData.totalExperienceYears ?? apiData.experienceYears ?? 0} Years`,
+        candidateType: isFresher ? 'Fresher' : 'Experienced',
         employmentType: 'Full Time',
         currentCompany: apiData.currentCompany || '',
-        currentDesignation: apiData.currentDesignation || apiData.role || '',
-        currentCtc: apiData.currentCtc ? `₹ ${apiData.currentCtc} LPA` : '',
-        expectedCtc: apiData.expectedCtc ? `₹ ${apiData.expectedCtc} LPA` : '',
+        currentDesignation: apiData.currentDesignation || apiData.vacancyTitle || '',
+        currentCtc: apiData.currentCTC ? `₹ ${apiData.currentCTC} LPA` : '',
+        expectedCtc: apiData.expectedCTC ? `₹ ${apiData.expectedCTC} LPA` : '',
         noticePeriod: apiData.noticePeriodDays ? `${apiData.noticePeriodDays} Days` : '',
         education: apiData.highestQualification || '',
         educationDetails: apiData.highestQualification || '',
@@ -324,12 +343,180 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         passingYear: apiData.yearOfPassing ? String(apiData.yearOfPassing) : '',
         percentage: apiData.marksPercentage ? `${apiData.marksPercentage}%` : '',
         source: apiData.registrationChannel || 'Walk-in Scan',
-        refType: '',
-        refName: '',
+        refType: apiData.referralEmployeeName ? 'Employee Referral' : '',
+        refName: apiData.referralEmployeeName || '',
         refEmployeeId: '',
         refMobile: '',
         refVerifiedBy: '',
       });
+
+      // Populate Live Pipeline History from Backend (or construct candidate-specific timeline)
+      const candDate = apiData.createdAt
+        ? new Date(apiData.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '04 Aug 2026';
+
+      if (apiData.pipelineProgressHistory && Array.isArray(apiData.pipelineProgressHistory) && apiData.pipelineProgressHistory.length > 0) {
+        const liveStages: StageItem[] = apiData.pipelineProgressHistory.map((p: any) => ({
+          id: p.id || p.roundNumber,
+          name: p.roundTitle || `Round ${p.roundNumber}`,
+          status: p.status || 'Pending',
+          statusType: p.status?.toLowerCase() === 'passed' ? 'passed' : p.status?.toLowerCase() === 'failed' ? 'rejected' : 'pending',
+          date: p.completedAt
+            ? new Date(p.completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : p.startedAt
+            ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : 'Pending',
+          interviewer: 'Assigned Evaluator',
+          interviewerInitials: 'AE',
+          interviewerRole: p.roundType || 'Evaluator',
+          mode: p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
+          feedback: p.scoreObtained !== null && p.scoreObtained !== undefined ? `Score: ${p.scoreObtained}%` : 'Evaluation in progress',
+          result: p.status || 'Pending',
+        }));
+        setStagesData(liveStages);
+      } else {
+        // Construct dynamic candidate hiring stages using actual candidate assigned flow version & drive type
+        const isApplied = apiData.status === 'Applied' || apiData.currentStage === 'Applied' || apiData.currentStage === 'Registered';
+        const isWalkInDrive = apiData.registrationChannel === 'Walk-in Scan' || apiData.registrationChannel === 'WalkIn' || (candidate.source && candidate.source.toLowerCase().includes('walk'));
+
+        let r1Name = 'General Aptitude & Logical Test';
+        let r1Role = 'Automated Test';
+        let r1Mode = 'Online Assessment';
+
+        let r2Name = 'Coding & Algorithm Challenge';
+        let r2Role = 'Technical Evaluator';
+        let r2Mode = 'Online / In Office';
+
+        let r3Name = 'Technical F2F & Live Coding';
+        let r3Role = 'Technical Panel';
+        let r3Mode = 'In Office';
+
+        if (isWalkInDrive) {
+          if (assignedFlowVersionName.includes('Fast-Track Technical') || assignedFlowVersionName.includes('Flow Version 2')) {
+            // Walk-in Flow Version 2: Aptitude -> F2F -> Technical -> Director -> Offer
+            r1Name = 'General Aptitude & Logical Test';
+            r2Name = 'Face to Face HR & Technical Round';
+            r2Role = 'Senior HR & Panel';
+            r3Name = 'Coding & Algorithm Challenge';
+            r3Role = 'Technical Evaluator';
+          } else {
+            // Walk-in Flow Version 1: Aptitude -> Technical -> F2F -> Director -> Offer
+            r1Name = 'General Aptitude & Logical Test';
+            r2Name = 'Coding & Algorithm Challenge';
+            r2Role = 'Technical Evaluator';
+            r3Name = 'Technical F2F & Live Coding';
+            r3Role = 'Technical Panel';
+          }
+        } else {
+          // Direct Hiring: Compulsory HR Screening 1st, then 2 dynamic technical/f2f rounds
+          r1Name = 'HR Screening (Compulsory 1st Round)';
+          r1Role = 'HR Specialist';
+          r1Mode = 'Phone / Walk-in';
+          r2Name = 'Technical Assessment';
+          r2Role = 'Technical Evaluator';
+          r3Name = 'Face to Face Interview';
+          r3Role = 'Technical Panel';
+        }
+
+        setStagesData([
+          {
+            id: 1,
+            name: r1Name,
+            status: isApplied ? 'In Progress' : 'Passed',
+            statusType: isApplied ? 'pending' : 'passed',
+            date: candDate,
+            interviewer: 'Assigned Evaluator',
+            interviewerInitials: 'AE',
+            interviewerRole: r1Role,
+            mode: r1Mode,
+            feedback: `Stage 1 verified on ${candDate}. Evaluation in progress.`,
+            result: isApplied ? 'In Progress' : 'Passed',
+            actionLabel: isWalkInDrive ? 'Schedule / Send Test' : null,
+            isDirectorRound: false,
+            isOfferRound: false,
+          },
+          {
+            id: 2,
+            name: r2Name,
+            status: 'Pending',
+            statusType: 'pending',
+            date: 'Pending',
+            interviewer: 'Unassigned',
+            interviewerInitials: 'UA',
+            interviewerRole: r2Role,
+            mode: r2Mode,
+            feedback: 'Stage 2 evaluation pending.',
+            result: 'Pending',
+            actionLabel: 'Schedule Stage 2',
+            isDirectorRound: false,
+            isOfferRound: false,
+          },
+          {
+            id: 3,
+            name: r3Name,
+            status: 'Pending',
+            statusType: 'pending',
+            date: 'Pending',
+            interviewer: 'Unassigned',
+            interviewerInitials: 'UA',
+            interviewerRole: r3Role,
+            mode: 'In Office',
+            feedback: 'Stage 3 evaluation pending.',
+            result: 'Pending',
+            actionLabel: 'Schedule Stage 3',
+            isDirectorRound: false,
+            isOfferRound: false,
+          },
+          {
+            id: 4,
+            name: 'Director Interview',
+            status: 'Pending',
+            statusType: 'pending',
+            date: 'Pending',
+            interviewer: 'Unassigned',
+            interviewerInitials: 'UA',
+            interviewerRole: 'Director of Engineering',
+            mode: 'In Office',
+            feedback: 'Director decision round pending (Fixed 4th Round).',
+            result: 'Pending',
+            actionLabel: null,
+            isDirectorRound: true,
+            isOfferRound: false,
+          },
+          {
+            id: 5,
+            name: 'Offer',
+            status: 'Pending',
+            statusType: 'pending',
+            date: 'Pending',
+            interviewer: '—',
+            interviewerInitials: '—',
+            interviewerRole: 'HR Operations',
+            mode: 'Official Document',
+            feedback: 'Awaiting pipeline clearance for offer rollout (Fixed 5th Round).',
+            result: 'Pending',
+            actionLabel: null,
+            isDirectorRound: false,
+            isOfferRound: true,
+          },
+        ]);
+      }
+
+      // Populate Live Candidate Documents from Backend
+      if (apiData.documents && Array.isArray(apiData.documents) && apiData.documents.length > 0) {
+        const liveDocs: CandidateDocument[] = apiData.documents.map((d: any, idx: number) => ({
+          id: d.id || idx + 1,
+          name: d.fileName || `${d.documentType || 'Document'}.pdf`,
+          date: d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : candDate,
+          size: d.fileSizeBytes ? `${Math.round(d.fileSizeBytes / 1024)} KB` : '150 KB',
+          type: d.documentType || 'Document',
+        }));
+        setDocumentsData(liveDocs);
+      } else {
+        setDocumentsData([
+          { id: 1, name: `Registration_Data_${apiData.lastName || 'Candidate'}.pdf`, date: candDate, size: '120 KB', type: 'Application Form' },
+        ]);
+      }
     }
   }, [candidateRes, candidatesListRes, candidateId, numericId]);
 
@@ -727,11 +914,17 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   className="group relative w-13 h-13 rounded-xl overflow-hidden shrink-0 border border-slate-200 shadow-2xs bg-slate-100 cursor-pointer transition-transform hover:scale-[1.02]"
                   title="Click to view profile photo"
                 >
-                  <img
-                    src={candidate.avatar}
-                    alt={candidate.name}
-                    className="w-full h-full object-cover group-hover:brightness-95 transition-all"
-                  />
+                  {candidate.avatar && candidate.avatar.trim().length > 0 && !candidate.avatar.includes('unsplash') ? (
+                    <img
+                      src={candidate.avatar}
+                      alt={candidate.name}
+                      className="w-full h-full object-cover group-hover:brightness-95 transition-all"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[var(--accent-indigo)] to-purple-600 flex items-center justify-center text-white font-black text-base tracking-tight font-heading">
+                      {nameInitials}
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                     <Icon name="eye" size="xs" />
                   </div>
@@ -784,6 +977,22 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 Applied Position:
               </span>
               <span className="font-bold text-blue-900 text-xs truncate">{candidate.appliedFor}</span>
+            </div>
+
+            {/* Permanent Assigned Pipeline Flow Box */}
+            <div className="flex flex-col gap-1 bg-indigo-50/90 border border-indigo-200 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-indigo-800 font-bold text-[11px] uppercase font-mono flex items-center gap-1.5">
+                  <Icon name="grid" size="xs" />
+                  Assigned Pipeline Flow:
+                </span>
+                <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
+                  🔒 Permanent Walk-in Flow
+                </span>
+              </div>
+              <span className="font-extrabold text-indigo-950 text-xs font-heading">
+                {assignedFlowVersionName}
+              </span>
             </div>
 
             {/* Key-Value Details Grid */}
@@ -1417,16 +1626,16 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       {/* ── 5. High-Resolution Profile Photo Lightbox Modal ──────────────────── */}
       {showImageModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setShowImageModal(false)}
         >
           <div
-            className="relative max-w-lg w-full bg-white rounded-2xl p-4 shadow-2xl flex flex-col gap-3 items-center overflow-hidden"
+            className="relative max-w-md w-full bg-white rounded-2xl p-6 shadow-2xl flex flex-col gap-4 items-center overflow-hidden border border-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-full flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div className="w-full flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex flex-col">
-                <h3 className="text-sm font-bold text-slate-900 font-heading">
+                <h3 className="text-base font-bold text-slate-900 font-heading">
                   {candidate.name}
                 </h3>
                 <span className="text-xs text-slate-500 font-medium">{candidate.designation}</span>
@@ -1434,19 +1643,33 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowImageModal(false)}
-                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label="Close photo dialog"
               >
                 <Icon name="x" size="sm" />
               </button>
             </div>
 
-            <div className="w-full max-h-[480px] rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center">
-              <img
-                src={candidate.avatar}
-                alt={candidate.name}
-                className="w-full h-full object-contain max-h-[480px]"
-              />
+            <div className="w-full min-h-[220px] rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center p-6">
+              {candidate.avatar && candidate.avatar.trim().length > 0 && !candidate.avatar.includes('unsplash') ? (
+                <img
+                  src={candidate.avatar}
+                  alt={candidate.name}
+                  className="w-full h-full object-contain max-h-[360px] rounded-lg shadow-sm"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-[var(--accent-indigo)] via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-3xl shadow-xl font-heading tracking-tight">
+                    {nameInitials}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">Candidate Avatar Initials</span>
+                </div>
+              )}
+            </div>
+
+            <div className="w-full flex items-center justify-between pt-1 text-xs text-slate-600 font-medium border-t border-slate-100">
+              <span>{candidate.email || 'Email not specified'}</span>
+              <span>{candidate.experience}</span>
             </div>
           </div>
         </div>

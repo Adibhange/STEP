@@ -10,6 +10,7 @@ namespace STEP.Application.Features.Candidates.Common
         string LastName,
         string Email,
         string Phone,
+        int VacancyId,
         string VacancyTitle,
         string CurrentStage,
         string Status,

@@ -42,7 +42,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
                 .Take(pageSize)
                 .Select(c => new CandidateSummaryDto(
                     c.Id, c.CandidateCode, c.FirstName, c.LastName, c.Email, c.Phone,
-                    c.Vacancy.Title, c.CurrentStage, c.Status, c.CreatedAt))
+                    c.VacancyId, c.Vacancy.Title, c.CurrentStage, c.Status, c.CreatedAt))
                 .ToListAsync(cancellationToken);
 
             return new CandidateListResultDto(items, totalCount);

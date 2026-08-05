@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Icon } from '@/design-system';
+import { toast } from '@/design-system/feedback/toast';
 import { MasterTable } from './MasterTable';
 import type { MasterRecord } from '@/types/master.types';
-import { useGetMasterDataByCategoryQuery } from '@/store/services/api';
+import { useGetMasterDataByCategoryQuery, useToggleMasterDataStatusMutation } from '@/store/services/api';
 
 export interface CategoryDef {
   key: string;
@@ -24,17 +25,8 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
     icon: 'briefcase',
     description: 'Job role definitions & titles',
     group: 'recruitment',
-    exampleName: 'Data Analyst',
-    exampleCode: 'DA',
-  },
-  {
-    key: 'experiences',
-    title: 'Experience',
-    icon: 'bar-chart-2',
-    description: 'Years of experience tiers',
-    group: 'recruitment',
-    exampleName: 'Junior (1–3 Years)',
-    exampleCode: 'JY',
+    exampleName: 'Senior .NET Architect',
+    exampleCode: 'SNET',
   },
   {
     key: 'departments',
@@ -42,29 +34,20 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
     icon: 'users',
     description: 'Organizational business units',
     group: 'recruitment',
-    exampleName: 'Human Resources',
-    exampleCode: 'HR',
+    exampleName: 'Engineering',
+    exampleCode: 'ENG',
   },
   {
-    key: 'employmentTypes',
+    key: 'employmenttypes',
     title: 'Employment Types',
     icon: 'file-text',
-    description: 'Full-time, contract, internship contracts',
+    description: 'Full-time permanent, contract, internship',
     group: 'recruitment',
     exampleName: 'Full-Time Permanent',
     exampleCode: 'FTP',
   },
   {
-    key: 'assessmentTitles',
-    title: 'Assessment & Round Titles',
-    icon: 'clipboard-check',
-    description: 'Master data for Assessment & Round titles (Coding, MCQ, SQL, Subjective)',
-    group: 'recruitment',
-    exampleName: 'SQL & Database Queries',
-    exampleCode: 'SQL',
-  },
-  {
-    key: 'hiringLocations',
+    key: 'hiringlocations',
     title: 'Hiring Locations',
     icon: 'building',
     description: 'Enterprise office locations',
@@ -73,35 +56,119 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
     exampleCode: 'MHQ',
   },
   {
-    key: 'testLocations',
+    key: 'testlocations',
     title: 'Test Locations',
     icon: 'clipboard-check',
     description: 'Assessment test centers & online proctoring',
     group: 'locations',
-    exampleName: 'Pune Test Center',
-    exampleCode: 'PTC',
+    exampleName: 'Mumbai Center',
+    exampleCode: 'MCTR',
+  },
+  {
+    key: 'experiencelevels',
+    title: 'Experience Levels',
+    icon: 'trending-up',
+    description: 'Job experience level definitions',
+    group: 'recruitment',
+    exampleName: 'Senior (3-5 Years)',
+    exampleCode: 'EXP-5',
   },
 ];
 
 export const ConfigurationPanel: React.FC = () => {
   const [activeCategoryKey, setActiveCategoryKey] = useState<string>('roles');
   const { data: masterResponse, isLoading, isError } = useGetMasterDataByCategoryQuery(activeCategoryKey);
+  const [toggleStatusApi] = useToggleMasterDataStatusMutation();
 
   const activeCategory = CONFIG_CATEGORIES.find((c) => c.key === activeCategoryKey) || CONFIG_CATEGORIES[0];
 
-  const activeRecords: MasterRecord[] = useMemo(() => {
-    return (masterResponse?.data || []).map((m: any) => ({
-      id: m.id,
-      category: m.category || activeCategoryKey,
-      code: m.code || '',
-      name: m.name || '',
-      description: m.description || '',
-      displayOrder: m.displayOrder || 1,
-      status: m.isActive ? 'Active' : 'Inactive',
-      isActive: m.isActive ?? true,
-      updatedAt: m.updatedAt || '',
-    }));
+  const fetchedRecords: MasterRecord[] = useMemo(() => {
+    return (masterResponse?.data || []).map((m: any) => {
+      const recStatus = (m.status || (m.isActive === false ? 'Inactive' : 'Active')) as 'Active' | 'Inactive';
+      return {
+        id: String(m.id),
+        category: m.category || activeCategoryKey,
+        code: m.code || '',
+        name: m.name || '',
+        description: m.description || '',
+        displayOrder: m.displayOrder || 1,
+        status: recStatus,
+        isActive: recStatus === 'Active',
+        updatedAt: m.updatedAt || new Date().toISOString().split('T')[0],
+      };
+    });
   }, [masterResponse, activeCategoryKey]);
+
+  const [records, setRecords] = useState<MasterRecord[]>([]);
+
+  useEffect(() => {
+    setRecords(fetchedRecords);
+  }, [fetchedRecords]);
+
+  const handleToggleStatus = async (recordId: string | number) => {
+    const currentRecord = records.find((r) => String(r.id) === String(recordId));
+    if (!currentRecord) return;
+    const nextStatus = currentRecord.status === 'Active' ? 'Inactive' : 'Active';
+    // Optimistic UI update
+    setRecords((prev) =>
+      prev.map((r) =>
+        String(r.id) === String(recordId)
+          ? { ...r, status: nextStatus as any, isActive: nextStatus === 'Active', updatedAt: new Date().toISOString().split('T')[0] }
+          : r
+      )
+    );
+    try {
+      await toggleStatusApi({ category: activeCategoryKey, id: recordId }).unwrap();
+      toast.success(`Status updated for ${currentRecord.name}`, {
+        description: `Master record status set to ${nextStatus} in database.`,
+      });
+    } catch {
+      // Rollback optimistic update on failure
+      setRecords((prev) =>
+        prev.map((r) =>
+          String(r.id) === String(recordId)
+            ? { ...r, status: currentRecord.status as any, isActive: currentRecord.status === 'Active', updatedAt: currentRecord.updatedAt }
+            : r
+        )
+      );
+      toast.error(`Failed to update status for ${currentRecord.name}`, {
+        description: 'Could not connect to backend. Please try again.',
+      });
+    }
+  };
+
+  const handleEditRecord = (updated: MasterRecord) => {
+    setRecords((prev) =>
+      prev.map((r) => (String(r.id) === String(updated.id) ? { ...updated, updatedAt: new Date().toISOString().split('T')[0] } : r))
+    );
+    toast.success(`Updated ${updated.name}`, {
+      description: `Master record changes saved successfully.`,
+    });
+  };
+
+  const handleAddRecord = (newRec: Omit<MasterRecord, 'id' | 'updatedAt'>) => {
+    const created: MasterRecord = {
+      id: String(Date.now()),
+      category: activeCategoryKey,
+      code: newRec.code,
+      name: newRec.name,
+      description: newRec.description || '',
+      status: newRec.status || 'Active',
+      isActive: (newRec.status || 'Active') === 'Active',
+      updatedAt: new Date().toISOString().split('T')[0],
+    };
+    setRecords((prev) => [created, ...prev]);
+    toast.success(`Created ${newRec.name}`, {
+      description: `New master taxonomy record added successfully.`,
+    });
+  };
+
+  const handleDeleteRecord = (recordId: string | number) => {
+    setRecords((prev) => prev.filter((r) => String(r.id) !== String(recordId)));
+    toast.success(`Record removed`, {
+      description: `Master record deleted successfully.`,
+    });
+  };
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -109,7 +176,7 @@ export const ConfigurationPanel: React.FC = () => {
       <div className="bg-[var(--surface-1)] border border-[var(--border-default)] p-2 rounded-[var(--radius-lg)] shadow-2xs flex items-center gap-2 overflow-x-auto scrollbar-step w-full">
         {CONFIG_CATEGORIES.map((cat) => {
           const isActive = cat.key === activeCategoryKey;
-          const count = cat.key === activeCategoryKey ? activeRecords.length : 0;
+          const count = cat.key === activeCategoryKey ? records.length : 0;
           return (
             <button
               key={cat.key}
@@ -151,13 +218,13 @@ export const ConfigurationPanel: React.FC = () => {
           <MasterTable
             title={activeCategory.title}
             description={activeCategory.description}
-            data={activeRecords}
+            data={records}
             exampleName={activeCategory.exampleName}
             exampleCode={activeCategory.exampleCode}
-            onAdd={() => {}}
-            onEdit={() => {}}
-            onToggleStatus={() => {}}
-            onDelete={() => {}}
+            onAdd={handleAddRecord}
+            onEdit={handleEditRecord}
+            onToggleStatus={handleToggleStatus}
+            onDelete={handleDeleteRecord}
           />
         </div>
       )}

@@ -142,6 +142,13 @@ export const stepApi = createApi({
       query: (category) => `/masterdata/${category}`,
       providesTags: ['MasterData'],
     }),
+    toggleMasterDataStatus: builder.mutation<ApiEnvelope<any>, { category: string; id: string | number }>({
+      query: ({ category, id }) => ({
+        url: `/masterdata/${category}/${id}/toggle-status`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: ['MasterData'],
+    }),
 
     // --- Users Endpoints ---
     getUsers: builder.query<ApiEnvelope<UserItem[]>, void>({
@@ -374,6 +381,7 @@ export const {
   useDirectorPinLoginMutation,
   useRefreshTokenMutation,
   useGetMasterDataByCategoryQuery,
+  useToggleMasterDataStatusMutation,
   useGetUsersQuery,
   useCreateUserMutation,
   useGetVacanciesQuery,

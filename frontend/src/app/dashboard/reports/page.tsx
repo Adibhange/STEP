@@ -1,8 +1,14 @@
 'use client';
 
 import React from 'react';
-import { ReportsView } from '@/features/reports/components/ReportsView';
+import { ComingSoonView } from '@/components/common/ComingSoonView';
 
 export default function ReportsPage() {
-  return <ReportsView />;
+  return (
+    <ComingSoonView
+      title="Analytics & Reports Under Maintenance"
+      description="Executive recruitment analytics, funnel reporting, and candidate performance metrics are currently disabled."
+      moduleName="Recruitment Analytics & Reports"
+    />
+  );
 }

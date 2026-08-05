@@ -36,6 +36,18 @@ export interface PipelineFlowVersionsProps {
   vacancyId?: string;
 }
 
+const STAGE_TYPE_MAP: Record<string, string> = {
+  'MCQ (Multiple Choice Questions)': 'Aptitude',
+  'Coding & Algorithm Challenge': 'Technical',
+  'SQL & Database Queries': 'Technical',
+  'Subjective & Essay Questions': 'Technical',
+  'General Aptitude & Logical Test': 'Aptitude',
+  'System Design & Architecture': 'Technical',
+  'Technical F2F & Live Coding': 'F2F',
+  'Executive F2F Interview': 'F2F',
+  'HR & Cultural Fit Round': 'HR',
+};
+
 export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = () => {
   const [flows, setFlows] = useState<PipelineFlowVersion[]>(INITIAL_FLOW_VERSIONS);
   const [newVersionName, setNewVersionName] = useState('');
@@ -57,7 +69,15 @@ export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = () => {
         if (f.id !== flowId) return f;
         return {
           ...f,
-          rounds: f.rounds.map((r) => (r.id === roundId ? { ...r, [field]: val } : r)),
+          rounds: f.rounds.map((r) => {
+            if (r.id !== roundId) return r;
+            const updated = { ...r, [field]: val };
+            // Auto-update type if name changed
+            if (field === 'name' && STAGE_TYPE_MAP[val]) {
+              updated.type = STAGE_TYPE_MAP[val] as any;
+            }
+            return updated;
+          }),
         };
       })
     );
@@ -264,51 +284,49 @@ export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = () => {
                       value={rd.name}
                       onChange={(val) => handleUpdateRound(flow.id, rd.id, 'name', val)}
                       options={[
-                        { value: 'MCQ (Multiple Choice Questions)', label: 'MCQ (Multiple Choice Questions)' },
-                        { value: 'Coding & Algorithm Challenge', label: 'Coding & Algorithm Challenge' },
-                        { value: 'SQL & Database Queries', label: 'SQL & Database Queries' },
-                        { value: 'Subjective & Essay Questions', label: 'Subjective & Essay Questions' },
                         { value: 'General Aptitude & Logical Test', label: 'General Aptitude & Logical Test' },
-                        { value: 'System Design & Architecture', label: 'System Design & Architecture' },
+                        { value: 'Coding & Algorithm Challenge', label: 'Coding & Algorithm Challenge' },
                         { value: 'Technical F2F & Live Coding', label: 'Technical F2F & Live Coding' },
-                        { value: 'Executive F2F Interview', label: 'Executive F2F Interview' },
                         { value: 'HR & Cultural Fit Round', label: 'HR & Cultural Fit Round' },
                       ]}
                       widthClass="w-full"
                     />
 
-                    {/* Editable Type & Cutoff % */}
+                    {/* Editable Type & Cutoff % CustomSelect */}
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
                         <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase font-mono block mb-0.5">
                           Type
                         </label>
-                        <select
+                        <CustomSelect
                           value={rd.type}
-                          onChange={(e) => handleUpdateRound(flow.id, rd.id, 'type', e.target.value)}
-                          className="w-full h-8 px-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] text-[11.5px] font-bold text-[var(--text-primary)] outline-none cursor-pointer"
-                        >
-                          <option value="Aptitude">Aptitude</option>
-                          <option value="Technical">Technical</option>
-                          <option value="F2F">F2F</option>
-                          <option value="HR">HR</option>
-                          <option value="Group Discussion">GD</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase font-mono block mb-0.5">
-                          Cutoff %
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={rd.cutoffPercent}
-                          onChange={(e) => handleUpdateRound(flow.id, rd.id, 'cutoffPercent', parseInt(e.target.value) || 0)}
-                          className="w-full h-8 px-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] font-mono text-center text-[11.5px] font-bold text-[var(--text-primary)] outline-none"
+                          onChange={(val) => handleUpdateRound(flow.id, rd.id, 'type', val)}
+                          options={[
+                            { value: 'Aptitude', label: 'Aptitude' },
+                            { value: 'Technical', label: 'Technical' },
+                            { value: 'F2F', label: 'F2F' },
+                            { value: 'HR', label: 'HR' },
+                            { value: 'Group Discussion', label: 'GD' },
+                          ]}
+                          widthClass="w-full"
                         />
                       </div>
+
+                      {rd.type !== 'HR' && (
+                        <div>
+                          <label className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase font-mono block mb-0.5">
+                            Cutoff %
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={rd.cutoffPercent}
+                            onChange={(e) => handleUpdateRound(flow.id, rd.id, 'cutoffPercent', parseInt(e.target.value) || 0)}
+                            className="w-full h-8 px-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] font-mono text-center text-[11.5px] font-bold text-[var(--text-primary)] outline-none"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -339,45 +357,45 @@ export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = () => {
 
             <form onSubmit={handleAddFlowVersion} className="flex flex-col gap-4">
               <div>
-                <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">
-                  Version Title *
+                <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-mono uppercase">
+                  Flow Version Name
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Flow Version 3 (Fast-Track Technical)"
+                  placeholder="e.g. Flow Version 3 (Fast-Track Senior)"
                   value={newVersionName}
                   onChange={(e) => setNewVersionName(e.target.value)}
-                  className="w-full h-9 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+                  className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">
-                  Description
+                <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-mono uppercase">
+                  Description / Sequence Overview
                 </label>
-                <input
-                  type="text"
-                  placeholder="Brief workflow description..."
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Round 1: Coding Challenge → Round 2: System Design"
                   value={newVersionDesc}
                   onChange={(e) => setNewVersionDesc(e.target.value)}
-                  className="w-full h-9 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+                  className="w-full p-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none resize-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--border-default)] w-full">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-default)]">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="h-9 px-4 rounded-lg text-[12.5px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] flex items-center justify-center hover:bg-[var(--surface-hover)] cursor-pointer w-full"
+                  className="h-9 px-4 rounded-lg text-[12px] font-bold border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] cursor-pointer"
                 >
-                  <span>Cancel</span>
+                  Cancel
                 </button>
                 <button
                   type="submit"
-                  className="h-9 px-4 rounded-lg text-[12.5px] font-bold bg-[var(--accent-indigo)] text-white flex items-center justify-center hover:bg-[var(--accent-indigo-hover)] cursor-pointer w-full"
+                  className="h-9 px-4 rounded-lg text-[12px] font-bold bg-[var(--accent-indigo)] text-white hover:bg-[var(--accent-indigo-hover)] cursor-pointer shadow-2xs"
                 >
-                  <span>Create Version</span>
+                  Create Flow Version
                 </button>
               </div>
             </form>

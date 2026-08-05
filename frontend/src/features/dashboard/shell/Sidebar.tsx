@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Icon } from '@/design-system';
+import { toast } from '@/design-system/feedback/toast';
 import { NAV_ITEMS, NAV_SECTIONS, type NavItem } from '../config/sidebar.config';
 
 interface SidebarProps {
@@ -220,16 +221,28 @@ interface NavItemRowProps {
 }
 
 const NavItemRow: React.FC<NavItemRowProps> = ({ item, active, collapsed }) => {
+  const handleClick = (e: React.MouseEvent) => {
+    if (item.isDisabled) {
+      e.preventDefault();
+      toast.info('Module Under Maintenance', {
+        description: `${item.label} module is currently disabled / in progress.`,
+      });
+    }
+  };
+
   return (
     <Link
       href={item.href}
+      onClick={handleClick}
       aria-label={item.label}
       aria-current={active ? 'page' : undefined}
       className={`
         relative group flex items-center mx-2 my-0.5 rounded-[var(--radius-md)]
         transition-all duration-150 focus-ring-step overflow-hidden
         ${collapsed ? 'justify-center px-0 py-1.5 h-9' : 'gap-2.5 px-3 py-1.5'}
-        ${active
+        ${item.isDisabled
+          ? 'opacity-60 cursor-not-allowed text-slate-400'
+          : active
           ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo-hover)] font-semibold'
           : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
         }
@@ -243,7 +256,7 @@ const NavItemRow: React.FC<NavItemRowProps> = ({ item, active, collapsed }) => {
         />
       )}
 
-      <span className={`shrink-0 transition-transform duration-150 group-hover:scale-105 ${active ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]'}`}>
+      <span className={`shrink-0 transition-transform duration-150 ${active ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]'}`}>
         <Icon name={item.icon as any} size="md" />
       </span>
 
@@ -253,7 +266,9 @@ const NavItemRow: React.FC<NavItemRowProps> = ({ item, active, collapsed }) => {
             {item.label}
           </span>
           {item.badge !== undefined && (
-            <span className="text-[10px] font-bold bg-[var(--accent-indigo)] text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shrink-0 font-mono">
+            <span className={`text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shrink-0 font-mono ${
+              item.isDisabled ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-[var(--accent-indigo)] text-white'
+            }`}>
               {typeof item.badge === 'number' && item.badge > 99 ? '99+' : item.badge}
             </span>
           )}

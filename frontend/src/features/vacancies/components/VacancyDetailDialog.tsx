@@ -7,6 +7,8 @@ import { AssessmentPatternBuilder } from './AssessmentPatternBuilder';
 import { CandidateBulkFlowAssignment } from './CandidateBulkFlowAssignment';
 import type { VacancyItem } from '../types/vacancy.types';
 
+import { getAppOrigin } from '@/lib/utils/url-helper';
+
 interface VacancyDetailDialogProps {
   vacancy: (VacancyItem & { driveType?: 'Walk-in Drive' | 'Direct / Sourced Hiring' }) | null;
   isOpen: boolean;
@@ -25,10 +27,14 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
   if (!isOpen || !vacancy) return null;
 
   const isDirectHiring = vacancy.driveType === 'Direct / Sourced Hiring';
+  const origin = getAppOrigin();
+  const applyUrl = `${origin}/apply/${vacancy.code || vacancy.id}`;
+  const dynamicQrUrl = vacancy.qrAnalytics?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(applyUrl)}`;
 
   const handleCopyQrUrl = () => {
-    if (vacancy.qrAnalytics?.registrationUrl) {
-      navigator.clipboard.writeText(vacancy.qrAnalytics.registrationUrl);
+    const copyTarget = vacancy.qrAnalytics?.registrationUrl || applyUrl;
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(copyTarget);
       setQrCopied(true);
       setTimeout(() => setQrCopied(false), 2000);
     }
@@ -193,11 +199,11 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
                   <div className="sm:col-span-4 flex flex-col items-center text-center bg-[var(--surface-1)] border border-[var(--border-default)] p-4 rounded-xl shadow-xs">
-                    {vacancy.qrAnalytics?.qrCodeUrl ? (
-                      <img src={vacancy.qrAnalytics.qrCodeUrl} alt="QR Code" className="w-36 h-36 rounded-lg border border-[var(--accent-indigo)] bg-white p-1.5" />
-                    ) : (
-                      <div className="w-36 h-36 bg-gray-200 rounded-lg flex items-center justify-center font-mono text-xs">No QR</div>
-                    )}
+                    <img
+                      src={dynamicQrUrl}
+                      alt="Vacancy QR Code"
+                      className="w-36 h-36 rounded-lg border border-[var(--accent-indigo)] bg-white p-1.5 shadow-2xs"
+                    />
                     <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono mt-2">
                       {isDirectHiring ? 'Direct Apply Link' : 'Scan to Register'}
                     </span>
@@ -205,7 +211,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                       <button type="button" onClick={handleCopyQrUrl} className="px-3 h-7.5 text-[11.5px] font-bold border border-[var(--border-default)] rounded-full hover:bg-[var(--surface-hover)] cursor-pointer">
                         {qrCopied ? 'Copied!' : 'Copy Link'}
                       </button>
-                      <a href={vacancy.qrAnalytics?.qrCodeUrl} target="_blank" download="qr.png" className="px-3 h-7.5 text-[11.5px] font-bold bg-[var(--accent-indigo)] text-white rounded-full flex items-center gap-1 cursor-pointer">
+                      <a href={dynamicQrUrl} target="_blank" rel="noreferrer" download="vacancy_qr_poster.png" className="px-3 h-7.5 text-[11.5px] font-bold bg-[var(--accent-indigo)] text-white rounded-full flex items-center gap-1 cursor-pointer">
                         <Icon name="download" size="xs" />
                         <span>{isDirectHiring ? 'Share' : 'Poster'}</span>
                       </a>
@@ -249,8 +255,10 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
           {/* ASSESSMENT BUILDER & EXCEL (Both Walk-in Drive & Direct Hiring) */}
           {activeTab === 'assessment-builder' && <AssessmentPatternBuilder />}
 
-          {/* CANDIDATES & BULK FLOW ASSIGNMENT (Walk-in Drive only) */}
-          {!isDirectHiring && activeTab === 'bulk-assignment' && <CandidateBulkFlowAssignment />}
+          {/* CANDIDATES & BULK FLOW ASSIGNMENT (Walk-in Drive & Direct Hiring) */}
+          {activeTab === 'bulk-assignment' && (
+            <CandidateBulkFlowAssignment vacancyId={vacancy.id} vacancyTitle={vacancy.title} />
+          )}
         </div>
       </div>
     </div>

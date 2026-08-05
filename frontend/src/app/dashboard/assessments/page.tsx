@@ -1,8 +1,14 @@
 'use client';
 
 import React from 'react';
-import { AssessmentsView } from '@/features/assessments/components/AssessmentsView';
+import { ComingSoonView } from '@/components/common/ComingSoonView';
 
 export default function AssessmentsPage() {
-  return <AssessmentsView />;
+  return (
+    <ComingSoonView
+      title="Assessments Module In Progress"
+      description="The online proctored candidate assessments and test evaluation module is currently undergoing system upgrades and is temporarily disabled."
+      moduleName="Online Candidate Assessments"
+    />
+  );
 }

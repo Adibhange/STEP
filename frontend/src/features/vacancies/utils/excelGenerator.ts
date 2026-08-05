@@ -16,23 +16,41 @@ export async function downloadAssessmentExcelTemplate(
 ): Promise<void> {
   const wb = new ExcelJS.Workbook();
 
+  // Compute total time dynamically
+  const grandTotalTime = sections.reduce((acc, s) => acc + (Number(s.timeLimitMinutes) || 0), 0);
+
   // 1. Instructions Sheet
   const instrSheet = wb.addWorksheet('Instructions');
-  instrSheet.columns = [{ width: 95 }];
-  const instrRows = [
-    ['QUESTION BANK TEMPLATE INSTRUCTIONS'],
+  instrSheet.columns = [{ width: 100 }];
+  
+  const instrRows: (string[])[] = [
+    ['STEP ENTERPRISE ASSESSMENT QUESTION BANK TEMPLATE INSTRUCTIONS'],
     [''],
-    [`Total Configured Sections: ${sections.length}`],
-    [`Total Questions: ${grandTotalQuestions}`],
-    [`Total Marks: ${grandTotalMarks}`],
+    ['SUMMARY & ASSESSMENT PATTERN SPECIFICATIONS:'],
+    [`• Total Configured Sections: ${sections.length}`],
+    [`• Total Questions: ${grandTotalQuestions}`],
+    [`• Total Assessment Timing: ${grandTotalTime} Minutes`],
+    [`• Total Assessment Marks: ${grandTotalMarks} Marks`],
     [''],
-    ['GUIDELINES:'],
-    ['1. Fill question details in the section worksheets below (Section 1, Section 2, etc.).'],
-    ['2. In MCQ worksheets, select SINGLE_CHOICE or MULTI_CHOICE from the question_type dropdown menu.'],
-    ['3. For MULTI_CHOICE questions, enter comma-separated correct options in correct_option (e.g. A,C).'],
-    ['4. Marks are automatically assigned per section based on your Step 1 pattern.'],
-    ['5. Save and upload this file in Step 3.'],
+    ['DYNAMIC SECTION-WISE BREAKDOWN:'],
   ];
+
+  sections.forEach((sec, idx) => {
+    instrRows.push([
+      `  • Section ${idx + 1}: ${sec.sectionTitle} | ${sec.totalQuestions} Questions | ${sec.timeLimitMinutes} Mins | ${sec.marksPerQuestion} Marks/Q = ${sec.totalMarks} Total Marks`
+    ]);
+  });
+
+  instrRows.push(
+    [''],
+    ['FILLING GUIDELINES:'],
+    ['1. Fill question details in the corresponding section worksheets below.'],
+    ['2. In MCQ worksheets, select SINGLE_CHOICE or MULTI_CHOICE from the question_type dropdown.'],
+    ['3. For MULTI_CHOICE questions, specify comma-separated correct options in correct_option (e.g. A,C).'],
+    ['4. Marks are automatically assigned per section based on your Step 3 pattern configuration.'],
+    ['5. Save the completed Excel workbook (.xlsx) and upload it in Step 3.']
+  );
+
   instrRows.forEach((r) => instrSheet.addRow(r));
   instrSheet.getRow(1).font = { bold: true, size: 13 };
 

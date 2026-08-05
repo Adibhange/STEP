@@ -8,15 +8,10 @@ import { downloadAssessmentExcelTemplate, parseUploadedAssessmentExcel } from '.
 import { AddMasterTitleModal } from './AddMasterTitleModal';
 
 export const INITIAL_MASTER_ROUND_TITLES = [
-  'MCQ (Single Choice)',
-  'MCQ (Multiple Choice)',
+  'MCQ Questions',
   'Coding & Algorithm Challenge',
   'SQL & Database Queries',
   'Subjective & Essay Questions',
-  'General Aptitude & Logical Test',
-  'System Design & Architecture',
-  'Technical F2F & Live Coding',
-  'HR & Cultural Fit Round',
 ];
 
 export const AssessmentPatternBuilder: React.FC = () => {
@@ -28,7 +23,7 @@ export const AssessmentPatternBuilder: React.FC = () => {
   const [sections, setSections] = useState<AssessmentSectionConfig[]>([
     {
       id: 'sec-1',
-      sectionTitle: 'MCQ (Single Choice)',
+      sectionTitle: 'MCQ Questions',
       totalQuestions: 20,
       timeLimitMinutes: 25,
       marksPerQuestion: 2,

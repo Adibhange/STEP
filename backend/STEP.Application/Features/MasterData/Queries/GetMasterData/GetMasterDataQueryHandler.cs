@@ -23,6 +23,7 @@ namespace STEP.Application.Features.MasterData.Queries.GetMasterData
                 "hiringlocations" => db.MasterHiringLocations,
                 "testlocations" => db.MasterTestLocations,
                 "employmenttypes" => db.MasterEmploymentTypes,
+                "experiencelevels" or "experiences" => db.MasterExperienceLevels,
                 _ => throw new NotFoundException("MasterDataCategory", request.Category)
             };
 

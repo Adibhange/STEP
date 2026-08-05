@@ -31,6 +31,7 @@ namespace STEP.Application.Common.Interfaces
         DbSet<MasterHiringLocation> MasterHiringLocations { get; }
         DbSet<MasterTestLocation> MasterTestLocations { get; }
         DbSet<MasterEmploymentType> MasterEmploymentTypes { get; }
+        DbSet<MasterExperienceLevel> MasterExperienceLevels { get; }
 
         DbSet<AuditLog> AuditLogs { get; }
 

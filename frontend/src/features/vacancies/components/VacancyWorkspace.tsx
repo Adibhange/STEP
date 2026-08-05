@@ -23,15 +23,22 @@ const TABS: WorkspaceHeaderTab[] = [
 /**
  * STEP Enterprise Vacancy Workspace — Primary Hiring Hub Workspace
  */
+import { getAppOrigin } from '@/lib/utils/url-helper';
+
 export const VacancyWorkspace: React.FC<VacancyWorkspaceProps> = ({ vacancy }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [qrCopied, setQrCopied] = useState(false);
   const [walkInEnabled, setWalkInEnabled] = useState(vacancy.walkInDrive?.enabled ?? true);
 
+  const origin = getAppOrigin();
+  const applyUrl = `${origin}/apply/${vacancy.code || vacancy.id}`;
+  const dynamicQrUrl = vacancy.qrAnalytics?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(applyUrl)}`;
+
   const handleCopyQrUrl = () => {
-    if (vacancy.qrAnalytics?.registrationUrl) {
-      navigator.clipboard.writeText(vacancy.qrAnalytics.registrationUrl);
+    const copyTarget = vacancy.qrAnalytics?.registrationUrl || applyUrl;
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(copyTarget);
       setQrCopied(true);
       setTimeout(() => setQrCopied(false), 2000);
     }
@@ -176,15 +183,11 @@ export const VacancyWorkspace: React.FC<VacancyWorkspaceProps> = ({ vacancy }) =
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                 {/* QR Code Poster Preview */}
                 <div className="lg:col-span-4 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-6 flex flex-col items-center justify-center text-center shadow-xs">
-                  {vacancy.qrAnalytics?.qrCodeUrl ? (
-                    <img
-                      src={vacancy.qrAnalytics.qrCodeUrl}
-                      alt="Registration QR Code"
-                      className="w-48 h-48 rounded-lg border-2 border-[var(--accent-indigo)] shadow-sm bg-white p-2"
-                    />
-                  ) : (
-                    <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center font-mono">No QR Generated</div>
-                  )}
+                  <img
+                    src={dynamicQrUrl}
+                    alt="Registration QR Code"
+                    className="w-48 h-48 rounded-lg border-2 border-[var(--accent-indigo)] shadow-sm bg-white p-2"
+                  />
                   <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase font-mono mt-3">Scan to Self-Register</span>
                   <div className="flex items-center gap-2 mt-4">
                     <button
@@ -195,10 +198,11 @@ export const VacancyWorkspace: React.FC<VacancyWorkspaceProps> = ({ vacancy }) =
                       {qrCopied ? 'Copied URL!' : 'Copy Link'}
                     </button>
                     <a
-                      href={vacancy.qrAnalytics?.qrCodeUrl}
+                      href={dynamicQrUrl}
                       target="_blank"
-                      download="vacancy-qr.png"
-                      className="px-3.5 h-8 text-[12px] font-bold bg-[var(--accent-indigo)] text-white rounded-full flex items-center gap-1 cursor-pointer"
+                      rel="noreferrer"
+                      download="vacancy-qr-poster.png"
+                      className="px-3.5 h-8 text-[12px] font-bold bg-[var(--accent-indigo)] text-[var(--text-on-accent)] rounded-full hover:bg-[var(--accent-indigo-hover)] cursor-pointer flex items-center gap-1.5 shadow-2xs"
                     >
                       <Icon name="download" size="xs" />
                       Download Poster
@@ -241,7 +245,7 @@ export const VacancyWorkspace: React.FC<VacancyWorkspaceProps> = ({ vacancy }) =
         {activeTab === 'assessment-builder' && <AssessmentPatternBuilder />}
 
         {/* 4. CANDIDATES & BULK FLOW ASSIGNMENT TAB */}
-        {activeTab === 'bulk-assignment' && <CandidateBulkFlowAssignment />}
+        {activeTab === 'bulk-assignment' && <CandidateBulkFlowAssignment vacancyId={vacancy.id} vacancyTitle={vacancy.title} />}
       </main>
     </div>
   );

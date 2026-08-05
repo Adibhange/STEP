@@ -5,6 +5,23 @@ import { Icon } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { type UserItem, type UserRole, type UserStatus } from '@/features/users/types/user.types';
 import { useGetUsersQuery, useCreateUserMutation, useGetMasterDataByCategoryQuery } from '@/store/services/api';
+import { useAppDispatch, notifySuccess, notifyError } from '@/store';
+
+// Role & Department ID Mappings matching ASP.NET Core DB Seeds
+const ROLE_ID_MAP: Record<string, number> = {
+  Administrator: 1,
+  Director: 2,
+  HR: 3,
+  Interviewer: 4,
+};
+
+const DEPT_ID_MAP: Record<string, number> = {
+  Engineering: 1,
+  'Product Management': 2,
+  'Talent Acquisition': 3,
+  'Human Resources': 3,
+  'Quality Assurance': 4,
+};
 
 // Role → Department constraints
 const DEPT_BY_ROLE: Record<string, string[] | 'locked'> = {
@@ -17,6 +34,7 @@ const DEPT_BY_ROLE: Record<string, string[] | 'locked'> = {
  * STEP Enterprise Users & Access Control Module
  */
 export const UsersView: React.FC = () => {
+  const dispatch = useAppDispatch();
   const { data: apiUsersResponse, isLoading } = useGetUsersQuery();
   const { data: deptMasterRes } = useGetMasterDataByCategoryQuery('departments');
   const [createUserApi] = useCreateUserMutation();
@@ -104,15 +122,32 @@ export const UsersView: React.FC = () => {
         firstName: formFirstName.trim(),
         lastName: formLastName.trim(),
         email: formEmail.trim(),
-        employeeCode: formEmpId.trim() || `EMP-${Date.now().toString().slice(-4)}`,
-        role: formRole,
-        department: formDept,
-        password: formTempPassword || 'Password@123',
+        tempPassword: formTempPassword || 'TempPass@2026',
+        roleId: ROLE_ID_MAP[formRole] || 4,
+        departmentId: DEPT_ID_MAP[formDept] || 1,
+        pin: formPin.trim() || undefined,
       }).unwrap();
-    } catch {
-      // Handled by API middleware/toast
+
+      dispatch(
+        notifySuccess({
+          title: 'User Created',
+          description: `Successfully added ${formFirstName} ${formLastName} to the database.`,
+        })
+      );
+      setIsAddOpen(false);
+    } catch (err: any) {
+      const errMsg =
+        err?.data?.message ||
+        err?.data?.errors?.Email?.[0] ||
+        err?.data?.errors?.TempPassword?.[0] ||
+        'Failed to create user in backend database. Please check fields.';
+      dispatch(
+        notifyError({
+          title: 'User Creation Failed',
+          description: errMsg,
+        })
+      );
     }
-    setIsAddOpen(false);
   };
 
   const handleSaveEdit = (e: React.SyntheticEvent<HTMLFormElement>) => {

@@ -54,6 +54,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<MasterHiringLocation> MasterHiringLocations => Set<MasterHiringLocation>();
     public DbSet<MasterTestLocation> MasterTestLocations => Set<MasterTestLocation>();
     public DbSet<MasterEmploymentType> MasterEmploymentTypes => Set<MasterEmploymentType>();
+    public DbSet<MasterExperienceLevel> MasterExperienceLevels => Set<MasterExperienceLevel>();
 
     // Audit
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

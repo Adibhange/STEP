@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import { Icon } from '@/design-system';
-import { QuestionPaper, PaperSection, QuestionItem } from '../types/question-paper.types';
+import { usePublishQuestionPaperMutation } from '@/store/services/api';
+import { useAppDispatch, notifySuccess, notifyError } from '@/store';
+import type { QuestionPaper, PaperSection, QuestionItem } from '../types/question-paper.types';
 
 interface QuestionPaperViewDialogProps {
   paper: QuestionPaper;
@@ -185,7 +187,30 @@ export const QuestionPaperViewDialog: React.FC<QuestionPaperViewDialogProps> = (
   onClose,
   mode = 'library',
 }) => {
+  const dispatch = useAppDispatch();
   const [activeSection, setActiveSection] = useState(0);
+  const [publishPaperApi, { isLoading: isPublishing }] = usePublishQuestionPaperMutation();
+
+  const handlePublishPaper = async () => {
+    try {
+      const paperIdNum = parseInt(paper.id.replace(/\D/g, ''), 10) || 1;
+      await publishPaperApi(paperIdNum).unwrap();
+      dispatch(
+        notifySuccess({
+          title: 'Question Paper Published',
+          description: `Successfully published and locked "${paper.title}".`,
+        })
+      );
+      onClose();
+    } catch (err: any) {
+      dispatch(
+        notifyError({
+          title: 'Publish Failed',
+          description: err?.data?.message || 'Failed to publish question paper to backend.',
+        })
+      );
+    }
+  };
 
   return (
     <div
@@ -207,13 +232,28 @@ export const QuestionPaperViewDialog: React.FC<QuestionPaperViewDialogProps> = (
               </span>
               <span className="text-[10.5px] text-[var(--text-tertiary)] font-mono whitespace-nowrap truncate">→ {paper.vacancyTitle}</span>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-7 h-7 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] flex items-center justify-center cursor-pointer shrink-0"
-            >
-              <Icon name="x" size="xs" />
-            </button>
+
+            <div className="flex items-center gap-2">
+              {paper.status !== 'Inactive' && (
+                <button
+                  type="button"
+                  onClick={handlePublishPaper}
+                  disabled={isPublishing}
+                  className="h-7 px-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1 border border-emerald-500"
+                >
+                  <Icon name="check-circle" size="xs" />
+                  <span>{isPublishing ? 'Publishing...' : 'Publish & Lock'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-7 h-7 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] flex items-center justify-center cursor-pointer shrink-0"
+              >
+                <Icon name="x" size="xs" />
+              </button>
+            </div>
           </div>
           {/* Title — wraps on mobile */}
           <h2 className="text-[14px] font-extrabold text-[var(--text-primary)] font-heading leading-snug">

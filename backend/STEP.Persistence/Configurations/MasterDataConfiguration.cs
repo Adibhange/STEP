@@ -46,4 +46,9 @@ namespace STEP.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<MasterEmploymentType> builder) => MasterDataConfiguration.ConfigureMaster(builder, "MasterEmploymentTypes");
     }
+
+    public class MasterExperienceLevelConfiguration : IEntityTypeConfiguration<MasterExperienceLevel>
+    {
+        public void Configure(EntityTypeBuilder<MasterExperienceLevel> builder) => MasterDataConfiguration.ConfigureMaster(builder, "MasterExperienceLevels");
+    }
 }

@@ -76,23 +76,25 @@ export const RecruitmentWorkspace: React.FC<RecruitmentWorkspaceProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-[12px] divide-x divide-[var(--border-soft)]">
             <div className="px-3 flex flex-col">
               <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Current Stage</span>
-              <span className="font-bold text-[var(--accent-indigo)] mt-0.5">Technical Interview</span>
+              <span className="font-bold text-[var(--accent-indigo)] mt-0.5">{cand?.currentStage || 'Screening'}</span>
             </div>
             <div className="px-3 flex flex-col">
-              <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Assigned Recruiter</span>
-              <span className="font-semibold text-[var(--text-primary)] mt-0.5">Sneha Kulkarni</span>
+              <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Referral / Recruiter</span>
+              <span className="font-semibold text-[var(--text-primary)] mt-0.5 truncate">{cand?.referralEmployeeName || 'Direct / Walk-in'}</span>
             </div>
             <div className="px-3 flex flex-col">
-              <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Assessment</span>
-              <span className="font-bold text-[var(--status-success-text)] font-mono mt-0.5">Passed (92%)</span>
+              <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Status</span>
+              <span className="font-bold text-[var(--status-success-text)] font-mono mt-0.5">{cand?.status || 'In-Progress'}</span>
             </div>
             <div className="px-3 flex flex-col">
-              <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Interview Schedule</span>
-              <span className="font-semibold text-[var(--text-primary)] font-mono mt-0.5">Tomorrow 11:30 AM</span>
+              <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Registration Channel</span>
+              <span className="font-semibold text-[var(--text-primary)] font-mono mt-0.5">{cand?.registrationChannel || 'Walk-in Scan'}</span>
             </div>
             <div className="px-3 flex flex-col">
-              <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Offer Status</span>
-              <span className="font-semibold text-[var(--text-tertiary)] mt-0.5">Not Started</span>
+              <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase">Experience</span>
+              <span className="font-semibold text-[var(--text-primary)] mt-0.5">
+                {cand?.totalExperienceYears === 0 ? 'Fresher (0 Yrs)' : `${cand?.totalExperienceYears ?? 0} Years`}
+              </span>
             </div>
           </div>
         </div>

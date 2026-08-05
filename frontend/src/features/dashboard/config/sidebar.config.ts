@@ -21,6 +21,7 @@ export interface NavItem {
   href: string;
   icon: string;
   badge?: string | number;
+  isDisabled?: boolean;
   section: 'recruitment' | 'analytics' | 'administration';
 }
 
@@ -52,6 +53,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Assessments',
     href: '/dashboard/assessments',
     icon: 'clipboard-check',
+    badge: 'Soon',
+    isDisabled: true,
     section: 'recruitment',
   },
 
@@ -61,6 +64,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Reports',
     href: '/dashboard/reports',
     icon: 'bar-chart-2',
+    badge: 'Soon',
+    isDisabled: true,
     section: 'analytics',
   },
 

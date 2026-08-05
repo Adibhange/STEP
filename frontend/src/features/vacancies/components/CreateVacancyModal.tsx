@@ -16,15 +16,10 @@ interface CreateVacancyModalProps {
 }
 
 export const INITIAL_MASTER_TITLES = [
-  'MCQ (Single Choice)',
-  'MCQ (Multiple Choice)',
+  'MCQ Questions',
   'Coding & Algorithm Challenge',
   'SQL & Database Queries',
   'Subjective & Essay Questions',
-  'General Aptitude & Logical Test',
-  'System Design & Architecture',
-  'Technical F2F & Live Coding',
-  'HR & Cultural Fit Round',
 ];
 
 export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, onClose, onSave }) => {
@@ -32,7 +27,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
 
   // Dynamic Master Data & Users API Queries
   const { data: rolesRes } = useGetMasterDataByCategoryQuery('roles');
-  const { data: expRes } = useGetMasterDataByCategoryQuery('experiences');
+  const { data: expRes } = useGetMasterDataByCategoryQuery('experiencelevels');
   const { data: deptRes } = useGetMasterDataByCategoryQuery('departments');
   const { data: empTypeRes } = useGetMasterDataByCategoryQuery('employmentTypes');
   const { data: hiringLocRes } = useGetMasterDataByCategoryQuery('hiringLocations');
@@ -47,7 +42,6 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
   const hiringLocOptions = useMemo(() => (hiringLocRes?.data || []).map((hl) => ({ value: hl.name, label: `${hl.name} (${hl.code || '—'})` })), [hiringLocRes]);
   const testLocOptions = useMemo(() => (testLocRes?.data || []).map((tl) => ({ value: tl.name, label: `${tl.name} (${tl.code || '—'})` })), [testLocRes]);
   const userOptions = useMemo(() => (usersRes?.data || []).map((u: any) => ({ value: `${u.firstName} ${u.lastName}`.trim(), label: `${u.firstName} ${u.lastName}`.trim() + ` — ${u.role}` })), [usersRes]);
-
   // ==================== STEP 1 STATE: Basic Info, Terms & Locations ====================
   const [title, setTitle] = useState('');
   const [driveType, setDriveType] = useState<'Walk-in Drive' | 'Direct / Sourced Hiring'>('Walk-in Drive');
@@ -243,7 +237,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
   const [sections, setSections] = useState<AssessmentSectionConfig[]>([
     {
       id: 'sec-1',
-      sectionTitle: 'MCQ (Single Choice)',
+      sectionTitle: 'MCQ Questions',
       totalQuestions: 20,
       timeLimitMinutes: 25,
       marksPerQuestion: 2,
@@ -264,18 +258,19 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const grandTotalQuestions = sections.reduce((acc, s) => acc + s.totalQuestions, 0);
-  const grandTotalTime = sections.reduce((acc, s) => acc + s.timeLimitMinutes, 0);
-  const grandTotalMarks = sections.reduce((acc, s) => acc + s.totalMarks, 0);
+  const grandTotalQuestions = sections.reduce((acc, s) => acc + (Number(s.totalQuestions) || 0), 0);
+  const grandTotalTime = sections.reduce((acc, s) => acc + (Number(s.timeLimitMinutes) || 0), 0);
+  const grandTotalMarks = sections.reduce((acc, s) => acc + (Number(s.totalMarks) || 0), 0);
 
   const handleUpdateSection = (id: string, field: keyof AssessmentSectionConfig, val: any) => {
     setSections((prev) =>
       prev.map((sec) => {
         if (sec.id !== id) return sec;
-        const updated = { ...sec, [field]: val };
+        const parsedVal = field === 'sectionTitle' ? val : (parseInt(val, 10) || 0);
+        const updated = { ...sec, [field]: parsedVal };
         if (field === 'totalQuestions' || field === 'marksPerQuestion') {
-          const qCount = field === 'totalQuestions' ? parseInt(val) || 0 : sec.totalQuestions;
-          const marks = field === 'marksPerQuestion' ? parseFloat(val) || 0 : sec.marksPerQuestion;
+          const qCount = field === 'totalQuestions' ? (parseInt(val, 10) || 0) : (Number(sec.totalQuestions) || 0);
+          const marks = field === 'marksPerQuestion' ? (parseFloat(val) || 0) : (Number(sec.marksPerQuestion) || 0);
           updated.totalMarks = qCount * marks;
         }
         return updated;
@@ -878,39 +873,54 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                       <div className="space-y-2">
                         {flow.rounds.map((round, rIdx) => {
                           const isWalkInFirstRound = driveType === 'Walk-in Drive' && rIdx === 0;
+                          const isDirectHiringFirstRound = driveType !== 'Walk-in Drive' && rIdx === 0;
+                          const isFirstRoundLocked = isWalkInFirstRound || isDirectHiringFirstRound;
 
                           return (
                             <div
                               key={round.id}
                               className={`p-3 rounded-lg border flex flex-wrap items-center justify-between gap-3 text-[12px] ${
-                                isWalkInFirstRound
-                                  ? 'bg-amber-50/60 border-amber-200'
+                                isFirstRoundLocked
+                                  ? 'bg-indigo-50/60 border-indigo-200'
                                   : 'bg-[var(--surface-2)] border-[var(--border-default)]'
                               }`}
                             >
-                              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                              <div className="flex items-center gap-2 flex-1 min-w-[240px]">
                                 <span className={`w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold text-[10px] ${
-                                  isWalkInFirstRound ? 'bg-amber-500 text-white' : 'bg-[var(--accent-indigo)] text-white'
+                                  isFirstRoundLocked ? 'bg-indigo-600 text-white' : 'bg-[var(--accent-indigo)] text-white'
                                 }`}>
                                   {rIdx + 1}
                                 </span>
 
                                 {isWalkInFirstRound ? (
                                   <div className="flex items-center gap-2">
-                                    <span className="font-bold text-amber-900 font-heading">
+                                    <span className="font-bold text-indigo-900 font-heading">
                                       General Aptitude & Logical Test
                                     </span>
-                                    <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full">
-                                      🔒 Fixed 1st Round for Walk-in Drive
+                                    <span className="text-[10px] font-mono font-bold text-indigo-800 bg-indigo-200/80 px-2 py-0.5 rounded-full">
+                                      🔒 Fixed 1st Round for Walk-in
+                                    </span>
+                                  </div>
+                                ) : isDirectHiringFirstRound ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-indigo-900 font-heading">
+                                      HR Screening
+                                    </span>
+                                    <span className="text-[10px] font-mono font-bold text-indigo-800 bg-indigo-200/80 px-2 py-0.5 rounded-full">
+                                      🔒 Compulsory 1st Round for Direct Hiring
                                     </span>
                                   </div>
                                 ) : (
-                                  <input
-                                    type="text"
+                                  <CustomSelect
                                     value={round.name}
-                                    onChange={(e) => handleUpdateRound(flow.id, rIdx, 'name', e.target.value)}
-                                    className="w-full h-8 px-2.5 rounded border border-[var(--border-default)] bg-[var(--surface-1)] text-[12px] text-[var(--text-primary)] outline-none"
-                                    placeholder="Round Title"
+                                    onChange={(val) => handleUpdateRound(flow.id, rIdx, 'name', val)}
+                                    options={[
+                                      { value: 'General Aptitude & Logical Test', label: 'General Aptitude & Logical Test' },
+                                      { value: 'Coding & Algorithm Challenge', label: 'Coding & Algorithm Challenge' },
+                                      { value: 'Technical F2F & Live Coding', label: 'Technical F2F & Live Coding' },
+                                      { value: 'HR & Cultural Fit Round', label: 'HR & Cultural Fit Round' },
+                                    ]}
+                                    widthClass="w-72"
                                   />
                                 )}
                               </div>
@@ -918,8 +928,12 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                               <div className="flex items-center gap-2 shrink-0">
                                 {/* Round Type Select */}
                                 {isWalkInFirstRound ? (
-                                  <span className="text-[11px] font-mono font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded border border-amber-300">
+                                  <span className="text-[11px] font-mono font-bold text-indigo-800 bg-indigo-100 px-2.5 py-1 rounded border border-indigo-300">
                                     Aptitude
+                                  </span>
+                                ) : isDirectHiringFirstRound ? (
+                                  <span className="text-[11px] font-mono font-bold text-indigo-800 bg-indigo-100 px-2.5 py-1 rounded border border-indigo-300">
+                                    HR
                                   </span>
                                 ) : (
                                   <CustomSelect
@@ -932,26 +946,28 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                                       { value: 'F2F', label: 'F2F Interview' },
                                       { value: 'Group Discussion', label: 'Group Discussion' },
                                     ]}
-                                    widthClass="w-48"
+                                    widthClass="w-44"
                                   />
                                 )}
 
-                                {/* Cutoff Percentage */}
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[10.5px] text-[var(--text-tertiary)] font-mono">Cutoff:</span>
-                                  <input
-                                    type="number"
-                                    min={30}
-                                    max={100}
-                                    value={round.cutoffPercent}
-                                    onChange={(e) => handleUpdateRound(flow.id, rIdx, 'cutoffPercent', parseInt(e.target.value) || 60)}
-                                    className="w-14 h-8 px-1.5 rounded border border-[var(--border-default)] bg-[var(--surface-1)] text-[11.5px] font-mono text-center"
-                                  />
-                                  <span className="text-[11px] font-mono">%</span>
-                                </div>
+                                {/* Cutoff Percentage (Only for Scored Test / Assessment Rounds) */}
+                                {round.type !== 'HR' && !isDirectHiringFirstRound && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[10.5px] text-[var(--text-tertiary)] font-mono">Cutoff:</span>
+                                    <input
+                                      type="number"
+                                      min={30}
+                                      max={100}
+                                      value={round.cutoffPercent}
+                                      onChange={(e) => handleUpdateRound(flow.id, rIdx, 'cutoffPercent', parseInt(e.target.value) || 60)}
+                                      className="w-14 h-8 px-1.5 rounded border border-[var(--border-default)] bg-[var(--surface-1)] text-[11.5px] font-mono text-center"
+                                    />
+                                    <span className="text-[11px] font-mono">%</span>
+                                  </div>
+                                )}
 
                                 {/* Delete Round button */}
-                                {!isWalkInFirstRound && flow.rounds.length > 1 && (
+                                {!isFirstRoundLocked && flow.rounds.length > 1 && (
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveRoundFromFlow(flow.id, rIdx)}
