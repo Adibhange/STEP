@@ -14,6 +14,7 @@ import {
   Settings2,
   Bell,
   CheckCircle2,
+  SquareCheck,
   AlertTriangle,
   XCircle,
   Info,
@@ -86,6 +87,7 @@ export type IconName =
   | 'settings'
   | 'bell'
   | 'check-circle'
+  | 'check-square'
   | 'alert-triangle'
   | 'x-circle'
   | 'info'
@@ -158,6 +160,7 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'settings': Settings2,
   'bell': Bell,
   'check-circle': CheckCircle2,
+  'check-square': SquareCheck,
   'alert-triangle': AlertTriangle,
   'x-circle': XCircle,
   'info': Info,

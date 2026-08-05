@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
+import { CodeEditorIDE } from './CodeEditorIDE';
 
 export interface ExamQuestion {
   id: string;
@@ -18,6 +19,7 @@ export interface ExamQuestion {
   options?: { label: string; text: string }[];
   codeTemplate?: string;
   sqlSchema?: string;
+  language?: string;
 }
 
 export interface AssessmentRoundConfig {
@@ -43,10 +45,10 @@ export interface CandidateExamPortalProps {
 }
 
 export const ASSESSMENT_ROUNDS: AssessmentRoundConfig[] = [
-  { roundNumber: 1, roundTitle: 'Round 1: Multiple Choice Questions (MCQs)', shortTitle: 'Round 1: MCQs', durationMinutes: 10, questionCount: 3, totalMarks: 15 },
-  { roundNumber: 2, roundTitle: 'Round 2: Algorithmic Coding Challenge', shortTitle: 'Round 2: Coding', durationMinutes: 20, questionCount: 1, totalMarks: 25 },
-  { roundNumber: 3, roundTitle: 'Round 3: Database & SQL Queries', shortTitle: 'Round 3: SQL', durationMinutes: 15, questionCount: 1, totalMarks: 20 },
-  { roundNumber: 4, roundTitle: 'Round 4: System Design Architecture', shortTitle: 'Round 4: Subjective', durationMinutes: 15, questionCount: 1, totalMarks: 20 },
+  { roundNumber: 1, roundTitle: 'Multiple Choice Questions (MCQs)', shortTitle: 'MCQs', durationMinutes: 10, questionCount: 3, totalMarks: 15 },
+  { roundNumber: 2, roundTitle: 'Algorithmic Coding Challenge', shortTitle: 'Coding Challenge', durationMinutes: 20, questionCount: 1, totalMarks: 25 },
+  { roundNumber: 3, roundTitle: 'Database & SQL Queries', shortTitle: 'SQL Queries', durationMinutes: 15, questionCount: 1, totalMarks: 20 },
+  { roundNumber: 4, roundTitle: 'System Design Architecture', shortTitle: 'Subjective Architecture', durationMinutes: 15, questionCount: 1, totalMarks: 20 },
 ];
 
 export const EXAM_QUESTIONS: ExamQuestion[] = [
@@ -112,6 +114,7 @@ export const EXAM_QUESTIONS: ExamQuestion[] = [
     sectionTitle: 'Coding & Algorithm Challenge',
     type: 'CODING',
     category: 'Data Structures & Algorithms',
+    language: 'JavaScript / TypeScript',
     questionText: 'Implement an LRU (Least Recently Used) Cache class with get(key) and put(key, value) operations in O(1) time complexity.',
     marks: 25,
     timeAllowedMinutes: 20,
@@ -150,6 +153,7 @@ export const EXAM_QUESTIONS: ExamQuestion[] = [
     sectionTitle: 'SQL & Database Queries',
     type: 'SQL',
     category: 'SQL Server 2022',
+    language: 'SQL Server 2022',
     questionText: 'Write a SQL query to calculate 30-day rolling candidate hire conversion counts partitioned by hiring location.',
     marks: 20,
     timeAllowedMinutes: 15,
@@ -219,9 +223,9 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   const [isMultiTabLocked, setIsMultiTabLocked] = useState(false);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
-  // Simulation test cases output state
-  const [codeOutput, setCodeOutput] = useState<string | null>(null);
-  const [isTestingCode, setIsTestingCode] = useState(false);
+  // ── Question Palette & Navigation States ────────────────────────────
+  const [paletteFilter, setPaletteFilter] = useState<'ALL' | 'ANSWERED' | 'UNANSWERED' | 'FLAGGED'>('ALL');
+  const [isMobileQuestionDrawerOpen, setIsMobileQuestionDrawerOpen] = useState(false);
 
   // ==================== 1. REFRESH PERSISTENCE (HYDRATION ON MOUNT) ============
   useEffect(() => {
@@ -456,16 +460,6 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     } else {
       handleSubmitExam();
     }
-  };
-
-  // Simulate Running Code Test Cases
-  const handleRunCodeTests = () => {
-    setIsTestingCode(true);
-    setCodeOutput(null);
-    setTimeout(() => {
-      setIsTestingCode(false);
-      setCodeOutput('✔ Test Case 1 Passed (lru.get(1) == 1)\n✔ Test Case 2 Passed (lru.put(3, 3) evicted key 2)\n✔ Test Case 3 Passed (O(1) execution time: 0.42ms)\n\nAll 5 Test Cases Passed Successfully!');
-    }, 600);
   };
 
   // Toggle Flag Question for Review
@@ -741,30 +735,52 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   }
 
   // ── 4. LIVE PROCTORED EXAM INTERFACE ─────────────────────────────────────
+  const activeRoundQuestions = EXAM_QUESTIONS.filter((q) => q.roundNumber === activeRoundNumber);
+
+  const currentQuestionIndexInRound = activeRoundQuestions.findIndex((q) => q.id === currentQ?.id);
+  const roundQuestionNumber = currentQuestionIndexInRound !== -1 ? currentQuestionIndexInRound + 1 : 1;
+  const roundQuestionCount = activeRoundQuestions.length;
+
+  const answeredCountInRound = activeRoundQuestions.filter(
+    (q) => answers[q.id] !== undefined && (Array.isArray(answers[q.id]) ? answers[q.id].length > 0 : true)
+  ).length;
+
+  const flaggedCountInRound = activeRoundQuestions.filter((q) => flaggedQuestions.has(q.id)).length;
+  const unansweredCountInRound = activeRoundQuestions.length - answeredCountInRound;
+
+  const filteredPaletteQuestions = activeRoundQuestions.filter((q) => {
+    const isAnswered = answers[q.id] !== undefined && (Array.isArray(answers[q.id]) ? answers[q.id].length > 0 : true);
+    const isFlagged = flaggedQuestions.has(q.id);
+    if (paletteFilter === 'ANSWERED') return isAnswered;
+    if (paletteFilter === 'UNANSWERED') return !isAnswered;
+    if (paletteFilter === 'FLAGGED') return isFlagged;
+    return true;
+  });
+
   return (
     <div className="h-screen w-screen bg-[#f7f8fb] text-slate-900 flex flex-col font-sans select-none overflow-hidden">
       
       {/* ── Top Header Navigation Bar ───────────────────────────────────────── */}
-      <header className="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold shrink-0">
+      <header className="h-14 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between shrink-0 shadow-2xs">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold shrink-0">
             <Icon name="clipboard-check" size="xs" />
           </div>
-          <div>
-            <h2 className="text-xs font-extrabold text-slate-900 font-heading truncate max-w-xs sm:max-w-md">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[11px] sm:text-xs font-extrabold text-slate-900 font-heading truncate max-w-[140px] sm:max-w-md">
               {paperTitle}
             </h2>
-            <p className="text-[10px] text-slate-500 font-mono">
+            <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono truncate">
               Candidate: <span className="font-semibold text-slate-800">{candidateName}</span> ({candidateCode})
             </p>
           </div>
         </div>
 
         {/* Live Proctoring Banner & Timers */}
-        <div className="flex items-center gap-3">
-          {/* Header Warning Counter Badge (Increments ONLY on Tab / Window Switch) */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto">
+          {/* Header Warning Counter Badge */}
           {tabSwitchWarnings > 0 && (
-            <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10.5px] font-mono font-bold flex items-center gap-1">
+            <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[9.5px] sm:text-[10.5px] font-mono font-bold flex items-center gap-1">
               <Icon name="alert-triangle" size="xs" className="text-rose-600" />
               <span>Warnings: {tabSwitchWarnings}/3</span>
             </span>
@@ -772,164 +788,205 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
           {/* Active Round Dedicated Countdown Timer */}
           <div
-            className={`px-3 py-1.5 rounded-xl border font-mono font-extrabold text-xs flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border font-mono font-extrabold text-[11px] sm:text-xs flex items-center gap-1 sm:gap-1.5 ${
               isRoundTimerCritical
                 ? 'bg-rose-50 border-rose-300 text-rose-700 animate-pulse'
                 : 'bg-blue-50 border-blue-200 text-blue-800'
             }`}
           >
             <Icon name="calendar" size="xs" />
-            <span>Round {activeRoundNumber} Time: {roundMinutes}:{roundSeconds}</span>
+            <span>R{activeRoundNumber} Time: {roundMinutes}:{roundSeconds}</span>
           </div>
 
           {/* Total Exam Time Remaining */}
           <div className="px-2.5 py-1 rounded-lg border bg-slate-50 border-slate-200 text-slate-600 font-mono text-[11px] font-semibold hidden sm:flex items-center gap-1">
             <span>Total: {formattedMinutes}:{formattedSeconds}</span>
           </div>
-
-          <button
-            type="button"
-            onClick={handleSubmitExam}
-            className="h-8 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-colors cursor-pointer shadow-2xs"
-          >
-            Submit Test
-          </button>
         </div>
       </header>
+
+      {/* ── Sub-Header: Step-by-Step Round Stepper Bar ────────────────────────── */}
+      <div className="bg-slate-50 border-b border-slate-200 px-3 sm:px-6 py-2 flex items-center justify-center gap-2 sm:gap-3 overflow-x-auto shrink-0 scrollbar-none w-full">
+        {ASSESSMENT_ROUNDS.map((rnd, idx) => {
+          const isCompleted = rnd.roundNumber < activeRoundNumber;
+          const isActive = rnd.roundNumber === activeRoundNumber;
+
+          return (
+            <div key={rnd.roundNumber} className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {isCompleted ? (
+                <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs sm:text-sm font-mono font-extrabold flex items-center gap-1.5 sm:gap-2 shadow-2xs">
+                  <Icon name="check-circle" size="xs" className="text-emerald-600" />
+                  <span className="hidden sm:inline">{rnd.roundNumber}. {rnd.shortTitle}</span>
+                  <span className="sm:hidden">R{rnd.roundNumber}</span>
+                </span>
+              ) : isActive ? (
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-blue-600 text-white font-mono font-extrabold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 shadow-md ring-2 ring-blue-500/30">
+                  <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-white animate-pulse" />
+                  <span className="hidden sm:inline">{rnd.roundNumber}. {rnd.shortTitle} (Active)</span>
+                  <span className="sm:hidden">R{rnd.roundNumber} (Active)</span>
+                </span>
+              ) : (
+                <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white text-slate-400 border border-slate-200 text-xs sm:text-sm font-mono font-semibold flex items-center gap-1.5 sm:gap-2">
+                  <Icon name="lock" size="xs" className="text-slate-400" />
+                  <span className="hidden sm:inline">{rnd.roundNumber}. {rnd.shortTitle}</span>
+                  <span className="sm:hidden">R{rnd.roundNumber}</span>
+                </span>
+              )}
+              {idx < ASSESSMENT_ROUNDS.length - 1 && (
+                <span className="text-slate-300 font-mono text-xs sm:text-sm font-bold px-0.5 sm:px-1">►</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       {/* ── Main Exam Body: Split View (Left Palette / Right Main Content) ──── */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* LEFT COLUMN: Question Palette (Square Tiles + Sequential Round Lock State) */}
-        <aside className="w-72 bg-slate-50 p-4 flex flex-col gap-3.5 overflow-y-auto hidden md:flex shrink-0 border-r border-slate-200">
-          <h4 className="text-xs font-extrabold text-slate-800 font-heading uppercase tracking-wider">
-            QUESTION PALETTE
-          </h4>
-
-          {/* Status Counter Legend */}
-          <div className="grid grid-cols-2 gap-2 text-[10.5px] font-mono">
-            <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between">
-              <span>Answered</span>
-              <span className="font-bold">{answeredCount}</span>
-            </div>
-            <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-between">
-              <span>Flagged</span>
-              <span className="font-bold">{flaggedQuestions.size}</span>
-            </div>
+        {/* LEFT COLUMN: Active Round Question Palette (Matching white background with right panel) */}
+        <aside className="w-64 lg:w-72 xl:w-80 bg-white p-3.5 lg:p-5 flex flex-col gap-3.5 lg:gap-4 overflow-y-auto hidden md:flex shrink-0 border-r border-slate-200">
+          <div className="border-b border-slate-200 pb-2">
+            <h4 className="text-xs lg:text-sm font-extrabold text-slate-900 font-heading uppercase tracking-wider">
+              QUESTION PALETTE
+            </h4>
           </div>
 
-          {/* Round-Wise Palette Sections with Lock State */}
-          <div className="flex flex-col gap-3 mt-1">
-            {roundsList.map((rnd) => {
-              const isCurrentRound = rnd.number === activeRoundNumber;
-              const isPastRound = rnd.number < activeRoundNumber;
-              const isFutureRound = rnd.number > activeRoundNumber;
-
-              return (
-                <div key={rnd.number} className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[11px] font-extrabold tracking-wider ${
-                      isCurrentRound ? 'text-blue-700' : isPastRound ? 'text-slate-400 line-through' : 'text-slate-400'
-                    }`}>
-                      {rnd.title}
-                    </span>
-                    {(isPastRound || isFutureRound) && (
-                      <span className="text-[10px] font-mono font-bold text-slate-400 flex items-center gap-1">
-                        <Icon name="lock" size="xs" />
-                        <span>Locked</span>
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2">
-                    {rnd.questions.map((q) => {
-                      const idx = EXAM_QUESTIONS.findIndex((item) => item.id === q.id);
-                      const isAnswered = answers[q.id] !== undefined;
-                      const isFlagged = flaggedQuestions.has(q.id);
-                      const isCurrentQ = idx === currentQuestionIndex;
-
-                      const isLocked = q.roundNumber !== activeRoundNumber;
-
-                      return (
-                        <button
-                          key={q.id}
-                          type="button"
-                          disabled={isLocked}
-                          onClick={() => {
-                            if (!isLocked) setCurrentQuestionIndex(idx);
-                          }}
-                          className={`w-10 h-10 rounded-xl font-mono text-xs font-bold transition-all flex items-center justify-center ${
-                            isCurrentQ
-                              ? 'ring-2 ring-blue-600 bg-blue-600 text-white font-extrabold shadow-md cursor-pointer'
-                              : isLocked
-                              ? 'bg-slate-100 border border-slate-200 text-slate-400 opacity-50 cursor-not-allowed'
-                              : isAnswered
-                              ? 'bg-emerald-600 text-white shadow-2xs font-bold cursor-pointer'
-                              : isFlagged
-                              ? 'bg-amber-500 text-white shadow-2xs font-bold cursor-pointer'
-                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold cursor-pointer'
-                          }`}
-                        >
-                          {q.number}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+          {/* Filter Pills Bar with Direct Status Color Coding */}
+          <div className="grid grid-cols-4 gap-1 lg:gap-1.5 text-[10px] lg:text-xs font-mono font-bold">
+            <button
+              type="button"
+              onClick={() => setPaletteFilter('ALL')}
+              className={`py-1 lg:py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                paletteFilter === 'ALL'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                  : 'bg-blue-50/70 text-blue-700 border-blue-200 hover:bg-blue-100'
+              }`}
+            >
+              All ({activeRoundQuestions.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaletteFilter('ANSWERED')}
+              className={`py-1 lg:py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                paletteFilter === 'ANSWERED'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                  : 'bg-emerald-50/70 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              Ans ({answeredCountInRound})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaletteFilter('UNANSWERED')}
+              className={`py-1 lg:py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                paletteFilter === 'UNANSWERED'
+                  ? 'bg-slate-700 text-white border-slate-700 shadow-2xs'
+                  : 'bg-slate-100/80 text-slate-700 border-slate-200 hover:bg-slate-200'
+              }`}
+            >
+              Left ({unansweredCountInRound})
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaletteFilter('FLAGGED')}
+              className={`py-1 lg:py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                paletteFilter === 'FLAGGED'
+                  ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
+                  : 'bg-amber-50/70 text-amber-800 border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              Flag ({flaggedCountInRound})
+            </button>
           </div>
 
-          <div className="mt-auto p-2.5 rounded-xl bg-white border border-slate-200 text-[10px] text-slate-600 space-y-0.5 shadow-2xs leading-tight">
-            <p><strong className="text-slate-900">Active Round:</strong> Round {activeRoundNumber} ({ASSESSMENT_ROUNDS[activeRoundNumber - 1]?.shortTitle})</p>
-            <p><strong className="text-slate-900">Session Persistence:</strong> Auto-Saved</p>
-            <p><strong className="text-slate-900">Proctoring Log:</strong> Tab Switch Warnings Only</p>
+          {/* Scrollable 5-Column Question Grid */}
+          <div className="flex-1 flex flex-col gap-1.5 min-h-[240px]">
+            <div className="max-h-[440px] xl:max-h-[520px] overflow-y-auto scrollbar-thin pr-1 grid grid-cols-5 gap-1.5 lg:gap-2">
+              {filteredPaletteQuestions.map((q) => {
+                const idx = EXAM_QUESTIONS.findIndex((item) => item.id === q.id);
+                const isAnswered = answers[q.id] !== undefined && (Array.isArray(answers[q.id]) ? answers[q.id].length > 0 : true);
+                const isFlagged = flaggedQuestions.has(q.id);
+                const isCurrentQ = idx === currentQuestionIndex;
+                const qIdxInRound = activeRoundQuestions.findIndex((item) => item.id === q.id);
+                const qNumInRound = qIdxInRound !== -1 ? qIdxInRound + 1 : q.number;
+
+                return (
+                  <button
+                    key={q.id}
+                    type="button"
+                    title={`Question ${qNumInRound} (${q.type}) - ${isAnswered ? 'Answered' : 'Unanswered'}`}
+                    onClick={() => setCurrentQuestionIndex(idx)}
+                    className={`w-9 h-9 lg:w-11 lg:h-11 rounded-lg lg:rounded-xl font-mono text-xs lg:text-sm font-bold transition-all flex items-center justify-center cursor-pointer ${
+                      isCurrentQ
+                        ? 'ring-2 ring-blue-600 bg-blue-600 text-white font-extrabold shadow-sm'
+                        : isAnswered
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : isFlagged
+                        ? 'bg-amber-500 text-white shadow-2xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {qNumInRound}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </aside>
 
         {/* RIGHT COLUMN: Question Display & Interactive Answer Controls */}
         <main className="flex-1 p-4 sm:p-5 overflow-y-auto flex flex-col gap-4 bg-white">
           
+          {/* Mobile Question Jump Bar (Visible on screens under md) */}
+          <div className="flex md:hidden items-center justify-between bg-slate-50 p-2 sm:p-2.5 rounded-xl border border-slate-200 gap-2 shrink-0">
+            {/* Open Question Navigator Sheet Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileQuestionDrawerOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs font-mono font-bold hover:bg-slate-100 transition-colors shadow-2xs cursor-pointer"
+            >
+              <Icon name="grid" size="xs" className="text-blue-600" />
+              <span>Question Navigator</span>
+              <Icon name="chevron-down" size="xs" className="text-slate-400" />
+            </button>
+
+            {/* Status Counter */}
+            <span className="text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 whitespace-nowrap">
+              {answeredCountInRound}/{roundQuestionCount} Ans
+            </span>
+          </div>
+
           {/* Question & Round Metadata Bar */}
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-wrap gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Round Badge */}
-              <span className="px-2.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-mono font-bold">
-                {currentQ.roundTitle}
-              </span>
-
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2 flex-wrap gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               {/* Question Number Badge */}
-              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs font-mono font-bold">
-                Question {currentQ.number} of {EXAM_QUESTIONS.length}
+              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[10px] sm:text-xs font-mono font-bold">
+                Question {roundQuestionNumber} of {roundQuestionCount}
               </span>
-            </div>
 
-            <div className="flex items-center gap-3">
-              {/* Question Time Allowed Badge */}
-              <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 flex items-center gap-1">
-                <Icon name="calendar" size="xs" />
-                <span>Round Time Allowed: {ASSESSMENT_ROUNDS[activeRoundNumber - 1]?.durationMinutes} Mins</span>
-              </span>
+              {/* Multi-Choice Indicator */}
+              {currentQ.type === 'MULTI_CHOICE' && (
+                <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] sm:text-xs font-mono font-extrabold flex items-center gap-1">
+                  <Icon name="check-square" size="xs" className="text-amber-600" />
+                  <span>Select All That Apply</span>
+                </span>
+              )}
 
               {/* Question Marks Badge */}
-              <span className="text-xs font-mono font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              <span className="text-[10px] sm:text-xs font-mono font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                 {currentQ.marks} Marks
               </span>
-
-              {/* Flag Button */}
-              <button
-                type="button"
-                onClick={() => toggleFlag(currentQ.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  flaggedQuestions.has(currentQ.id)
-                    ? 'bg-amber-50 text-amber-800 border border-amber-300'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <Icon name="list" size="xs" />
-                <span>{flaggedQuestions.has(currentQ.id) ? 'Flagged' : 'Flag for Review'}</span>
-              </button>
             </div>
+
+            {/* Flag Button */}
+            <button
+              type="button"
+              onClick={() => toggleFlag(currentQ.id)}
+              className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1 bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0 ml-auto sm:ml-0"
+            >
+              <Icon name="list" size="xs" />
+              <span>{flaggedQuestions.has(currentQ.id) ? 'Flagged' : 'Flag'}</span>
+            </button>
           </div>
 
           {/* Question Text */}
@@ -941,100 +998,108 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           {currentQ.options && (
             <div className="flex flex-col gap-2 mt-1">
               {currentQ.options.map((opt) => {
-                const isSelected = answers[currentQ.id] === opt.label;
+                const currentAnswer = answers[currentQ.id];
+                const isMultiChoice = currentQ.type === 'MULTI_CHOICE';
+                
+                const currentArr: string[] = Array.isArray(currentAnswer)
+                  ? currentAnswer
+                  : typeof currentAnswer === 'string' && currentAnswer.trim() !== ''
+                  ? [currentAnswer]
+                  : [];
+
+                const isSelected = isMultiChoice
+                  ? currentArr.includes(opt.label)
+                  : currentAnswer === opt.label;
+
+                const handleOptionClick = () => {
+                  if (isMultiChoice) {
+                    const newArr = currentArr.includes(opt.label)
+                      ? currentArr.filter((item) => item !== opt.label)
+                      : [...currentArr, opt.label];
+                    setAnswers({ ...answers, [currentQ.id]: newArr });
+                  } else {
+                    setAnswers({ ...answers, [currentQ.id]: opt.label });
+                  }
+                };
+
                 return (
                   <button
                     key={opt.label}
                     type="button"
-                    onClick={() => setAnswers({ ...answers, [currentQ.id]: opt.label })}
-                    className={`p-3 rounded-xl border text-left text-xs font-medium transition-all cursor-pointer flex items-center gap-3 ${
+                    onClick={handleOptionClick}
+                    className={`p-3.5 rounded-xl border text-left text-xs font-medium transition-all cursor-pointer flex items-center gap-3 ${
                       isSelected
                         ? 'bg-blue-50 border-blue-600 text-blue-950 font-bold shadow-2xs ring-1 ring-blue-500/30'
                         : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <span
-                      className={`w-6 h-6 rounded-lg font-mono font-bold text-xs flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}
-                    >
-                      {opt.label}
-                    </span>
-                    <span>{opt.text}</span>
+                    {isMultiChoice ? (
+                      <span
+                        className={`w-6 h-6 rounded-md font-mono font-bold text-xs flex items-center justify-center shrink-0 transition-colors ${
+                          isSelected
+                            ? 'bg-blue-600 text-white border border-blue-600'
+                            : 'bg-slate-100 text-slate-600 border border-slate-300'
+                        }`}
+                      >
+                        {isSelected ? <Icon name="check" size="xs" /> : opt.label}
+                      </span>
+                    ) : (
+                      <span
+                        className={`w-6 h-6 rounded-lg font-mono font-bold text-xs flex items-center justify-center shrink-0 ${
+                          isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}
+                      >
+                        {opt.label}
+                      </span>
+                    )}
+                    <span className="leading-snug">{opt.text}</span>
                   </button>
                 );
               })}
             </div>
           )}
 
-          {/* Coding Challenge Editor */}
+          {/* Coding Challenge Solution IDE */}
           {currentQ.type === 'CODING' && (
-            <div className="flex flex-col gap-0 border border-slate-800 rounded-xl overflow-hidden shadow-2xs mt-1">
-              <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-900 text-slate-200 text-xs font-mono border-b border-slate-800">
-                <span className="flex items-center gap-1.5">
-                  <Icon name="file-text" size="xs" className="text-emerald-400" />
-                  <span>JavaScript / TypeScript Code Solution</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={handleRunCodeTests}
-                  disabled={isTestingCode}
-                  className="px-3 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <Icon name="send" size="xs" />
-                  <span>{isTestingCode ? 'Running...' : 'Run Code Test Cases'}</span>
-                </button>
-              </div>
-
-              <textarea
-                value={answers[currentQ.id] !== undefined ? answers[currentQ.id] : currentQ.codeTemplate}
-                onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
-                rows={6}
-                className="w-full p-3.5 bg-slate-950 font-mono text-xs text-emerald-300 outline-none leading-relaxed scrollbar-thin"
-              />
-
-              {codeOutput && (
-                <div className="p-2.5 bg-slate-900 border-t border-emerald-500/40 font-mono text-[11px] text-emerald-400 whitespace-pre-line leading-relaxed">
-                  {codeOutput}
-                </div>
-              )}
-            </div>
+            <CodeEditorIDE
+              value={answers[currentQ.id] !== undefined ? answers[currentQ.id] : (currentQ.codeTemplate || '')}
+              onChange={(val) => setAnswers({ ...answers, [currentQ.id]: val })}
+              questionType="CODING"
+              language={currentQ.language}
+              defaultTemplate={currentQ.codeTemplate || ''}
+              title="Algorithmic Solution IDE"
+              questionId={currentQ.id}
+            />
           )}
 
-          {/* SQL Query Editor */}
+          {/* SQL Query Editor IDE */}
           {currentQ.type === 'SQL' && (
-            <div className="flex flex-col gap-0 border border-slate-800 rounded-xl overflow-hidden shadow-2xs mt-1">
-              <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-900 text-slate-200 text-xs font-mono border-b border-slate-800">
-                <span className="flex items-center gap-1.5">
-                  <Icon name="file-text" size="xs" className="text-amber-400" />
-                  <span>SQL Server 2022 Query Editor</span>
-                </span>
-              </div>
-              <textarea
-                value={answers[currentQ.id] !== undefined ? answers[currentQ.id] : currentQ.sqlSchema}
-                onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
-                rows={5}
-                className="w-full p-3.5 bg-slate-950 font-mono text-xs text-amber-300 outline-none leading-relaxed scrollbar-thin"
-              />
-            </div>
+            <CodeEditorIDE
+              value={answers[currentQ.id] !== undefined ? answers[currentQ.id] : (currentQ.sqlSchema || '')}
+              onChange={(val) => setAnswers({ ...answers, [currentQ.id]: val })}
+              questionType="SQL"
+              language={currentQ.language}
+              defaultTemplate={currentQ.sqlSchema || ''}
+              title="SQL Server & Database Query IDE"
+              questionId={currentQ.id}
+            />
           )}
 
           {/* Subjective Essay Textarea */}
           {currentQ.type === 'SUBJECTIVE' && (
-            <div className="flex flex-col gap-1.5 mt-1">
+            <div className="flex-1 flex flex-col gap-1.5 mt-1 min-h-[280px]">
               <label className="text-xs font-bold text-slate-700">Your Detailed Architecture / Essay Response:</label>
               <textarea
                 value={answers[currentQ.id] || ''}
                 onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
                 placeholder="Type your explanation and system design architecture solution here..."
-                rows={4}
-                className="w-full p-3.5 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-900 outline-none focus:border-blue-500 focus:bg-white leading-relaxed scrollbar-thin shadow-2xs"
+                className="flex-1 w-full p-4 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-900 outline-none focus:border-blue-500 focus:bg-white leading-relaxed resize-none scrollbar-thin shadow-2xs min-h-[240px]"
               />
             </div>
           )}
 
           {/* Bottom Action Controls */}
-          <div className="flex items-center justify-between border-t border-slate-200 pt-3 mt-auto">
+          <div className="flex flex-wrap items-center justify-between border-t border-slate-200 pt-3 mt-auto gap-2">
             <button
               type="button"
               onClick={() => {
@@ -1042,12 +1107,12 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
                 delete nextAns[currentQ.id];
                 setAnswers(nextAns);
               }}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
             >
               Clear Choice
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 disabled={
@@ -1055,7 +1120,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
                   EXAM_QUESTIONS[currentQuestionIndex - 1].roundNumber < activeRoundNumber
                 }
                 onClick={() => setCurrentQuestionIndex((i) => i - 1)}
-                className="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-800 font-bold text-xs transition-colors cursor-pointer"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-800 font-bold text-[11px] sm:text-xs transition-colors cursor-pointer"
               >
                 Previous
               </button>
@@ -1063,7 +1128,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
               <button
                 type="button"
                 onClick={handleNextQuestion}
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20 flex items-center gap-1.5"
+                className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] sm:text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20 flex items-center gap-1 sm:gap-1.5"
               >
                 <span>
                   {currentQuestionIndex === EXAM_QUESTIONS.length - 1
@@ -1079,6 +1144,122 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           </div>
         </main>
       </div>
+
+      {/* Mobile Question Navigator Drawer Sheet Overlay */}
+      {isMobileQuestionDrawerOpen && (
+        <div
+          onClick={() => setIsMobileQuestionDrawerOpen(false)}
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 md:hidden"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl border border-slate-200 p-4 shadow-2xl flex flex-col gap-3 max-h-[85vh] overflow-y-auto"
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
+                  <Icon name="grid" size="xs" />
+                </span>
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-900 font-heading">
+                    Question Navigator ({roundQuestionCount} Questions)
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileQuestionDrawerOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <Icon name="x" size="xs" />
+              </button>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="grid grid-cols-4 gap-1 text-[10px] font-mono font-bold">
+              <button
+                type="button"
+                onClick={() => setPaletteFilter('ALL')}
+                className={`py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                  paletteFilter === 'ALL'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                    : 'bg-blue-50/70 text-blue-700 border-blue-200 hover:bg-blue-100'
+                }`}
+              >
+                All ({activeRoundQuestions.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaletteFilter('ANSWERED')}
+                className={`py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                  paletteFilter === 'ANSWERED'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                    : 'bg-emerald-50/70 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                }`}
+              >
+                Ans ({answeredCountInRound})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaletteFilter('UNANSWERED')}
+                className={`py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                  paletteFilter === 'UNANSWERED'
+                    ? 'bg-slate-700 text-white border-slate-700 shadow-2xs'
+                    : 'bg-slate-100/80 text-slate-700 border-slate-200 hover:bg-slate-200'
+                }`}
+              >
+                Left ({unansweredCountInRound})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaletteFilter('FLAGGED')}
+                className={`py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                  paletteFilter === 'FLAGGED'
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
+                    : 'bg-amber-50/70 text-amber-800 border-amber-200 hover:bg-amber-100'
+                }`}
+              >
+                Flag ({flaggedCountInRound})
+              </button>
+            </div>
+
+            {/* 5-Column Question Grid */}
+            <div className="grid grid-cols-5 gap-2 max-h-64 overflow-y-auto scrollbar-thin p-1">
+              {filteredPaletteQuestions.map((q) => {
+                const idx = EXAM_QUESTIONS.findIndex((item) => item.id === q.id);
+                const isAnswered = answers[q.id] !== undefined && (Array.isArray(answers[q.id]) ? answers[q.id].length > 0 : true);
+                const isFlagged = flaggedQuestions.has(q.id);
+                const isCurrentQ = idx === currentQuestionIndex;
+                const qIdxInRound = activeRoundQuestions.findIndex((item) => item.id === q.id);
+                const qNumInRound = qIdxInRound !== -1 ? qIdxInRound + 1 : q.number;
+
+                return (
+                  <button
+                    key={q.id}
+                    type="button"
+                    onClick={() => {
+                      setCurrentQuestionIndex(idx);
+                      setIsMobileQuestionDrawerOpen(false);
+                    }}
+                    className={`w-10 h-10 rounded-xl font-mono text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                      isCurrentQ
+                        ? 'ring-2 ring-blue-600 bg-blue-600 text-white font-extrabold shadow-md'
+                        : isAnswered
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : isFlagged
+                        ? 'bg-amber-500 text-white shadow-2xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {qNumInRound}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
