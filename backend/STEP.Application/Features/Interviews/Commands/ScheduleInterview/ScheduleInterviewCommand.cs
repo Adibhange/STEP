@@ -6,6 +6,7 @@ namespace STEP.Application.Features.Interviews.Commands.ScheduleInterview
 {
     public record ScheduleInterviewCommand(
         int CandidateId,
+        int InterviewerUserId,
         DateTime ScheduledAt,
         int DurationMinutes,
         string Mode,

@@ -1,9 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CodeEditorIDE } from './CodeEditorIDE';
+import {
+  useStartExamSessionMutation,
+  useResumeExamSessionQuery,
+  useSaveExamAnswerMutation,
+  useSubmitExamMutation,
+  useReportExamViolationMutation,
+  type LiveExamWorkspaceData,
+  type ExamQuestionData,
+} from '@/store/services/api';
+
+export interface ExamOption {
+  label: string;
+  text: string;
+  optionId: number;
+}
 
 export interface ExamQuestion {
   id: string;
@@ -16,7 +31,7 @@ export interface ExamQuestion {
   questionText: string;
   marks: number;
   timeAllowedMinutes: number;
-  options?: { label: string; text: string }[];
+  options?: ExamOption[];
   codeTemplate?: string;
   sqlSchema?: string;
   language?: string;
@@ -44,181 +59,161 @@ export interface CandidateExamPortalProps {
   onExamComplete?: (score: number, total: number) => void;
 }
 
-export const ASSESSMENT_ROUNDS: AssessmentRoundConfig[] = [
-  { roundNumber: 1, roundTitle: 'Multiple Choice Questions (MCQs)', shortTitle: 'MCQs', durationMinutes: 10, questionCount: 3, totalMarks: 15 },
-  { roundNumber: 2, roundTitle: 'Algorithmic Coding Challenge', shortTitle: 'Coding Challenge', durationMinutes: 20, questionCount: 1, totalMarks: 25 },
-  { roundNumber: 3, roundTitle: 'Database & SQL Queries', shortTitle: 'SQL Queries', durationMinutes: 15, questionCount: 1, totalMarks: 20 },
-  { roundNumber: 4, roundTitle: 'System Design Architecture', shortTitle: 'Subjective Architecture', durationMinutes: 15, questionCount: 1, totalMarks: 20 },
+// Question-type buckets rendered as "rounds" in the UI — this is the same grouping the
+// recruiter configures as Assessment Sections (MCQ / Coding / SQL / Subjective) when building
+// the vacancy's question paper. A paper missing a category simply has fewer rounds shown.
+const ROUND_TYPE_GROUPS: { title: string; shortTitle: string; types: ExamQuestion['type'][] }[] = [
+  { title: 'Multiple Choice Questions (MCQs)', shortTitle: 'MCQs', types: ['SINGLE_CHOICE', 'MULTI_CHOICE'] },
+  { title: 'Algorithmic Coding Challenge', shortTitle: 'Coding Challenge', types: ['CODING'] },
+  { title: 'Database & SQL Queries', shortTitle: 'SQL Queries', types: ['SQL'] },
+  { title: 'System Design Architecture', shortTitle: 'Subjective Architecture', types: ['SUBJECTIVE'] },
 ];
 
-export const EXAM_QUESTIONS: ExamQuestion[] = [
-  {
-    id: 'eq-1',
-    number: 1,
-    roundNumber: 1,
-    roundTitle: 'Round 1: Multiple Choice Questions (MCQs)',
-    sectionTitle: 'MCQ (Single Choice)',
-    type: 'SINGLE_CHOICE',
-    category: 'Next.js 16 App Router',
-    questionText: 'Which React directive is required at the top of a file to declare client-side interactivity in Next.js 16?',
-    marks: 5,
-    timeAllowedMinutes: 3,
-    options: [
-      { label: 'A', text: "'use server'" },
-      { label: 'B', text: "'use client'" },
-      { label: 'C', text: "'use interactive'" },
-      { label: 'D', text: "'use react'" },
-    ],
-  },
-  {
-    id: 'eq-2',
-    number: 2,
-    roundNumber: 1,
-    roundTitle: 'Round 1: Multiple Choice Questions (MCQs)',
-    sectionTitle: 'MCQ (Single Choice)',
-    type: 'SINGLE_CHOICE',
-    category: 'React 19 Hooks',
-    questionText: 'What is the primary benefit of the new React 19 useActionState hook?',
-    marks: 5,
-    timeAllowedMinutes: 3,
-    options: [
-      { label: 'A', text: 'Direct DOM node manipulation without refs' },
-      { label: 'B', text: 'Managing pending state, optimistic updates, and form response data in server actions' },
-      { label: 'C', text: 'Automatic Redux store synchronization' },
-      { label: 'D', text: 'Replacing all useEffect calls in application code' },
-    ],
-  },
-  {
-    id: 'eq-3',
-    number: 3,
-    roundNumber: 1,
-    roundTitle: 'Round 1: Multiple Choice Questions (MCQs)',
-    sectionTitle: 'MCQ (Multi Choice)',
-    type: 'MULTI_CHOICE',
-    category: 'ASP.NET Core 10 & EF Core',
-    questionText: 'Which of the following are valid lifetime scopes for Dependency Injection in .NET Core? (Select all that apply)',
-    marks: 5,
-    timeAllowedMinutes: 4,
-    options: [
-      { label: 'A', text: 'AddTransient' },
-      { label: 'B', text: 'AddScoped' },
-      { label: 'C', text: 'AddSingleton' },
-      { label: 'D', text: 'AddGlobal' },
-    ],
-  },
-  {
-    id: 'eq-4',
-    number: 4,
-    roundNumber: 2,
-    roundTitle: 'Round 2: Algorithmic Coding Challenge',
-    sectionTitle: 'Coding & Algorithm Challenge',
-    type: 'CODING',
-    category: 'Data Structures & Algorithms',
-    language: 'JavaScript / TypeScript',
-    questionText: 'Implement an LRU (Least Recently Used) Cache class with get(key) and put(key, value) operations in O(1) time complexity.',
-    marks: 25,
-    timeAllowedMinutes: 20,
-    codeTemplate: `class LRUCache {
-  /**
-   * @param {number} capacity
-   */
-  constructor(capacity) {
-    this.capacity = capacity;
-    this.cache = new Map();
+/**
+ * Groups the paper's real (flat, shuffled) question list into round buckets and, for each round,
+ * derives a duration: if every question in that round carries a real per-question
+ * TimeAllowedMinutes, sum those; otherwise fall back to a proportional share of the paper's
+ * overall duration, weighted by that round's share of total marks.
+ */
+function buildRoundsAndQuestions(
+  rawQuestions: ExamQuestionData[],
+  overallDurationMinutes: number
+): { questions: ExamQuestion[]; rounds: AssessmentRoundConfig[] } {
+  const totalMarks = rawQuestions.reduce((acc, q) => acc + q.marks, 0) || 1;
+  const overallSeconds = overallDurationMinutes * 60;
+
+  const rounds: AssessmentRoundConfig[] = [];
+  const questions: ExamQuestion[] = [];
+  let roundNumber = 0;
+
+  for (const group of ROUND_TYPE_GROUPS) {
+    const groupRaw = rawQuestions.filter((q) => group.types.includes(q.questionType as ExamQuestion['type']));
+    if (groupRaw.length === 0) continue;
+
+    roundNumber += 1;
+    const groupMarks = groupRaw.reduce((acc, q) => acc + q.marks, 0);
+    const allHaveRealTime = groupRaw.every((q) => (q.timeAllowedMinutes ?? 0) > 0);
+    const durationMinutes = allHaveRealTime
+      ? groupRaw.reduce((acc, q) => acc + (q.timeAllowedMinutes || 0), 0)
+      : Math.max(1, Math.round((overallSeconds * (groupMarks / totalMarks)) / 60));
+
+    rounds.push({
+      roundNumber,
+      roundTitle: group.title,
+      shortTitle: group.shortTitle,
+      durationMinutes,
+      questionCount: groupRaw.length,
+      totalMarks: groupMarks,
+    });
+
+    for (const q of groupRaw) {
+      questions.push({
+        id: String(q.id),
+        number: 0, // assigned below, once overall ordering across all rounds is known
+        roundNumber,
+        roundTitle: group.title,
+        sectionTitle: group.title,
+        type: q.questionType as ExamQuestion['type'],
+        category: q.questionType,
+        questionText: q.questionText,
+        marks: q.marks,
+        timeAllowedMinutes: q.timeAllowedMinutes || 0,
+        options: (q.options || []).map((o) => ({ label: o.label, text: o.text, optionId: o.id })),
+        codeTemplate: q.questionType === 'CODING' ? '' : undefined,
+        sqlSchema: q.questionType === 'SQL' ? (q.sqlSchema || '') : undefined,
+        language: q.programmingLanguage || undefined,
+      });
+    }
   }
 
-  /** 
-   * @param {number} key
-   * @return {number}
-   */
-  get(key) {
-    // Write your solution code here
-  }
+  questions.forEach((q, idx) => {
+    q.number = idx + 1;
+  });
 
-  /** 
-   * @param {number} key 
-   * @param {number} value
-   * @return {void}
-   */
-  put(key, value) {
-    // Write your solution code here
+  return { questions, rounds };
+}
+
+/** Rehydrates the local answers map from whatever the session already has saved (resume case). */
+function buildInitialAnswers(rawQuestions: ExamQuestionData[], questions: ExamQuestion[]): Record<string, any> {
+  const map: Record<string, any> = {};
+  for (const q of questions) {
+    const raw = rawQuestions.find((r) => String(r.id) === q.id);
+    if (!raw) continue;
+
+    if (q.type === 'SINGLE_CHOICE' || q.type === 'MULTI_CHOICE') {
+      const labels = (raw.selectedOptionIds || [])
+        .map((optId) => q.options?.find((o) => o.optionId === optId)?.label)
+        .filter((l): l is string => Boolean(l));
+      if (labels.length > 0) {
+        map[q.id] = q.type === 'MULTI_CHOICE' ? labels : labels[0];
+      }
+    } else if (raw.submittedAnswerText) {
+      map[q.id] = raw.submittedAnswerText;
+    }
   }
-}`,
-  },
-  {
-    id: 'eq-5',
-    number: 5,
-    roundNumber: 3,
-    roundTitle: 'Round 3: Database & SQL Queries',
-    sectionTitle: 'SQL & Database Queries',
-    type: 'SQL',
-    category: 'SQL Server 2022',
-    language: 'SQL Server 2022',
-    questionText: 'Write a SQL query to calculate 30-day rolling candidate hire conversion counts partitioned by hiring location.',
-    marks: 20,
-    timeAllowedMinutes: 15,
-    sqlSchema: `-- Table: Candidates (Id, Code, Name, HiringLocationId, Status, AppliedDate)
-SELECT 
-    HiringLocationId,
-    AppliedDate,
-    COUNT(Id) OVER (
-        PARTITION BY HiringLocationId 
-        ORDER BY AppliedDate 
-        ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
-    ) AS Rolling30DayHireCount
-FROM Candidates
-WHERE Status = 'Joined';`,
-  },
-  {
-    id: 'eq-6',
-    number: 6,
-    roundNumber: 4,
-    roundTitle: 'Round 4: Architecture & Subjective',
-    sectionTitle: 'Subjective & System Architecture',
-    type: 'SUBJECTIVE',
-    category: 'Enterprise Security Architecture',
-    questionText: 'Describe how you would design a multi-tenant proctoring engine with tab switch detection and anti-cheating token locks.',
-    marks: 20,
-    timeAllowedMinutes: 15,
-  },
-];
+  return map;
+}
+
+/** Converts the local (label-based) answer value into the shape SaveExamAnswerCommand expects. */
+function buildSaveAnswerPayload(question: ExamQuestion, value: any): { submittedAnswerText: string | null; selectedOptionIds: number[] } {
+  if (question.type === 'SINGLE_CHOICE' || question.type === 'MULTI_CHOICE') {
+    const labels: string[] = Array.isArray(value) ? value : typeof value === 'string' && value ? [value] : [];
+    const selectedOptionIds = (question.options || []).filter((o) => labels.includes(o.label)).map((o) => o.optionId);
+    return { submittedAnswerText: null, selectedOptionIds };
+  }
+  return { submittedAnswerText: typeof value === 'string' ? value : '', selectedOptionIds: [] };
+}
 
 export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   testMode = 'From Home',
-  sessionToken = 'EXAM-MUM-2026-X89',
-  candidateName = 'Anjali Sharma',
-  candidateCode = 'CND-2026-1042',
-  candidateEmail = 'anjali.sharma@email.com',
-  vacancyTitle = 'Frontend Developer - React (V123)',
-  paperTitle = 'Advanced React 19 & Next.js Enterprise Assessment',
-  durationMinutes = 60,
+  sessionToken: sessionTokenFromUrl = '',
+  candidateName: candidateNameProp,
+  candidateCode = '',
+  candidateEmail: candidateEmailProp,
+  vacancyTitle: vacancyTitleProp,
+  paperTitle: paperTitleProp,
+  durationMinutes: durationMinutesProp,
   passingPercentage = 70,
   onExamComplete,
 }) => {
-  const STORAGE_KEY = `STEP_EXAM_PERSISTENCE_${sessionToken}`;
+  // ── Real Session Data ────────────────────────────────────────────────────────
+  const [workspace, setWorkspace] = useState<LiveExamWorkspaceData | null>(null);
+  const [activeSessionToken, setActiveSessionToken] = useState<string | undefined>(undefined);
+  const hasInitializedSessionState = useRef<string | null>(null);
+
+  const [startExamSessionApi, { isLoading: isStarting }] = useStartExamSessionMutation();
+  const {
+    data: resumeRes,
+    isLoading: isResuming,
+    isError: isResumeError,
+  } = useResumeExamSessionQuery(sessionTokenFromUrl, { skip: testMode !== 'In Office' || !sessionTokenFromUrl });
+  const [saveExamAnswerApi] = useSaveExamAnswerMutation();
+  const [submitExamApi, { isLoading: isSubmitting }] = useSubmitExamMutation();
+  const [reportExamViolationApi] = useReportExamViolationMutation();
 
   // ── Authentication & Gatekeeper State ──────────────────────────────────────
-  const [isAuthenticated, setIsAuthenticated] = useState(testMode === 'In Office');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginCode, setLoginCode] = useState(candidateCode);
   const [loginPasscode, setLoginPasscode] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // ── Exam Flow Lifecycle States ──────────────────────────────────────────────
   const [examStep, setExamStep] = useState<'instructions' | 'active' | 'submitted'>('instructions');
+  const [submitResult, setSubmitResult] = useState<{ totalScore: number; totalMarks: number } | null>(null);
 
-  // Overall Total Exam Timer (in seconds)
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState(durationMinutes * 60);
+  // Overall Total Exam Timer (in seconds) — seeded from the real session once it loads.
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState((durationMinutesProp ?? 60) * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
   // Round-Wise Active State & Dedicated Round Timer
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [activeRoundNumber, setActiveRoundNumber] = useState<number>(1);
-  const [roundTimeLeftSeconds, setRoundTimeLeftSeconds] = useState<number>(ASSESSMENT_ROUNDS[0].durationMinutes * 60);
+  const [roundTimeLeftSeconds, setRoundTimeLeftSeconds] = useState<number>(600);
 
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [flaggedQuestions, setFlaggedQuestions] = useState<Set<string>>(new Set());
 
-  // ── Anti-Cheating & Proctoring States ───────────────────────────────────────
+  // ── Anti-Cheating & Proctoring States (client-side only for now) ───────────
   const [tabSwitchWarnings, setTabSwitchWarnings] = useState(0);
   const [isMultiTabLocked, setIsMultiTabLocked] = useState(false);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
@@ -227,74 +222,69 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   const [paletteFilter, setPaletteFilter] = useState<'ALL' | 'ANSWERED' | 'UNANSWERED' | 'FLAGGED'>('ALL');
   const [isMobileQuestionDrawerOpen, setIsMobileQuestionDrawerOpen] = useState(false);
 
-  // ==================== 1. REFRESH PERSISTENCE (HYDRATION ON MOUNT) ============
+  // Pending debounced autosaves (free-text answers), flushed immediately on navigation/submit.
+  const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // Real per-vacancy/candidate identity — falls back to the prop defaults only until the real
+  // session response arrives.
+  const candidateName = workspace?.candidateName ?? candidateNameProp ?? candidateCode;
+  const vacancyTitle = workspace?.vacancyTitle ?? vacancyTitleProp ?? '';
+  const paperTitle = workspace?.paperTitle ?? paperTitleProp ?? '';
+  const durationMinutes = workspace?.durationMinutes ?? durationMinutesProp ?? 60;
+
+  // ==================== Derive rounds + flat question list from the real session ==========
+  const { questions: examQuestions, rounds: assessmentRounds } = useMemo(() => {
+    if (!workspace) return { questions: [] as ExamQuestion[], rounds: [] as AssessmentRoundConfig[] };
+    return buildRoundsAndQuestions(workspace.questions, workspace.durationMinutes);
+  }, [workspace]);
+
+  // ==================== Apply a freshly loaded/resumed session's real state once =========
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const savedSession = sessionStorage.getItem(STORAGE_KEY);
-      if (savedSession) {
-        const parsed = JSON.parse(savedSession);
-        if (parsed.isAuthenticated !== undefined) setIsAuthenticated(parsed.isAuthenticated);
-        if (parsed.examStep !== undefined) setExamStep(parsed.examStep);
-        if (parsed.currentQuestionIndex !== undefined) setCurrentQuestionIndex(parsed.currentQuestionIndex);
-        if (parsed.activeRoundNumber !== undefined) setActiveRoundNumber(parsed.activeRoundNumber);
-        if (parsed.roundTimeLeftSeconds !== undefined) setRoundTimeLeftSeconds(parsed.roundTimeLeftSeconds);
-        if (parsed.timeLeftSeconds !== undefined) setTimeLeftSeconds(parsed.timeLeftSeconds);
-        if (parsed.answers !== undefined) setAnswers(parsed.answers);
-        if (parsed.flaggedQuestions !== undefined) setFlaggedQuestions(new Set(parsed.flaggedQuestions));
-        if (parsed.tabSwitchWarnings !== undefined) setTabSwitchWarnings(parsed.tabSwitchWarnings);
+    if (!workspace || examQuestions.length === 0) return;
+    if (hasInitializedSessionState.current === workspace.sessionToken) return;
+    hasInitializedSessionState.current = workspace.sessionToken;
 
-        if (parsed.examStep === 'active') {
-          setIsTimerRunning(true);
-        }
-      }
-    } catch (e) {
-      // Fallback if sessionStorage read fails
+    setAnswers(buildInitialAnswers(workspace.questions, examQuestions));
+    setTimeLeftSeconds(workspace.totalTimeLeftSeconds);
+
+    const initialQIdx = Math.min(Math.max(workspace.activeQuestionIndex || 0, 0), examQuestions.length - 1);
+    setCurrentQuestionIndex(initialQIdx);
+
+    const initialRound = examQuestions[initialQIdx]?.roundNumber || 1;
+    setActiveRoundNumber(initialRound);
+    const roundCfg = assessmentRounds.find((r) => r.roundNumber === initialRound);
+    setRoundTimeLeftSeconds((roundCfg?.durationMinutes || 10) * 60);
+
+    const hasProgress =
+      (workspace.activeQuestionIndex || 0) > 0 ||
+      workspace.questions.some((q) => q.submittedAnswerText || (q.selectedOptionIds && q.selectedOptionIds.length > 0));
+
+    if (workspace.sessionStatus === 'Submitted' || workspace.sessionStatus === 'Evaluated') {
+      setExamStep('submitted');
+    } else if (hasProgress) {
+      setExamStep('active');
+      setIsTimerRunning(true);
+    } else {
+      setExamStep('instructions');
     }
-  }, [STORAGE_KEY]);
+  }, [workspace, examQuestions, assessmentRounds]);
 
-  // ==================== 2. SAVE STATE TO STORAGE ON CHANGE ====================
+  // ==================== Office mode: silently resume an already-started session ==========
   useEffect(() => {
-    if (typeof window === 'undefined' || !sessionToken) return;
-    try {
-      const stateToSave = {
-        isAuthenticated,
-        examStep,
-        currentQuestionIndex,
-        activeRoundNumber,
-        roundTimeLeftSeconds,
-        timeLeftSeconds,
-        answers,
-        flaggedQuestions: Array.from(flaggedQuestions),
-        tabSwitchWarnings,
-      };
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-    } catch (e) {
-      // Storage quota safety fallback
+    if (testMode === 'In Office' && resumeRes?.data) {
+      setWorkspace(resumeRes.data);
+      setActiveSessionToken(resumeRes.data.sessionToken);
+      setIsAuthenticated(true);
     }
-  }, [
-    STORAGE_KEY,
-    sessionToken,
-    isAuthenticated,
-    examStep,
-    currentQuestionIndex,
-    activeRoundNumber,
-    roundTimeLeftSeconds,
-    timeLeftSeconds,
-    answers,
-    flaggedQuestions,
-    tabSwitchWarnings,
-  ]);
+  }, [testMode, resumeRes]);
 
-  // ==================== 3. DISABLE BROWSER BACK BUTTON (NO POPUPS) ============
+  // ==================== 1. DISABLE BROWSER BACK BUTTON (NO POPUPS) ============
   useEffect(() => {
     if (examStep !== 'active') return;
 
-    // Push dummy state onto history stack to block backward navigation
     window.history.pushState(null, '', window.location.href);
 
     const handlePopState = () => {
-      // Trap/block back button navigation seamlessly without prompt popups
       window.history.pushState(null, '', window.location.href);
     };
 
@@ -305,20 +295,20 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     };
   }, [examStep]);
 
-  // ==================== 4. MULTI-TAB / MULTI-DEVICE SESSION LOCK =============
+  // ==================== 2. MULTI-TAB / MULTI-DEVICE SESSION LOCK =============
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !activeSessionToken) return;
 
     try {
       const channel = new BroadcastChannel('STEP_EXAM_SESSION_CHANNEL');
       broadcastChannelRef.current = channel;
 
-      channel.postMessage({ type: 'PING_EXISTING_SESSION', token: sessionToken });
+      channel.postMessage({ type: 'PING_EXISTING_SESSION', token: activeSessionToken });
 
       channel.onmessage = (event) => {
-        if (event.data?.token === sessionToken) {
+        if (event.data?.token === activeSessionToken) {
           if (event.data?.type === 'PING_EXISTING_SESSION') {
-            channel.postMessage({ type: 'SESSION_ALREADY_ACTIVE', token: sessionToken });
+            channel.postMessage({ type: 'SESSION_ALREADY_ACTIVE', token: activeSessionToken });
           } else if (event.data?.type === 'SESSION_ALREADY_ACTIVE') {
             setIsMultiTabLocked(true);
           }
@@ -331,22 +321,42 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     return () => {
       broadcastChannelRef.current?.close();
     };
-  }, [sessionToken]);
+  }, [activeSessionToken]);
 
-  // ==================== 5. TAB / WINDOW SWITCH PROCTORING (INCREMENTS WARNINGS) =
+  // Shared by every violation source below (tab switch, fullscreen exit) — reports to the
+  // backend, which is the authority on the 3-strike auto-submit rule
+  // (CandidateExamSession.TabSwitchWarnings). The local counter still drives the header badge,
+  // but the actual auto-submit decision comes back from the server so the client never submits
+  // twice (once locally, once server-side) for the same violation.
+  const reportViolation = (violationType: string) => {
+    setTabSwitchWarnings((prev) => prev + 1);
+
+    if (!activeSessionToken) return;
+    reportExamViolationApi({ sessionToken: activeSessionToken, violationType })
+      .unwrap()
+      .then((res) => {
+        if (res.data.autoSubmitted && res.data.submitResult) {
+          setIsTimerRunning(false);
+          setSubmitResult({
+            totalScore: Number(res.data.submitResult.totalScore),
+            totalMarks: Number(res.data.submitResult.totalMarks),
+          });
+          setExamStep('submitted');
+          onExamComplete?.(Number(res.data.submitResult.totalScore), Number(res.data.submitResult.totalMarks));
+        }
+      })
+      .catch(() => {
+        // Best-effort — violation reporting failing shouldn't block the candidate from continuing.
+      });
+  };
+
+  // ==================== 3. TAB / WINDOW SWITCH PROCTORING (INCREMENTS WARNINGS) =
   useEffect(() => {
     if (examStep !== 'active') return;
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Increment warning count ONLY on tab switch / window blur
-        setTabSwitchWarnings((prev) => {
-          const nextCount = prev + 1;
-          if (nextCount >= 3) {
-            handleAutoSubmit();
-          }
-          return nextCount;
-        });
+        reportViolation('TabSwitch');
       }
     };
 
@@ -355,15 +365,79 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [examStep, activeSessionToken]);
+
+  // ==================== 3b. FULL-SCREEN ENFORCEMENT ===========================
+  // Best-effort request on entering the active exam; exiting full-screen mid-exam counts as a
+  // violation exactly like a tab switch (same counter, same server-side 3-strike rule).
+  useEffect(() => {
+    if (examStep !== 'active') return;
+
+    if (document.fullscreenElement == null) {
+      document.documentElement.requestFullscreen?.().catch(() => {
+        // Some browsers/contexts reject this (e.g. iframe embedding) — degrade silently, the
+        // rest of the proctoring measures still apply.
+      });
+    }
+
+    const handleFullscreenChange = () => {
+      if (document.fullscreenElement == null) {
+        reportViolation('FullscreenExit');
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      if (document.fullscreenElement != null) {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [examStep, activeSessionToken]);
+
+  // ==================== 3c. COPY / PASTE / RIGHT-CLICK / DEVTOOLS BLOCKING ====
+  useEffect(() => {
+    if (examStep !== 'active') return;
+
+    const blockClipboardEvent = (e: ClipboardEvent) => e.preventDefault();
+    const blockContextMenu = (e: MouseEvent) => e.preventDefault();
+    const blockDevToolsShortcuts = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      const isDevToolsShortcut =
+        key === 'f12' ||
+        (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) ||
+        (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(key)) ||
+        (e.ctrlKey && key === 'u');
+      if (isDevToolsShortcut) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('copy', blockClipboardEvent);
+    document.addEventListener('cut', blockClipboardEvent);
+    document.addEventListener('paste', blockClipboardEvent);
+    document.addEventListener('contextmenu', blockContextMenu);
+    document.addEventListener('keydown', blockDevToolsShortcuts);
+
+    return () => {
+      document.removeEventListener('copy', blockClipboardEvent);
+      document.removeEventListener('cut', blockClipboardEvent);
+      document.removeEventListener('paste', blockClipboardEvent);
+      document.removeEventListener('contextmenu', blockContextMenu);
+      document.removeEventListener('keydown', blockDevToolsShortcuts);
+    };
   }, [examStep]);
 
-  // ==================== 6. ROUND TIME EXPIRY & DEDICATED TIMER EFFECT =========
+  // ==================== 4. ROUND TIME EXPIRY & DEDICATED TIMER EFFECT =========
   const handleRoundTimeExpiry = (expiredRound: number) => {
-    const currentRoundIdx = ASSESSMENT_ROUNDS.findIndex((r) => r.roundNumber === expiredRound);
+    const currentRoundIdx = assessmentRounds.findIndex((r) => r.roundNumber === expiredRound);
 
-    if (currentRoundIdx < ASSESSMENT_ROUNDS.length - 1) {
-      const nextRound = ASSESSMENT_ROUNDS[currentRoundIdx + 1];
-      const firstQIdx = EXAM_QUESTIONS.findIndex((q) => q.roundNumber === nextRound.roundNumber);
+    if (currentRoundIdx < assessmentRounds.length - 1) {
+      const nextRound = assessmentRounds[currentRoundIdx + 1];
+      const firstQIdx = examQuestions.findIndex((q) => q.roundNumber === nextRound.roundNumber);
 
       setActiveRoundNumber(nextRound.roundNumber);
       setRoundTimeLeftSeconds(nextRound.durationMinutes * 60);
@@ -377,13 +451,11 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (isTimerRunning && examStep === 'active') {
       interval = setInterval(() => {
-        // 1. Overall exam timer decrement
         setTimeLeftSeconds((prev) => (prev > 0 ? prev - 1 : 0));
 
-        // 2. Active round timer decrement
         setRoundTimeLeftSeconds((prev) => {
           if (prev <= 1) {
             handleRoundTimeExpiry(activeRoundNumber);
@@ -396,10 +468,65 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isTimerRunning, examStep, activeRoundNumber]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTimerRunning, examStep, activeRoundNumber, assessmentRounds, examQuestions]);
+
+  // ==================== Autosave plumbing ====================================
+  const persistAnswerNow = async (question: ExamQuestion, value: any) => {
+    if (!activeSessionToken) return;
+    const payload = buildSaveAnswerPayload(question, value);
+    try {
+      await saveExamAnswerApi({
+        sessionToken: activeSessionToken,
+        candidateExamSessionQuestionId: Number(question.id),
+        submittedAnswerText: payload.submittedAnswerText,
+        selectedOptionIds: payload.selectedOptionIds,
+      }).unwrap();
+    } catch (err) {
+      toast.error('Autosave Failed', { description: 'Your last answer change could not be saved. Please check your connection.' });
+    }
+  };
+
+  const persistAnswerDebounced = (question: ExamQuestion, value: any) => {
+    const key = question.id;
+    if (saveTimersRef.current[key]) clearTimeout(saveTimersRef.current[key]);
+    saveTimersRef.current[key] = setTimeout(() => {
+      delete saveTimersRef.current[key];
+      void persistAnswerNow(question, value);
+    }, 800);
+  };
+
+  const flushPendingSaves = () => {
+    Object.entries(saveTimersRef.current).forEach(([qId, timer]) => {
+      clearTimeout(timer);
+      const q = examQuestions.find((eq) => eq.id === qId);
+      if (q && answers[qId] !== undefined) {
+        void persistAnswerNow(q, answers[qId]);
+      }
+    });
+    saveTimersRef.current = {};
+  };
+
+  const handleAnswerChange = (question: ExamQuestion, value: any) => {
+    setAnswers((prev) => ({ ...prev, [question.id]: value }));
+    if (question.type === 'CODING' || question.type === 'SQL' || question.type === 'SUBJECTIVE') {
+      persistAnswerDebounced(question, value);
+    } else {
+      persistAnswerNow(question, value);
+    }
+  };
+
+  const handleClearAnswer = (question: ExamQuestion) => {
+    setAnswers((prev) => {
+      const next = { ...prev };
+      delete next[question.id];
+      return next;
+    });
+    void persistAnswerNow(question, undefined);
+  };
 
   // Handle Home candidate login form submit
-  const handleCandidateLogin = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleCandidateLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!loginCode.trim() || !loginPasscode.trim()) {
       setLoginError('Please enter both Candidate ID and Passcode.');
@@ -410,47 +537,70 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
       return;
     }
     setLoginError(null);
-    setIsAuthenticated(true);
+    try {
+      const res = await startExamSessionApi({
+        candidateCode: loginCode.trim(),
+        passcode: loginPasscode.trim(),
+        testSource: testMode === 'In Office' ? 'Office' : 'Home',
+      }).unwrap();
+      setWorkspace(res.data);
+      setActiveSessionToken(res.data.sessionToken);
+      setIsAuthenticated(true);
+    } catch (err: any) {
+      setLoginError(err?.data?.message || 'Invalid Candidate ID or Passcode. Please check your exam invitation and try again.');
+    }
   };
 
-  // Start Exam Action
+  // Start Exam Action — the real session already began server-side at login/resume; this just
+  // moves the local UI from the instructions screen into the live timed view.
   const handleStartExam = () => {
     setExamStep('active');
     setIsTimerRunning(true);
-    setActiveRoundNumber(1);
-    setRoundTimeLeftSeconds(ASSESSMENT_ROUNDS[0].durationMinutes * 60);
+  };
+
+  const performSubmit = async (isAuto: boolean) => {
+    flushPendingSaves();
+    setIsTimerRunning(false);
+    if (!activeSessionToken) return;
+    try {
+      const res = await submitExamApi({ sessionToken: activeSessionToken }).unwrap();
+      setSubmitResult({ totalScore: Number(res.data.totalScore), totalMarks: Number(res.data.totalMarks) });
+      setExamStep('submitted');
+      if (!isAuto) {
+        toast.success('Exam Submitted Successfully', { description: 'Your test responses have been evaluated and recorded.' });
+      }
+      onExamComplete?.(Number(res.data.totalScore), Number(res.data.totalMarks));
+    } catch (err: any) {
+      toast.error('Submission Failed', {
+        description: err?.data?.message || 'Could not submit your exam. Please check your connection and try again.',
+      });
+      setIsTimerRunning(true);
+    }
   };
 
   // Auto-Submit Exam on Timer Expiry or Max Violations
   const handleAutoSubmit = () => {
-    setIsTimerRunning(false);
-    setExamStep('submitted');
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch (e) {}
-    if (onExamComplete) onExamComplete(88, 100);
+    void performSubmit(true);
   };
 
   // Manual Submit Exam
   const handleSubmitExam = () => {
-    setIsTimerRunning(false);
-    setExamStep('submitted');
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch (e) {}
-    toast.success('Exam Submitted Successfully', {
-      description: 'Your test responses have been evaluated and recorded.',
-    });
-    if (onExamComplete) onExamComplete(92, 100);
+    void performSubmit(false);
   };
 
   // Next Question / Next Round Action
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < EXAM_QUESTIONS.length - 1) {
-      const nextQ = EXAM_QUESTIONS[currentQuestionIndex + 1];
+    const currentQForFlush = examQuestions[currentQuestionIndex];
+    if (currentQForFlush && saveTimersRef.current[currentQForFlush.id]) {
+      clearTimeout(saveTimersRef.current[currentQForFlush.id]);
+      delete saveTimersRef.current[currentQForFlush.id];
+      void persistAnswerNow(currentQForFlush, answers[currentQForFlush.id]);
+    }
+
+    if (currentQuestionIndex < examQuestions.length - 1) {
+      const nextQ = examQuestions[currentQuestionIndex + 1];
       if (nextQ.roundNumber > activeRoundNumber) {
-        // Advancing to next round manually!
-        const nextRoundConfig = ASSESSMENT_ROUNDS.find((r) => r.roundNumber === nextQ.roundNumber);
+        const nextRoundConfig = assessmentRounds.find((r) => r.roundNumber === nextQ.roundNumber);
         setActiveRoundNumber(nextQ.roundNumber);
         if (nextRoundConfig) {
           setRoundTimeLeftSeconds(nextRoundConfig.durationMinutes * 60);
@@ -480,16 +630,8 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   const roundSeconds = String(roundTimeLeftSeconds % 60).padStart(2, '0');
   const isRoundTimerCritical = roundTimeLeftSeconds < 120; // < 2 mins
 
-  const currentQ = EXAM_QUESTIONS[currentQuestionIndex];
+  const currentQ = examQuestions[currentQuestionIndex];
   const answeredCount = Object.keys(answers).length;
-
-  // Group questions by Round for palette display
-  const roundsList = [
-    { number: 1, title: 'ROUND 1: MCQS', questions: EXAM_QUESTIONS.filter((q) => q.roundNumber === 1) },
-    { number: 2, title: 'ROUND 2: CODING', questions: EXAM_QUESTIONS.filter((q) => q.roundNumber === 2) },
-    { number: 3, title: 'ROUND 3: SQL', questions: EXAM_QUESTIONS.filter((q) => q.roundNumber === 3) },
-    { number: 4, title: 'ROUND 4: SUBJECTIVE', questions: EXAM_QUESTIONS.filter((q) => q.roundNumber === 4) },
-  ];
 
   // ── MULTI-TAB LOCKED SCREEN ───────────────────────────────────────────────
   if (isMultiTabLocked) {
@@ -506,7 +648,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
             This exam session is already active in another tab or device window. To maintain proctoring integrity, only <strong className="text-slate-900">one single active window</strong> is permitted.
           </p>
           <div className="w-full bg-rose-50 border border-rose-200 p-3 rounded-xl text-left text-[11px] font-mono text-rose-900">
-            Session Token: {sessionToken}<br />
+            Session Token: {activeSessionToken || sessionTokenFromUrl}<br />
             Security Rule: Single Active Session Constraint
           </div>
           <button
@@ -521,8 +663,34 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     );
   }
 
-  // ── 1. HOME LOGIN GATEKEEPER SCREEN ───────────────────────────────────────
+  // ── 1. HOME LOGIN GATEKEEPER SCREEN (or office-mode silent resume) ────────
   if (!isAuthenticated) {
+    // Office mode: no login form — the session is expected to already exist (e.g. via a
+    // walk-in check-in flow); just resolve it silently.
+    if (testMode === 'In Office') {
+      if (isResumeError) {
+        return (
+          <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans text-center">
+            <div className="max-w-md w-full bg-white border border-rose-200 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3">
+              <Icon name="alert-triangle" size="lg" className="text-rose-600" />
+              <h2 className="text-lg font-extrabold text-rose-700 font-heading">Unable to Load Assessment Session</h2>
+              <p className="text-xs text-slate-500">
+                This exam link could not be resolved. Please check with the venue proctor or contact the recruitment team.
+              </p>
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans">
+          <div className="flex flex-col items-center gap-3 text-slate-500 text-xs font-semibold">
+            <Icon name="spinner" size="lg" className="animate-spin text-blue-600" />
+            <span>{isResuming ? 'Loading your assessment session…' : 'Preparing your assessment session…'}</span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans relative">
         <div className="max-w-lg w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col gap-5">
@@ -575,9 +743,17 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
             <button
               type="submit"
-              className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20"
+              disabled={isStarting}
+              className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Verify & Launch Exam Session
+              {isStarting ? (
+                <>
+                  <Icon name="spinner" size="xs" className="animate-spin" />
+                  <span>Verifying…</span>
+                </>
+              ) : (
+                <span>Verify &amp; Launch Exam Session</span>
+              )}
             </button>
           </form>
         </div>
@@ -590,7 +766,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     return (
       <div className="h-screen w-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-3 sm:p-5 font-sans overflow-hidden">
         <div className="max-w-5xl w-full bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[96vh] overflow-y-auto">
-          
+
           {/* Vacancy & Exam Header */}
           <div className="flex items-start justify-between border-b border-slate-200 pb-3 flex-wrap gap-2">
             <div>
@@ -617,15 +793,15 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs font-mono">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Total Rounds</span>
-              <p className="font-bold text-blue-700 mt-0.5">4 Timed Rounds</p>
+              <p className="font-bold text-blue-700 mt-0.5">{assessmentRounds.length} Timed Rounds</p>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Total Questions</span>
-              <p className="font-bold text-slate-900 mt-0.5">{EXAM_QUESTIONS.length} Questions</p>
+              <p className="font-bold text-slate-900 mt-0.5">{examQuestions.length} Questions</p>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Total Marks</span>
-              <p className="font-bold text-slate-900 mt-0.5">100 Marks</p>
+              <p className="font-bold text-slate-900 mt-0.5">{assessmentRounds.reduce((acc, r) => acc + r.totalMarks, 0)} Marks</p>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Passing Cutoff</span>
@@ -639,7 +815,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
               Assessment Round Breakdown & Round-Wise Time Limits
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
-              {ASSESSMENT_ROUNDS.map((rnd) => (
+              {assessmentRounds.map((rnd) => (
                 <div key={rnd.roundNumber} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-0.5">
                   <div className="flex items-center justify-between font-bold text-slate-900 text-[11.5px]">
                     <span>{rnd.shortTitle}</span>
@@ -673,7 +849,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           <div className="flex items-center justify-between gap-4 pt-1">
             <div className="flex items-center gap-2 text-xs text-emerald-700 font-semibold">
               <Icon name="check-circle" size="xs" className="text-emerald-600 shrink-0" />
-              <span>Browser Compatibility & Proctoring Status Verified (Token: {sessionToken.slice(0, 12)}...)</span>
+              <span>Browser Compatibility & Proctoring Status Verified (Token: {(activeSessionToken || sessionTokenFromUrl).slice(0, 12)}...)</span>
             </div>
 
             <button
@@ -710,7 +886,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           <div className="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 gap-3 text-xs font-mono text-left">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Questions Answered</span>
-              <p className="font-bold text-slate-900 mt-0.5">{answeredCount} / {EXAM_QUESTIONS.length}</p>
+              <p className="font-bold text-slate-900 mt-0.5">{answeredCount} / {examQuestions.length}</p>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-bold">Security Audit Log</span>
@@ -735,7 +911,18 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   }
 
   // ── 4. LIVE PROCTORED EXAM INTERFACE ─────────────────────────────────────
-  const activeRoundQuestions = EXAM_QUESTIONS.filter((q) => q.roundNumber === activeRoundNumber);
+  if (!currentQ) {
+    return (
+      <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans">
+        <div className="flex flex-col items-center gap-3 text-slate-500 text-xs font-semibold">
+          <Icon name="spinner" size="lg" className="animate-spin text-blue-600" />
+          <span>Loading questions…</span>
+        </div>
+      </div>
+    );
+  }
+
+  const activeRoundQuestions = examQuestions.filter((q) => q.roundNumber === activeRoundNumber);
 
   const currentQuestionIndexInRound = activeRoundQuestions.findIndex((q) => q.id === currentQ?.id);
   const roundQuestionNumber = currentQuestionIndexInRound !== -1 ? currentQuestionIndexInRound + 1 : 1;
@@ -759,7 +946,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
   return (
     <div className="h-screen w-screen bg-[#f7f8fb] text-slate-900 flex flex-col font-sans select-none overflow-hidden">
-      
+
       {/* ── Top Header Navigation Bar ───────────────────────────────────────── */}
       <header className="h-14 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between shrink-0 shadow-2xs">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
@@ -807,7 +994,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
       {/* ── Sub-Header: Step-by-Step Round Stepper Bar ────────────────────────── */}
       <div className="bg-slate-50 border-b border-slate-200 px-3 sm:px-6 py-2 flex items-center justify-center gap-2 sm:gap-3 overflow-x-auto shrink-0 scrollbar-none w-full">
-        {ASSESSMENT_ROUNDS.map((rnd, idx) => {
+        {assessmentRounds.map((rnd, idx) => {
           const isCompleted = rnd.roundNumber < activeRoundNumber;
           const isActive = rnd.roundNumber === activeRoundNumber;
 
@@ -832,7 +1019,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
                   <span className="sm:hidden">R{rnd.roundNumber}</span>
                 </span>
               )}
-              {idx < ASSESSMENT_ROUNDS.length - 1 && (
+              {idx < assessmentRounds.length - 1 && (
                 <span className="text-slate-300 font-mono text-xs sm:text-sm font-bold px-0.5 sm:px-1">►</span>
               )}
             </div>
@@ -842,7 +1029,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
       {/* ── Main Exam Body: Split View (Left Palette / Right Main Content) ──── */}
       <div className="flex-1 flex overflow-hidden">
-        
+
         {/* LEFT COLUMN: Active Round Question Palette (Matching white background with right panel) */}
         <aside className="w-64 lg:w-72 xl:w-80 bg-white p-3.5 lg:p-5 flex flex-col gap-3.5 lg:gap-4 overflow-y-auto hidden md:flex shrink-0 border-r border-slate-200">
           <div className="border-b border-slate-200 pb-2">
@@ -903,7 +1090,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           <div className="flex-1 flex flex-col gap-1.5 min-h-[240px]">
             <div className="max-h-[440px] xl:max-h-[520px] overflow-y-auto scrollbar-thin pr-1 grid grid-cols-5 gap-1.5 lg:gap-2">
               {filteredPaletteQuestions.map((q) => {
-                const idx = EXAM_QUESTIONS.findIndex((item) => item.id === q.id);
+                const idx = examQuestions.findIndex((item) => item.id === q.id);
                 const isAnswered = answers[q.id] !== undefined && (Array.isArray(answers[q.id]) ? answers[q.id].length > 0 : true);
                 const isFlagged = flaggedQuestions.has(q.id);
                 const isCurrentQ = idx === currentQuestionIndex;
@@ -936,7 +1123,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
         {/* RIGHT COLUMN: Question Display & Interactive Answer Controls */}
         <main className="flex-1 p-4 sm:p-5 overflow-y-auto flex flex-col gap-4 bg-white">
-          
+
           {/* Mobile Question Jump Bar (Visible on screens under md) */}
           <div className="flex md:hidden items-center justify-between bg-slate-50 p-2 sm:p-2.5 rounded-xl border border-slate-200 gap-2 shrink-0">
             {/* Open Question Navigator Sheet Button */}
@@ -1000,7 +1187,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
               {currentQ.options.map((opt) => {
                 const currentAnswer = answers[currentQ.id];
                 const isMultiChoice = currentQ.type === 'MULTI_CHOICE';
-                
+
                 const currentArr: string[] = Array.isArray(currentAnswer)
                   ? currentAnswer
                   : typeof currentAnswer === 'string' && currentAnswer.trim() !== ''
@@ -1016,9 +1203,9 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
                     const newArr = currentArr.includes(opt.label)
                       ? currentArr.filter((item) => item !== opt.label)
                       : [...currentArr, opt.label];
-                    setAnswers({ ...answers, [currentQ.id]: newArr });
+                    handleAnswerChange(currentQ, newArr);
                   } else {
-                    setAnswers({ ...answers, [currentQ.id]: opt.label });
+                    handleAnswerChange(currentQ, opt.label);
                   }
                 };
 
@@ -1063,7 +1250,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           {currentQ.type === 'CODING' && (
             <CodeEditorIDE
               value={answers[currentQ.id] !== undefined ? answers[currentQ.id] : (currentQ.codeTemplate || '')}
-              onChange={(val) => setAnswers({ ...answers, [currentQ.id]: val })}
+              onChange={(val) => handleAnswerChange(currentQ, val)}
               questionType="CODING"
               language={currentQ.language}
               defaultTemplate={currentQ.codeTemplate || ''}
@@ -1076,7 +1263,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           {currentQ.type === 'SQL' && (
             <CodeEditorIDE
               value={answers[currentQ.id] !== undefined ? answers[currentQ.id] : (currentQ.sqlSchema || '')}
-              onChange={(val) => setAnswers({ ...answers, [currentQ.id]: val })}
+              onChange={(val) => handleAnswerChange(currentQ, val)}
               questionType="SQL"
               language={currentQ.language}
               defaultTemplate={currentQ.sqlSchema || ''}
@@ -1091,7 +1278,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
               <label className="text-xs font-bold text-slate-700">Your Detailed Architecture / Essay Response:</label>
               <textarea
                 value={answers[currentQ.id] || ''}
-                onChange={(e) => setAnswers({ ...answers, [currentQ.id]: e.target.value })}
+                onChange={(e) => handleAnswerChange(currentQ, e.target.value)}
                 placeholder="Type your explanation and system design architecture solution here..."
                 className="flex-1 w-full p-4 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-900 outline-none focus:border-blue-500 focus:bg-white leading-relaxed resize-none scrollbar-thin shadow-2xs min-h-[240px]"
               />
@@ -1102,11 +1289,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
           <div className="flex flex-wrap items-center justify-between border-t border-slate-200 pt-3 mt-auto gap-2">
             <button
               type="button"
-              onClick={() => {
-                const nextAns = { ...answers };
-                delete nextAns[currentQ.id];
-                setAnswers(nextAns);
-              }}
+              onClick={() => handleClearAnswer(currentQ)}
               className="px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
             >
               Clear Choice
@@ -1117,7 +1300,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
                 type="button"
                 disabled={
                   currentQuestionIndex === 0 ||
-                  EXAM_QUESTIONS[currentQuestionIndex - 1].roundNumber < activeRoundNumber
+                  examQuestions[currentQuestionIndex - 1].roundNumber < activeRoundNumber
                 }
                 onClick={() => setCurrentQuestionIndex((i) => i - 1)}
                 className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-800 font-bold text-[11px] sm:text-xs transition-colors cursor-pointer"
@@ -1128,13 +1311,16 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
               <button
                 type="button"
                 onClick={handleNextQuestion}
-                className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] sm:text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20 flex items-center gap-1 sm:gap-1.5"
+                disabled={isSubmitting}
+                className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] sm:text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20 flex items-center gap-1 sm:gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <span>
-                  {currentQuestionIndex === EXAM_QUESTIONS.length - 1
+                  {isSubmitting
+                    ? 'Submitting…'
+                    : currentQuestionIndex === examQuestions.length - 1
                     ? 'Save & Submit Exam'
-                    : currentQuestionIndex < EXAM_QUESTIONS.length - 1 &&
-                      EXAM_QUESTIONS[currentQuestionIndex + 1].roundNumber > activeRoundNumber
+                    : currentQuestionIndex < examQuestions.length - 1 &&
+                      examQuestions[currentQuestionIndex + 1].roundNumber > activeRoundNumber
                     ? `Finish Round ${activeRoundNumber} & Next Round`
                     : 'Save & Next Question'}
                 </span>
@@ -1227,7 +1413,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
             {/* 5-Column Question Grid */}
             <div className="grid grid-cols-5 gap-2 max-h-64 overflow-y-auto scrollbar-thin p-1">
               {filteredPaletteQuestions.map((q) => {
-                const idx = EXAM_QUESTIONS.findIndex((item) => item.id === q.id);
+                const idx = examQuestions.findIndex((item) => item.id === q.id);
                 const isAnswered = answers[q.id] !== undefined && (Array.isArray(answers[q.id]) ? answers[q.id].length > 0 : true);
                 const isFlagged = flaggedQuestions.has(q.id);
                 const isCurrentQ = idx === currentQuestionIndex;

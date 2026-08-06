@@ -26,7 +26,9 @@ namespace STEP.Application.Features.Candidates.Common
         string Status,
         decimal? ScoreObtained,
         DateTime? StartedAt,
-        DateTime? CompletedAt);
+        DateTime? CompletedAt,
+        int? CandidateExamSessionId,
+        int? InterviewId);
 
     public record CandidateDocumentDto(
         int Id,

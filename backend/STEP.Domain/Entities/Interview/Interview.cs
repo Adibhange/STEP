@@ -15,6 +15,12 @@ namespace STEP.Domain.Entities.Interview
         public int CandidateId { get; set; }
         public CandidateEntity Candidate { get; set; } = null!;
 
+        /// <summary>Who this interview is assigned to conduct it — set when scheduled/rescheduled.
+        /// Distinct from InterviewRoundDetail.PanelistUserId, which only exists once someone has
+        /// actually submitted a scorecard; this is the assignment, that is the outcome.</summary>
+        public int? InterviewerUserId { get; set; }
+        public STEP.Domain.Entities.Identity.User? InterviewerUser { get; set; }
+
         public DateTime ScheduledAt { get; set; }
         public int DurationMinutes { get; set; }
 

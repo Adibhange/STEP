@@ -5,6 +5,7 @@ namespace STEP.Application.Features.Interviews.Common
 {
     public record InterviewRoundDetailDto(
         int Id,
+        int PanelistUserId,
         string PanelistName,
         int TechnicalRating,
         int CommunicationRating,
@@ -21,6 +22,8 @@ namespace STEP.Application.Features.Interviews.Common
         int CandidateId,
         string CandidateName,
         string VacancyTitle,
+        int? InterviewerUserId,
+        string? InterviewerName,
         DateTime ScheduledAt,
         int DurationMinutes,
         string Mode,

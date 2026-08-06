@@ -25,6 +25,7 @@ function persistSession(payload: AuthResultData) {
   localStorage.setItem('step_role', payload.user?.role || '');
   localStorage.setItem('step_name', `${payload.user?.firstName || ''} ${payload.user?.lastName || ''}`.trim());
   localStorage.setItem('step_emp_code', payload.user?.employeeCode || '');
+  localStorage.setItem('step_user_id', payload.user?.id ? String(payload.user.id) : '');
 }
 
 type AuthMode = 'standard' | 'director';

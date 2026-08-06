@@ -21,6 +21,7 @@ namespace STEP.Persistence.Configurations
             // Restrict — CandidatePipelineProgress is already reachable via a Cascade path from
             // Candidate directly, so a second cascade path here would create a multi-path cycle.
             builder.HasOne(e => e.CandidatePipelineProgress).WithMany().HasForeignKey(e => e.CandidatePipelineProgressId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.InterviewerUser).WithMany().HasForeignKey(e => e.InterviewerUserId).OnDelete(DeleteBehavior.Restrict);
 
             builder.HasQueryFilter(e => !e.IsDeleted);
         }

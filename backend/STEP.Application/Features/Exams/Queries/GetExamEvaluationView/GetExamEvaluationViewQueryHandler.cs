@@ -15,7 +15,8 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
         public async Task<ExamEvaluationViewDto> Handle(GetExamEvaluationViewQuery request, CancellationToken cancellationToken)
         {
             var session = await db.CandidateExamSessions
-                .Include(s => s.Answers).ThenInclude(a => a.CandidateExamSessionQuestion)
+                .Include(s => s.Answers).ThenInclude(a => a.CandidateExamSessionQuestion).ThenInclude(q => q.Options)
+                .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == request.CandidateExamSessionId, cancellationToken)
                 ?? throw new NotFoundException(nameof(CandidateExamSession), request.CandidateExamSessionId);
@@ -25,12 +26,19 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                 .Select(a => new ExamAnswerEvaluationDto(
                     a.Id, a.CandidateExamSessionQuestion.DisplayOrder, a.CandidateExamSessionQuestion.QuestionType,
                     a.CandidateExamSessionQuestion.QuestionText, a.SubmittedAnswerText, a.Marks, a.MarksObtained,
-                    a.EvaluationStatus, a.EvaluationLocked, a.EvaluatorRemarks))
+                    a.EvaluationStatus, a.EvaluationLocked, a.EvaluatorRemarks,
+                    a.CandidateExamSessionQuestion.Options
+                        .OrderBy(o => o.DisplayOrder)
+                        .Select(o => new EvaluationOptionDto(o.Id, o.DisplayOptionLabel, o.OptionText, o.IsCorrect))
+                        .ToList(),
+                    a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList()))
                 .ToList();
 
             return new ExamEvaluationViewDto(
                 session.Id, session.SnapshotCandidateName, session.SnapshotVacancyTitle, session.SnapshotPaperTitle,
-                session.SessionStatus, session.EvaluationStatus, session.TotalMarks, session.TotalScore, answers);
+                session.SessionStatus, session.EvaluationStatus, session.TotalMarks, session.TotalScore,
+                session.FrozenTotalDurationMinutes, session.StartedAt, session.SubmittedAt,
+                session.TabSwitchWarnings, session.AssessmentIntegrityScore, answers);
         }
     }
 }

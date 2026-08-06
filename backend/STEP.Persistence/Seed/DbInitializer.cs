@@ -53,6 +53,23 @@ namespace STEP.Persistence.Seed
                 );
             ";
             await db.Database.ExecuteSqlRawAsync(syncPermissionsSql);
+
+            // Same drift, same fix, for Interviewer (RoleId=4) — this DB's RolePermissions table
+            // never actually had IdentitySeedData's AddGrants(RoleInterviewerId, "Candidate.View",
+            // "Exam.Manage") applied (discovered when a real Interviewer login came back with
+            // zero permissions). Deliberately narrower than Director/HR — interviewers only need
+            // to view their assigned candidates and access the exam/interview scoring surface.
+            var syncInterviewerPermissionsSql = @"
+                INSERT INTO master.RolePermissions (RoleId, PermissionId, CreatedAt, IsDeleted)
+                SELECT r.RoleId, p.PermissionId, GETUTCDATE(), 0
+                FROM (VALUES (4)) AS r(RoleId)
+                CROSS JOIN (VALUES (3), (5)) AS p(PermissionId)
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM master.RolePermissions rp
+                    WHERE rp.RoleId = r.RoleId AND rp.PermissionId = p.PermissionId
+                );
+            ";
+            await db.Database.ExecuteSqlRawAsync(syncInterviewerPermissionsSql);
         }
     }
 }

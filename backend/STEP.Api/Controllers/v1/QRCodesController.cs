@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.QR.Commands.GenerateQRCode;
 using STEP.Application.Features.QR.Queries.GetQRCodeAnalytics;
+using STEP.Application.Features.QR.Queries.GetQRCodeByVacancy;
 
 namespace STEP.Api.Controllers.v1
 {
@@ -24,6 +25,13 @@ namespace STEP.Api.Controllers.v1
         {
             var analytics = await mediator.Send(new GetQRCodeAnalyticsQuery(id));
             return Ok(ApiResponse<object>.Ok(analytics, "QR code analytics retrieved successfully"));
+        }
+
+        [HttpGet("vacancy/{vacancyId:int}")]
+        public async Task<IActionResult> GetByVacancy(int vacancyId)
+        {
+            var qrCode = await mediator.Send(new GetQRCodeByVacancyQuery(vacancyId));
+            return Ok(ApiResponse<object>.Ok(qrCode, qrCode == null ? "No QR code generated for this vacancy yet" : "QR code retrieved successfully"));
         }
     }
 }

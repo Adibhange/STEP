@@ -28,25 +28,47 @@ namespace STEP.Application.Features.Interviews.Commands.ScheduleInterview
                     "There is no active interview round for this candidate right now.")]);
             }
 
-            var interview = new Interview
+            var interviewerExists = await db.Users.AnyAsync(u => u.Id == request.InterviewerUserId, cancellationToken);
+            if (!interviewerExists)
             {
-                CandidatePipelineProgressId = progress.Id,
-                CandidateId = candidate.Id,
-                ScheduledAt = request.ScheduledAt,
-                DurationMinutes = request.DurationMinutes,
-                Mode = request.Mode,
-                MeetingLinkOrLocation = request.MeetingLinkOrLocation,
-                Status = "Scheduled",
-            };
+                throw new NotFoundException(nameof(STEP.Domain.Entities.Identity.User), request.InterviewerUserId);
+            }
+
+            // Reassigning/rescheduling an already-scheduled round updates that same Interview row
+            // rather than creating a second one — the "Assign Interviewer" modal re-opening on a
+            // round that already has an interview is an edit, not a new booking.
+            var interview = await db.Interviews
+                .Where(i => i.CandidatePipelineProgressId == progress.Id && i.Status != "Cancelled")
+                .OrderByDescending(i => i.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (interview == null)
+            {
+                interview = new Interview
+                {
+                    CandidatePipelineProgressId = progress.Id,
+                    CandidateId = candidate.Id,
+                };
+                db.Interviews.Add(interview);
+            }
+
+            interview.InterviewerUserId = request.InterviewerUserId;
+            interview.ScheduledAt = request.ScheduledAt;
+            interview.DurationMinutes = request.DurationMinutes;
+            interview.Mode = request.Mode;
+            interview.MeetingLinkOrLocation = request.MeetingLinkOrLocation;
+            interview.Status = "Scheduled";
 
             progress.Status = "InProgress";
             progress.StartedAt ??= DateTime.UtcNow;
 
-            db.Interviews.Add(interview);
             await db.SaveChangesAsync(cancellationToken);
+
+            var interviewer = await db.Users.FirstAsync(u => u.Id == request.InterviewerUserId, cancellationToken);
 
             return new InterviewDto(
                 interview.Id, candidate.Id, $"{candidate.FirstName} {candidate.LastName}", candidate.Vacancy.Title,
+                interview.InterviewerUserId, $"{interviewer.FirstName} {interviewer.LastName}",
                 interview.ScheduledAt, interview.DurationMinutes, interview.Mode, interview.MeetingLinkOrLocation,
                 interview.Status, []);
         }

@@ -16,6 +16,7 @@ namespace STEP.Application.Features.Interviews.Queries.GetInterviewById
         {
             var interview = await db.Interviews
                 .Include(i => i.Candidate).ThenInclude(c => c.Vacancy)
+                .Include(i => i.InterviewerUser)
                 .Include(i => i.RoundDetails).ThenInclude(d => d.Panelist)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(i => i.Id == request.Id, cancellationToken)
@@ -23,13 +24,15 @@ namespace STEP.Application.Features.Interviews.Queries.GetInterviewById
 
             var roundDetails = interview.RoundDetails
                 .Select(d => new InterviewRoundDetailDto(
-                    d.Id, $"{d.Panelist.FirstName} {d.Panelist.LastName}", d.TechnicalRating, d.CommunicationRating,
+                    d.Id, d.PanelistUserId, $"{d.Panelist.FirstName} {d.Panelist.LastName}", d.TechnicalRating, d.CommunicationRating,
                     d.ProblemSolvingRating, d.CulturalFitRating, d.Strengths, d.Weaknesses, d.Recommendation, d.Comments, d.SubmittedAt))
                 .ToList();
 
             return new InterviewDto(
                 interview.Id, interview.CandidateId, $"{interview.Candidate.FirstName} {interview.Candidate.LastName}",
-                interview.Candidate.Vacancy.Title, interview.ScheduledAt, interview.DurationMinutes, interview.Mode,
+                interview.Candidate.Vacancy.Title, interview.InterviewerUserId,
+                interview.InterviewerUser != null ? $"{interview.InterviewerUser.FirstName} {interview.InterviewerUser.LastName}" : null,
+                interview.ScheduledAt, interview.DurationMinutes, interview.Mode,
                 interview.MeetingLinkOrLocation, interview.Status, roundDetails);
         }
     }

@@ -6,7 +6,14 @@ import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 import { ScheduleTestModal } from '@/features/assessments/components/ScheduleTestModal';
-import { useGetCandidateByIdQuery, useGetCandidatesQuery } from '@/store/services/api';
+import {
+  useGetCandidateByIdQuery,
+  useGetCandidatesQuery,
+  useGetInterviewByIdQuery,
+  useGetUsersQuery,
+  useScheduleInterviewMutation,
+  useSubmitInterviewFeedbackMutation,
+} from '@/store/services/api';
 
 export interface StageAttempt {
   attempt: number;
@@ -33,6 +40,14 @@ export interface StageItem {
   isOfferRound?: boolean;
   isTerminated?: boolean;
   terminationReason?: string;
+  /** Real Interview.Id for this round, if one has been scheduled — null/undefined means no
+   * Interview row exists yet, so a real scorecard can't be submitted (only the synthetic demo
+   * stages below lack this; live-data stages carry the backend's PipelineProgressDto.interviewId). */
+  interviewId?: number | null;
+  /** Assessment | Interview — mirrors the backend's PipelineRoundClassification. Only
+   * Interview-classified rounds have a real "schedule + assign interviewer" backend action;
+   * Assessment rounds go through the exam engine instead (see "Schedule / Send Test"). */
+  roundType?: string;
 }
 
 export interface CandidateDocument {
@@ -372,6 +387,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           mode: p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
           feedback: p.scoreObtained !== null && p.scoreObtained !== undefined ? `Score: ${p.scoreObtained}%` : 'Evaluation in progress',
           result: p.status || 'Pending',
+          interviewId: p.interviewId ?? null,
+          roundType: p.roundType,
         }));
         setStagesData(liveStages);
       } else {
@@ -382,14 +399,17 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         let r1Name = 'General Aptitude & Logical Test';
         let r1Role = 'Automated Test';
         let r1Mode = 'Online Assessment';
+        let r1Type = 'Assessment'; // Aptitude → Assessment (PipelineRoundClassification)
 
         let r2Name = 'Coding & Algorithm Challenge';
         let r2Role = 'Technical Evaluator';
         let r2Mode = 'Online / In Office';
+        let r2Type = 'Assessment'; // Technical → Assessment
 
         let r3Name = 'Technical F2F & Live Coding';
         let r3Role = 'Technical Panel';
         let r3Mode = 'In Office';
+        let r3Type = 'Interview'; // F2F → Interview
 
         if (isWalkInDrive) {
           if (assignedFlowVersionName.includes('Fast-Track Technical') || assignedFlowVersionName.includes('Flow Version 2')) {
@@ -397,8 +417,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             r1Name = 'General Aptitude & Logical Test';
             r2Name = 'Face to Face HR & Technical Round';
             r2Role = 'Senior HR & Panel';
+            r2Type = 'Interview'; // HR → Interview
             r3Name = 'Coding & Algorithm Challenge';
             r3Role = 'Technical Evaluator';
+            r3Type = 'Assessment'; // Technical → Assessment
           } else {
             // Walk-in Flow Version 1: Aptitude -> Technical -> F2F -> Director -> Offer
             r1Name = 'General Aptitude & Logical Test';
@@ -412,6 +434,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           r1Name = 'HR Screening (Compulsory 1st Round)';
           r1Role = 'HR Specialist';
           r1Mode = 'Phone / Walk-in';
+          r1Type = 'Interview'; // HR → Interview
           r2Name = 'Technical Assessment';
           r2Role = 'Technical Evaluator';
           r3Name = 'Face to Face Interview';
@@ -434,6 +457,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             actionLabel: isWalkInDrive ? 'Schedule / Send Test' : null,
             isDirectorRound: false,
             isOfferRound: false,
+            roundType: r1Type,
           },
           {
             id: 2,
@@ -450,6 +474,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             actionLabel: 'Schedule Stage 2',
             isDirectorRound: false,
             isOfferRound: false,
+            roundType: r2Type,
           },
           {
             id: 3,
@@ -466,6 +491,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             actionLabel: 'Schedule Stage 3',
             isDirectorRound: false,
             isOfferRound: false,
+            roundType: r3Type,
           },
           {
             id: 4,
@@ -482,6 +508,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             actionLabel: null,
             isDirectorRound: true,
             isOfferRound: false,
+            roundType: 'Interview',
           },
           {
             id: 5,
@@ -560,9 +587,40 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [directorDecision, setDirectorDecision] = useState<'offer' | 'reject' | 'hold'>('offer');
   const [feedbackSuccessToast, setFeedbackSuccessToast] = useState(false);
 
+  // Real panelist scorecard fields (SubmitInterviewFeedbackCommand shape) — only used for
+  // non-Director rounds, since a real Interview + InterviewRoundDetail is what backs this.
+  const [scorecardTechnical, setScorecardTechnical] = useState(3);
+  const [scorecardCommunication, setScorecardCommunication] = useState(3);
+  const [scorecardProblemSolving, setScorecardProblemSolving] = useState(3);
+  const [scorecardCulturalFit, setScorecardCulturalFit] = useState(3);
+  const [scorecardStrengths, setScorecardStrengths] = useState('');
+  const [scorecardWeaknesses, setScorecardWeaknesses] = useState('');
+  const [scorecardRecommendation, setScorecardRecommendation] = useState<'Hire' | 'Reject' | 'OnHold'>('Hire');
+
+  const currentUserId = typeof window !== 'undefined' ? Number(localStorage.getItem('step_user_id')) || null : null;
+  const [submitInterviewFeedback, { isLoading: isSubmittingFeedback }] = useSubmitInterviewFeedbackMutation();
+  const { data: feedbackInterviewRes } = useGetInterviewByIdQuery(selectedFeedbackStage?.interviewId ?? 0, {
+    skip: !selectedFeedbackStage || selectedFeedbackStage.isDirectorRound || !selectedFeedbackStage.interviewId,
+  });
+  const myExistingScorecard = feedbackInterviewRes?.data?.roundDetails.find((d) => d.panelistUserId === currentUserId);
+
+  // Pre-fill the scorecard form with the current panelist's own previous submission (if any) once
+  // it loads — resubmitting replaces it server-side (upsert), so this is an honest "edit" flow.
+  useEffect(() => {
+    if (!myExistingScorecard) return;
+    setScorecardTechnical(myExistingScorecard.technicalRating);
+    setScorecardCommunication(myExistingScorecard.communicationRating);
+    setScorecardProblemSolving(myExistingScorecard.problemSolvingRating);
+    setScorecardCulturalFit(myExistingScorecard.culturalFitRating);
+    setScorecardStrengths(myExistingScorecard.strengths || '');
+    setScorecardWeaknesses(myExistingScorecard.weaknesses || '');
+    setScorecardRecommendation(myExistingScorecard.recommendation as 'Hire' | 'Reject' | 'OnHold');
+    setFeedbackText(myExistingScorecard.comments || '');
+  }, [myExistingScorecard]);
+
   // Assign Interviewer Modal State
   const [selectedAssignStage, setSelectedAssignStage] = useState<StageItem | null>(null);
-  const [assignedInterviewer, setAssignedInterviewer] = useState('Rahul Patel');
+  const [assignedInterviewer, setAssignedInterviewer] = useState(''); // holds a real Users.Id (as a string)
   const [assignDate, setAssignDate] = useState('2025-05-18');
   const [assignTime, setAssignTime] = useState('11:30');
   const [assignMode, setAssignMode] = useState('Google Meet');
@@ -572,19 +630,24 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [showAssessmentEvaluationModal, setShowAssessmentEvaluationModal] = useState(false);
   const [showScheduleTestModal, setShowScheduleTestModal] = useState(false);
 
-  // Options for Dropdowns
-  const directorOptions = [
-    { value: 'Rajesh Sharma (Director of Engineering)', label: 'Rajesh Sharma (Director of Engineering)' },
-    { value: 'Anil Mehta (Managing Director)', label: 'Anil Mehta (Managing Director)' },
-    { value: 'Pooja Hegde (Director of People)', label: 'Pooja Hegde (Director of People)' },
-  ];
+  // Options for Dropdowns — real accounts from the Users table, filtered by role. No more
+  // fictional names: whoever the org has actually created under Users is who shows up here.
+  const { data: usersRes } = useGetUsersQuery();
+  const [scheduleInterview, { isLoading: isScheduling }] = useScheduleInterviewMutation();
 
-  const interviewerOptions = [
-    { value: 'Rahul Patel', label: 'Rahul Patel (HR Lead)' },
-    { value: 'Sneha Kulkarni', label: 'Sneha Kulkarni (Technical Lead)' },
-    { value: 'Akshay Patil', label: 'Akshay Patil (Principal Engineer)' },
-    { value: 'Neha Verma', label: 'Neha Verma (HR Manager)' },
-  ];
+  const directorOptions = useMemo(
+    () => (usersRes?.data || [])
+      .filter((u) => u.role === 'Director')
+      .map((u) => ({ value: String(u.id), label: `${u.firstName} ${u.lastName} (Director)` })),
+    [usersRes]
+  );
+
+  const interviewerOptions = useMemo(
+    () => (usersRes?.data || [])
+      .filter((u) => u.role === 'Interviewer' || u.role === 'HR')
+      .map((u) => ({ value: String(u.id), label: `${u.firstName} ${u.lastName} (${u.role})` })),
+    [usersRes]
+  );
 
   const meetingModeOptions = [
     { value: 'Google Meet', label: 'Google Meet (Online Link)' },
@@ -802,100 +865,167 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     toast.success('Offer Letter Rolled Out', { description: `Official offer dispatched to ${offerCandidateEmail}.` });
   };
 
-  const handleSaveFeedback = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleSaveFeedback = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFeedbackStage) return;
 
-    if (selectedFeedbackStage.isDirectorRound) {
-      let newResult = 'Offered';
-      let newStatusType: 'passed' | 'rejected' | 'pending' = 'passed';
-      let newStatus = 'Passed';
-
-      if (directorDecision === 'reject') {
-        newResult = 'Rejected';
-        newStatusType = 'rejected';
-        newStatus = 'Rejected';
-      } else if (directorDecision === 'hold') {
-        newResult = 'On Hold';
-        newStatusType = 'pending';
-        newStatus = 'On Hold';
-
-        setStagesData((prev) =>
-          prev.map((s) =>
-            s.id === 2
-              ? {
-                ...s,
-                status: 'Retake Needed',
-                statusType: 'pending',
-                actionLabel: 'Re-send / Schedule Test (2nd Attempt)',
-                attempts: [
-                  ...(s.attempts || []),
-                  { attempt: 2, date: 'Pending', score: '—', result: 'Re-test Triggered' },
-                ],
-              }
-              : s
-          )
-        );
+    // Regular (non-Director) rounds submit a real scorecard against the real Interview row —
+    // Director Decision below stays local-only for now (not in scope for this pass).
+    if (!selectedFeedbackStage.isDirectorRound) {
+      if (!selectedFeedbackStage.interviewId) {
+        toast.error('No Interview Scheduled', {
+          description: 'Assign an interviewer and schedule this round before submitting a scorecard.',
+        });
+        return;
       }
 
+      try {
+        await submitInterviewFeedback({
+          interviewId: selectedFeedbackStage.interviewId,
+          technicalRating: scorecardTechnical,
+          communicationRating: scorecardCommunication,
+          problemSolvingRating: scorecardProblemSolving,
+          culturalFitRating: scorecardCulturalFit,
+          strengths: scorecardStrengths || undefined,
+          weaknesses: scorecardWeaknesses || undefined,
+          recommendation: scorecardRecommendation,
+          comments: feedbackText || undefined,
+        }).unwrap();
+
+        setStagesData((prev) =>
+          prev.map((s) => (s.id === selectedFeedbackStage.id ? { ...s, feedback: feedbackText || s.feedback } : s))
+        );
+        setSelectedFeedbackStage(null);
+        toast.success('Scorecard Saved', { description: 'Interview scorecard submitted and persisted.' });
+      } catch (err) {
+        const description = (err as { data?: { message?: string; errors?: string[] } })?.data?.errors?.[0]
+          || (err as { data?: { message?: string } })?.data?.message
+          || 'Could not save the scorecard. Please try again.';
+        toast.error('Submission Failed', { description });
+      }
+      return;
+    }
+
+    // Director Decision — still local-only simulation (out of scope for this pass; the real
+    // backend equivalent is PublishInterviewResultCommand, which this does not call yet).
+    let newResult = 'Offered';
+    let newStatusType: 'passed' | 'rejected' | 'pending' = 'passed';
+    let newStatus = 'Passed';
+
+    if (directorDecision === 'reject') {
+      newResult = 'Rejected';
+      newStatusType = 'rejected';
+      newStatus = 'Rejected';
+    } else if (directorDecision === 'hold') {
+      newResult = 'On Hold';
+      newStatusType = 'pending';
+      newStatus = 'On Hold';
+
       setStagesData((prev) =>
         prev.map((s) =>
-          s.id === 4
+          s.id === 2
             ? {
               ...s,
-              feedback: feedbackText || s.feedback,
-              result: newResult,
-              status: newStatus,
-              statusType: newStatusType,
-            }
-            : s
-        )
-      );
-    } else {
-      setStagesData((prev) =>
-        prev.map((s) =>
-          s.id === selectedFeedbackStage.id
-            ? {
-              ...s,
-              feedback: feedbackText || s.feedback,
-              result: directorDecision === 'offer' ? 'Passed' : 'Rejected',
-              status: directorDecision === 'offer' ? 'Passed' : 'Rejected',
-              statusType: directorDecision === 'offer' ? 'passed' : 'rejected',
+              status: 'Retake Needed',
+              statusType: 'pending',
+              actionLabel: 'Re-send / Schedule Test (2nd Attempt)',
+              attempts: [
+                ...(s.attempts || []),
+                { attempt: 2, date: 'Pending', score: '—', result: 'Re-test Triggered' },
+              ],
             }
             : s
         )
       );
     }
 
-    setSelectedFeedbackStage(null);
-    toast.success('Feedback Saved', { description: 'Interviewer feedback and stage decision recorded.' });
-  };
-
-  const handleSaveAssign = (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedAssignStage) return;
-
-    const initials = assignedInterviewer
-      .split(' ')
-      .map((n) => n[0])
-      .join('');
-
     setStagesData((prev) =>
       prev.map((s) =>
-        s.id === selectedAssignStage.id
+        s.id === 4
           ? {
             ...s,
-            interviewer: assignedInterviewer,
-            interviewerInitials: initials || 'IN',
-            mode: assignMode,
-            date: assignDate,
+            feedback: feedbackText || s.feedback,
+            result: newResult,
+            status: newStatus,
+            statusType: newStatusType,
           }
           : s
       )
     );
 
-    setSelectedAssignStage(null);
-    toast.success('Interview Scheduled', { description: `Assigned ${assignedInterviewer} for ${assignDate} (${assignMode}).` });
+    setSelectedFeedbackStage(null);
+    toast.success('Feedback Saved', { description: 'Interviewer feedback and stage decision recorded.' });
+  };
+
+  const MEETING_MODE_TO_BACKEND: Record<string, 'Online' | 'Onsite' | 'Phone'> = {
+    'Google Meet': 'Online',
+    'Microsoft Teams': 'Online',
+    'In Office': 'Onsite',
+  };
+
+  const handleSaveAssign = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedAssignStage) return;
+
+    const options = selectedAssignStage.isDirectorRound ? directorOptions : interviewerOptions;
+    const selectedOption = options.find((o) => o.value === assignedInterviewer);
+
+    if (!selectedOption) {
+      toast.error('No Account Selected', {
+        description: `No ${selectedAssignStage.isDirectorRound ? 'Director' : 'Interviewer/HR'} accounts exist yet — create one under Users first.`,
+      });
+      return;
+    }
+
+    const displayName = selectedOption.label.replace(/\s*\([^)]*\)$/, ''); // strip the trailing "(Role)"
+    const initials = displayName.split(' ').map((n) => n[0]).join('');
+
+    // Assessment-classified rounds (automated exams) have no real "assign an interviewer" backend
+    // action — that's the exam engine's job (see "Schedule / Send Test"). Kept local-only here so
+    // opening this modal on those rounds doesn't dead-end; Interview-classified rounds below are real.
+    if (selectedAssignStage.roundType !== 'Interview') {
+      setStagesData((prev) =>
+        prev.map((s) => (s.id === selectedAssignStage.id ? { ...s, interviewer: displayName, interviewerInitials: initials || 'IN', mode: assignMode, date: assignDate } : s))
+      );
+      setSelectedAssignStage(null);
+      toast.success('Assignment Noted', {
+        description: `${displayName} noted for ${assignDate} (${assignMode}). This round has no automated scheduling — coordinate directly.`,
+      });
+      return;
+    }
+
+    try {
+      const result = await scheduleInterview({
+        candidateId: numericId,
+        interviewerUserId: Number(assignedInterviewer),
+        scheduledAt: new Date(`${assignDate}T${assignTime}`).toISOString(),
+        durationMinutes: 60,
+        mode: MEETING_MODE_TO_BACKEND[assignMode] || 'Onsite',
+      }).unwrap();
+
+      setStagesData((prev) =>
+        prev.map((s) =>
+          s.id === selectedAssignStage.id
+            ? {
+              ...s,
+              interviewer: result.data.interviewerName || displayName,
+              interviewerInitials: initials || 'IN',
+              mode: assignMode,
+              date: assignDate,
+              interviewId: result.data.id,
+            }
+            : s
+        )
+      );
+
+      setSelectedAssignStage(null);
+      toast.success('Interview Scheduled', { description: `${result.data.interviewerName} assigned for ${assignDate} (${assignMode}) — persisted.` });
+    } catch (err) {
+      const description = (err as { data?: { errors?: string[]; message?: string } })?.data?.errors?.[0]
+        || (err as { data?: { message?: string } })?.data?.message
+        || 'Could not schedule the interview. Please try again.';
+      toast.error('Scheduling Failed', { description });
+    }
   };
 
   return (
@@ -1221,13 +1351,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                             type="button"
                             onClick={() => {
                               setSelectedAssignStage(stage);
-                              setAssignedInterviewer(
-                                stage.isDirectorRound
-                                  ? 'Rajesh Sharma (Director of Engineering)'
-                                  : stage.interviewer !== 'Unassigned'
-                                    ? stage.interviewer
-                                    : 'Rahul Patel'
-                              );
+                              const options = stage.isDirectorRound ? directorOptions : interviewerOptions;
+                              setAssignedInterviewer(options[0]?.value || '');
                             }}
                             className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-purple-500 bg-purple-50 text-purple-700 text-[11.5px] sm:text-xs font-semibold hover:bg-purple-100 transition-colors cursor-pointer"
                           >
@@ -1239,8 +1364,15 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                             type="button"
                             onClick={() => {
                               setSelectedFeedbackStage(stage);
-                              setFeedbackText(stage.feedback);
+                              setFeedbackText(stage.isDirectorRound ? stage.feedback : '');
                               setDirectorDecision('offer');
+                              setScorecardTechnical(3);
+                              setScorecardCommunication(3);
+                              setScorecardProblemSolving(3);
+                              setScorecardCulturalFit(3);
+                              setScorecardStrengths('');
+                              setScorecardWeaknesses('');
+                              setScorecardRecommendation('Hire');
                             }}
                             className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-blue-500 bg-blue-50 text-blue-700 text-[11.5px] sm:text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
                           >
@@ -1258,6 +1390,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                               setShowScheduleTestModal(true);
                             } else {
                               setSelectedAssignStage(stage);
+                              const options = stage.isDirectorRound ? directorOptions : interviewerOptions;
+                              setAssignedInterviewer(options[0]?.value || '');
                             }
                           }}
                           className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-emerald-500 bg-white text-emerald-700 hover:bg-emerald-50 cursor-pointer shadow-2xs"
@@ -1926,9 +2060,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </button>
               <button
                 type="submit"
-                className="h-8.5 px-4 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 cursor-pointer shadow-2xs"
+                disabled={isScheduling}
+                className="h-8.5 px-4 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Assign & Send Invites
+                {isScheduling ? 'Assigning…' : 'Assign & Send Invites'}
               </button>
             </div>
           </form>
@@ -1960,101 +2095,197 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </button>
             </div>
 
-            {/* Decision Selection */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700">
-                {selectedFeedbackStage.isDirectorRound ? 'Director Final Outcome' : 'Interview Result'}
-              </label>
+            {selectedFeedbackStage.isDirectorRound ? (
+              <>
+                {/* Decision Selection — 3 Choices for Director: Offer, Reject, On Hold */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700">Director Final Outcome</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDirectorDecision('offer')}
+                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'offer'
+                        ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                    >
+                      <Icon name="check-circle" size="xs" />
+                      <span>Offer</span>
+                    </button>
 
-              {selectedFeedbackStage.isDirectorRound ? (
-                /* 3 Choices for Director: Offer, Reject, On Hold */
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDirectorDecision('offer')}
-                    className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'offer'
-                      ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                  >
-                    <Icon name="check-circle" size="xs" />
-                    <span>Offer</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setDirectorDecision('reject')}
+                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'reject'
+                        ? 'bg-rose-500 text-white border-rose-600 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                    >
+                      <Icon name="x-circle" size="xs" />
+                      <span>Reject</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setDirectorDecision('reject')}
-                    className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'reject'
-                      ? 'bg-rose-500 text-white border-rose-600 shadow-2xs'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                  >
-                    <Icon name="x-circle" size="xs" />
-                    <span>Reject</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDirectorDecision('hold')}
-                    className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'hold'
-                      ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                  >
-                    <Icon name="pause-circle" size="xs" />
-                    <span>On Hold</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setDirectorDecision('hold')}
+                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'hold'
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                    >
+                      <Icon name="pause-circle" size="xs" />
+                      <span>On Hold</span>
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                /* Standard Pass vs Fail */
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setDirectorDecision('offer')}
-                    className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${directorDecision === 'offer'
-                      ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                  >
-                    <Icon name="check-circle" size="xs" />
-                    <span>Pass / Recommend</span>
-                  </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setDirectorDecision('reject')}
-                    className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${directorDecision === 'reject'
-                      ? 'bg-rose-500 text-white border-rose-600 shadow-2xs'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                  >
-                    <Icon name="x-circle" size="xs" />
-                    <span>Fail / Reject</span>
-                  </button>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Remarks & Detailed Rationale</label>
+                    <span className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-rose-600' : 'text-slate-400'}`}>
+                      {feedbackText.length} / 500 characters
+                    </span>
+                  </div>
+                  <textarea
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
+                    rows={4}
+                    maxLength={500}
+                    placeholder="Enter evaluation notes, technical observations, and final recommendations..."
+                    className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
+                  />
                 </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700">Remarks & Detailed Rationale</label>
-                <span
-                  className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-rose-600' : 'text-slate-400'
-                    }`}
-                >
-                  {feedbackText.length} / 500 characters
-                </span>
+              </>
+            ) : !selectedFeedbackStage.interviewId ? (
+              /* No real Interview row exists for this round yet — an honest empty state instead
+               * of letting a scorecard vanish into nothing on refresh. */
+              <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-amber-300 bg-amber-50 text-center">
+                <Icon name="alert-triangle" size="sm" className="text-amber-500" />
+                <p className="text-xs font-semibold text-amber-800">No interview scheduled for this round yet</p>
+                <p className="text-[11px] text-amber-700">
+                  Use &ldquo;Assign Interviewer&rdquo; to schedule this round before submitting a scorecard — feedback needs a real interview record to attach to.
+                </p>
               </div>
+            ) : (
+              <>
+                {myExistingScorecard && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-[11px] font-semibold text-blue-700">
+                    <Icon name="info" size="xs" />
+                    <span>
+                      You already submitted a scorecard on {new Date(myExistingScorecard.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} — resubmitting will replace it.
+                    </span>
+                  </div>
+                )}
 
-              <textarea
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
-                rows={4}
-                maxLength={500}
-                placeholder="Enter evaluation notes, technical observations, and final recommendations..."
-                className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
-              />
-            </div>
+                {/* Real panelist scorecard — mirrors SubmitInterviewFeedbackCommand exactly */}
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    ['Technical', scorecardTechnical, setScorecardTechnical],
+                    ['Communication', scorecardCommunication, setScorecardCommunication],
+                    ['Problem Solving', scorecardProblemSolving, setScorecardProblemSolving],
+                    ['Cultural Fit', scorecardCulturalFit, setScorecardCulturalFit],
+                  ] as const).map(([label, value, setValue]) => (
+                    <div key={label} className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-700">{label} Rating</label>
+                      <div className="grid grid-cols-5 gap-1">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setValue(n)}
+                            className={`h-8 rounded-lg text-xs font-bold border transition-all cursor-pointer ${value === n
+                              ? 'bg-blue-600 text-white border-blue-700 shadow-2xs'
+                              : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                              }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700">Recommendation</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setScorecardRecommendation('Hire')}
+                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${scorecardRecommendation === 'Hire'
+                        ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                    >
+                      <Icon name="check-circle" size="xs" />
+                      <span>Hire</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScorecardRecommendation('Reject')}
+                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${scorecardRecommendation === 'Reject'
+                        ? 'bg-rose-500 text-white border-rose-600 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                    >
+                      <Icon name="x-circle" size="xs" />
+                      <span>Reject</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScorecardRecommendation('OnHold')}
+                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${scorecardRecommendation === 'OnHold'
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                    >
+                      <Icon name="pause-circle" size="xs" />
+                      <span>On Hold</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700">Strengths</label>
+                    <textarea
+                      value={scorecardStrengths}
+                      onChange={(e) => setScorecardStrengths(e.target.value)}
+                      rows={3}
+                      placeholder="Key strengths observed..."
+                      className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700">Weaknesses</label>
+                    <textarea
+                      value={scorecardWeaknesses}
+                      onChange={(e) => setScorecardWeaknesses(e.target.value)}
+                      rows={3}
+                      placeholder="Areas of concern..."
+                      className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Comments</label>
+                    <span className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-rose-600' : 'text-slate-400'}`}>
+                      {feedbackText.length} / 500 characters
+                    </span>
+                  </div>
+                  <textarea
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
+                    rows={3}
+                    maxLength={500}
+                    placeholder="Any additional evaluation notes..."
+                    className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
               <button
@@ -2066,9 +2297,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </button>
               <button
                 type="submit"
-                className="h-8.5 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs"
+                disabled={!selectedFeedbackStage.isDirectorRound && (!selectedFeedbackStage.interviewId || isSubmittingFeedback)}
+                className="h-8.5 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save Decision & Update Status
+                {selectedFeedbackStage.isDirectorRound
+                  ? 'Save Decision & Update Status'
+                  : isSubmittingFeedback
+                    ? 'Saving…'
+                    : 'Submit Scorecard'}
               </button>
             </div>
           </form>

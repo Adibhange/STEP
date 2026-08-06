@@ -16,6 +16,7 @@ namespace STEP.Infrastructure
             services.AddSingleton<IFileStorageService, LocalFileStorageService>();
             services.AddSingleton<IOfferLetterPdfGenerator, QuestPdfOfferLetterGenerator>();
             services.AddHostedService<OutboxDispatcherHostedService>();
+            services.AddHostedService<ExpiredExamAutoSubmitHostedService>();
 
             return services;
         }

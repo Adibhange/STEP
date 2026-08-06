@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { PipelineFlowVersion, PipelineRound } from '../types/vacancy.types';
+import { useGetVacancyByIdQuery } from '@/store/services/api';
 
 export const INITIAL_FLOW_VERSIONS: PipelineFlowVersion[] = [
   {
@@ -48,11 +49,51 @@ const STAGE_TYPE_MAP: Record<string, string> = {
   'HR & Cultural Fit Round': 'HR',
 };
 
-export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = () => {
+export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = ({ vacancyId }) => {
   const [flows, setFlows] = useState<PipelineFlowVersion[]>(INITIAL_FLOW_VERSIONS);
   const [newVersionName, setNewVersionName] = useState('');
   const [newVersionDesc, setNewVersionDesc] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const { data: vacancyRes, isLoading: isVacancyLoading } = useGetVacancyByIdQuery(Number(vacancyId), { skip: !vacancyId });
+  const hasSyncedRealFlows = useRef(false);
+
+  // Load the vacancy's real, already-saved pipeline flows exactly once when they arrive —
+  // replacing the placeholder examples above with what was actually configured at vacancy
+  // creation (or, if none were saved, leaving the placeholders as an editable starting point).
+  // Note: there is currently no backend command to persist edits made here back to the vacancy
+  // — same as the Assessment Pattern Builder's section editor, this becomes a real, accurate
+  // snapshot of what's saved, but further edits stay local-only until that command exists.
+  useEffect(() => {
+    if (hasSyncedRealFlows.current) return;
+    const realFlows = vacancyRes?.data?.pipelineFlows;
+    if (realFlows && realFlows.length > 0) {
+      setFlows(
+        realFlows.map((f: any) => ({
+          id: String(f.id),
+          versionName: f.versionName,
+          description: f.description || '',
+          isDefault: f.isDefault,
+          assignedCandidateCount: 0,
+          rounds: f.rounds
+            .slice()
+            .sort((a: any, b: any) => a.roundOrder - b.roundOrder)
+            .map((r: any) => ({
+              id: String(r.id),
+              name: r.name,
+              type: r.roundType,
+              cutoffPercent: Number(r.cutoffPercent),
+            })),
+        }))
+      );
+      hasSyncedRealFlows.current = true;
+    } else if (vacancyRes?.data) {
+      // Confirmed: this vacancy really has no saved pipeline flow yet — keep placeholders editable.
+      hasSyncedRealFlows.current = true;
+    }
+  }, [vacancyRes]);
+
+  const hasRealFlows = (vacancyRes?.data?.pipelineFlows?.length ?? 0) > 0;
 
   const handleSetDefault = (flowId: string) => {
     setFlows((prev) =>
@@ -143,6 +184,24 @@ export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = () => {
 
   return (
     <div className="flex flex-col gap-5 w-full">
+      {/* Real saved-state banner — reflects what's actually persisted for this vacancy. */}
+      {isVacancyLoading ? (
+        <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border-default)] text-[12px] text-[var(--text-tertiary)] flex items-center gap-2">
+          <Icon name="spinner" size="xs" className="animate-spin" />
+          <span>Loading this vacancy's saved pipeline flow…</span>
+        </div>
+      ) : hasRealFlows ? (
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-[12px] text-emerald-700 font-semibold flex items-center gap-2">
+          <Icon name="check-circle" size="xs" />
+          <span>Showing the pipeline flow(s) already saved for this vacancy. Edits below are not yet persisted back to the backend.</span>
+        </div>
+      ) : (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-[12px] text-amber-700 font-semibold flex items-center gap-2">
+          <Icon name="alert-triangle" size="xs" />
+          <span>No pipeline flow was saved for this vacancy yet — showing an editable example pattern.</span>
+        </div>
+      )}
+
       {/* Action Header */}
       <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.Exams.Commands.EvaluateCandidateAnswer;
 using STEP.Application.Features.Exams.Commands.PublishAssessmentResult;
+using STEP.Application.Features.Exams.Commands.ReportExamViolation;
 using STEP.Application.Features.Exams.Commands.SaveExamAnswer;
 using STEP.Application.Features.Exams.Commands.StartExamSession;
 using STEP.Application.Features.Exams.Commands.SubmitExam;
@@ -51,6 +52,13 @@ namespace STEP.Api.Controllers.v1
             return Ok(ApiResponse<object>.Ok(result, "Assessment submitted successfully"));
         }
 
+        [HttpPost("violations")]
+        public async Task<IActionResult> ReportViolation([FromBody] ReportExamViolationRequestBody body)
+        {
+            var result = await mediator.Send(new ReportExamViolationCommand(body.SessionToken, body.ViolationType));
+            return Ok(ApiResponse<object>.Ok(result, "Violation recorded"));
+        }
+
         [HttpGet("{sessionId:int}/evaluation")]
         [Authorize(Policy = "Exam.Manage")]
         public async Task<IActionResult> GetEvaluation(int sessionId)
@@ -80,6 +88,7 @@ namespace STEP.Api.Controllers.v1
 
     public record StartExamSessionRequestBody(string CandidateCode, string Passcode, string? TestSource);
     public record SubmitExamRequestBody(string SessionToken);
+    public record ReportExamViolationRequestBody(string SessionToken, string ViolationType);
     public record EvaluateAnswerRequestBody(int CandidateExamAnswerId, decimal MarksObtained, string? EvaluatorRemarks);
     public record PublishRequestBody(string? Remarks);
 }

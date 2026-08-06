@@ -54,6 +54,17 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
             var paper = roundAssessment.VacancyQuestionPaper;
 
+            // Defense-in-depth: AssignPipelineFlowCommandHandler and AssignQuestionPaperToRoundCommandHandler
+            // each independently enforce that a round's paper belongs to the same vacancy as the candidate at
+            // write time, so this should never trip in practice — but nothing re-checks it at session-start
+            // time, so a bug in either of those write paths (or a future raw-SQL/seed/bulk-import mistake)
+            // would otherwise go undetected here and silently serve a candidate a different vacancy's paper.
+            if (paper.VacancyId != candidate.VacancyId)
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("VacancyQuestionPaper",
+                    "This assessment round's question paper does not belong to the candidate's vacancy.")]);
+            }
+
             // Resume-on-reconnect: an existing not-yet-finished session for this round is returned as-is, never re-snapshotted.
             // (Deliberately written as explicit ORs, not `new[] {...}.Contains(...)` — that form
             // trips a LINQ-expression-interpreter bug under EF Core 10 / .NET 10.)
@@ -104,6 +115,10 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 FrozenDeviceType = "Unknown",
                 FrozenTotalDurationMinutes = fullPaper.DurationMinutes,
                 FrozenPassingPercentage = fullPaper.PassingPercentage,
+                // Intentionally fixed, not read from any per-vacancy/paper setting — shuffle is
+                // always on for every session by product decision (see the Shuffle(...) calls
+                // below, which run unconditionally). These two fields exist purely as an audit
+                // record of that fact for this session, not as a live on/off switch.
                 FrozenShuffleEnabled = true,
                 FrozenOptionShuffleEnabled = true,
                 SessionStatus = "InProgress",

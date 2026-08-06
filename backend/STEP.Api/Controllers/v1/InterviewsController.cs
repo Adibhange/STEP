@@ -28,9 +28,12 @@ namespace STEP.Api.Controllers.v1
         }
 
         [HttpPost("feedback")]
-        public async Task<IActionResult> SubmitFeedback([FromBody] SubmitInterviewFeedbackCommand command)
+        public async Task<IActionResult> SubmitFeedback([FromBody] SubmitInterviewFeedbackRequestBody body)
         {
-            await mediator.Send(command);
+            var panelistUserId = CurrentUserId ?? throw new System.UnauthorizedAccessException("Unable to resolve the current user.");
+            await mediator.Send(new SubmitInterviewFeedbackCommand(
+                body.InterviewId, panelistUserId, body.TechnicalRating, body.CommunicationRating, body.ProblemSolvingRating,
+                body.CulturalFitRating, body.Strengths, body.Weaknesses, body.Recommendation, body.Comments));
             return Ok(ApiResponse<object>.Ok(new { }, "Interview scorecard submitted successfully"));
         }
 
@@ -44,4 +47,17 @@ namespace STEP.Api.Controllers.v1
     }
 
     public record PublishInterviewRequestBody(bool Passed, string? Remarks);
+
+    /// <summary>Same shape as SubmitInterviewFeedbackCommand minus PanelistUserId — that's derived
+    /// server-side from the JWT, never trusted from the client (mirrors Offers.Approve/Interviews.Publish).</summary>
+    public record SubmitInterviewFeedbackRequestBody(
+        int InterviewId,
+        int TechnicalRating,
+        int CommunicationRating,
+        int ProblemSolvingRating,
+        int CulturalFitRating,
+        string? Strengths,
+        string? Weaknesses,
+        string Recommendation,
+        string? Comments);
 }

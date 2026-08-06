@@ -51,7 +51,22 @@ export const QuestionPapersView: React.FC = () => {
             timeLimitMinutes: qp.durationMinutes || 45,
             marksPerQuestion: 4,
             totalMarks: qp.totalMarks || 100,
-            questions: qp.questions || [],
+            // Normalize the real API shape (optionLabel/optionText/isCorrect) into what
+            // QuestionPaperViewDialog expects (label/text/correctOption) — passing the raw
+            // objects through left every option's text blank (wrong field names).
+            questions: (qp.questions || []).map((q: any) => ({
+              id: String(q.id),
+              questionType: q.questionType,
+              questionText: q.questionText,
+              options: (q.options || []).map((o: any) => ({ label: o.optionLabel, text: o.optionText })),
+              correctOption: (q.options || [])
+                .filter((o: any) => o.isCorrect)
+                .map((o: any) => o.optionLabel)
+                .join(','),
+              language: q.programmingLanguage || undefined,
+              problemStatement: q.sqlSchema || undefined,
+              maxWordCount: q.maxWordCount || undefined,
+            })),
           },
         ],
       }));

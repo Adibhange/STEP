@@ -8,11 +8,18 @@ using STEP.Application.Features.Candidates.Common;
 
 namespace STEP.Application.Features.Candidates.Queries.GetCandidates
 {
-    public class GetCandidatesQueryHandler(IApplicationDbContext db) : IRequestHandler<GetCandidatesQuery, CandidateListResultDto>
+    public class GetCandidatesQueryHandler(IApplicationDbContext db, ICurrentUserService currentUser) : IRequestHandler<GetCandidatesQuery, CandidateListResultDto>
     {
         public async Task<CandidateListResultDto> Handle(GetCandidatesQuery request, CancellationToken cancellationToken)
         {
             var query = db.Candidates.Include(c => c.Vacancy).AsNoTracking().AsQueryable();
+
+            // Interviewers only ever see candidates they've actually been assigned an interview
+            // for — HR/Director keep full visibility, they own the whole pipeline.
+            if (currentUser.Role == "Interviewer" && currentUser.UserId is int interviewerId)
+            {
+                query = query.Where(c => db.Interviews.Any(i => i.CandidateId == c.Id && i.InterviewerUserId == interviewerId));
+            }
 
             if (!string.IsNullOrWhiteSpace(request.Search))
             {

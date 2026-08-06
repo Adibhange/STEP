@@ -100,6 +100,20 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
   // or from a prior visit to this tab) — surfaced so the real state is visible instead of always
   // showing an empty upload box regardless of what's actually been imported already.
   const existingPaper = (papersRes?.data || []).find((p: any) => p.vacancyId === vacancyId);
+  const hasSyncedUploadState = useRef(false);
+
+  // Reflect an already-imported paper's real question count in STEP 3 itself on load, not just
+  // the top banner — otherwise a page reload showed a generic empty box even with 28 real
+  // questions already sitting in the database.
+  useEffect(() => {
+    if (hasSyncedUploadState.current) return;
+    if (!papersRes) return;
+    if (existingPaper && existingPaper.totalQuestions > 0) {
+      setUploadSuccess(true);
+      setLastImportedCount(existingPaper.totalQuestions);
+    }
+    hasSyncedUploadState.current = true;
+  }, [papersRes, existingPaper]);
 
   const grandTotalQuestions = sections.reduce((acc, s) => acc + s.totalQuestions, 0);
   const grandTotalTime = sections.reduce((acc, s) => acc + s.timeLimitMinutes, 0);
@@ -403,13 +417,19 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
           />
 
-          <div className="w-11 h-11 rounded-2xl bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center">
-            <Icon name="upload" size="md" />
+          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border ${
+            uploadSuccess && !uploadedFile ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-sky-50 text-sky-700 border-sky-200'
+          }`}>
+            <Icon name={uploadSuccess && !uploadedFile ? 'check-circle' : 'upload'} size="md" />
           </div>
 
           <div>
             <p className="text-[13px] font-extrabold text-[var(--text-primary)] font-heading">
-              {uploadedFile ? uploadedFile.name : 'Click or drop configured Question Bank Excel file here'}
+              {uploadedFile
+                ? uploadedFile.name
+                : uploadSuccess && lastImportedCount
+                ? `${lastImportedCount} question(s) already imported — click or drop a file to replace`
+                : 'Click or drop configured Question Bank Excel file here'}
             </p>
             <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
               Supports real binary .xlsx multi-worksheet workbooks formatted according to the template from Step 2.

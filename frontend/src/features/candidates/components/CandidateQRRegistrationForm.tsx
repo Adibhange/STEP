@@ -2,7 +2,28 @@
 
 import React, { useState } from 'react';
 import { Icon } from '@/design-system';
+import { Select } from '@/design-system/components/select';
+import { DatePicker } from '@/design-system/components/date-picker';
 import { useRegisterCandidateViaQRMutation } from '@/store/services/api';
+
+const QUALIFICATION_OPTIONS = [
+  { value: 'B.Tech / B.E.', label: 'B.Tech / B.E.' },
+  { value: 'BCA / MCA', label: 'BCA / MCA' },
+  { value: 'M.Tech / M.E.', label: 'M.Tech / M.E.' },
+  { value: 'B.Sc / M.Sc', label: 'B.Sc / M.Sc' },
+  { value: 'Diploma', label: 'Diploma in Engineering' },
+  { value: 'MBA / PGDM', label: 'MBA / PGDM' },
+  { value: 'Other Graduate', label: 'Other Graduate Degree' },
+];
+
+const NOTICE_PERIOD_OPTIONS = [
+  { value: '0', label: 'Immediate Joiner' },
+  { value: '15', label: '15 Days' },
+  { value: '30', label: '30 Days' },
+  { value: '45', label: '45 Days' },
+  { value: '60', label: '60 Days' },
+  { value: '90', label: '90 Days' },
+];
 
 interface DriveInfo {
   code: string;
@@ -38,6 +59,7 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
   const [currentCTC, setCurrentCTC] = useState<string>('');
   const [expectedCTC, setExpectedCTC] = useState<string>('');
   const [noticePeriodDays, setNoticePeriodDays] = useState<string>('30');
+  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(undefined);
 
   // Validation & Error States
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -176,20 +198,6 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
           </ul>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setRegisteredCandidate(null);
-            setCurrentStep(1);
-            setFirstName('');
-            setLastName('');
-            setEmail('');
-            setPhone('');
-          }}
-          className="w-full h-11 rounded-[var(--radius-xl)] text-xs font-bold bg-[var(--surface-1)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)] border border-[var(--border-default)] transition-all cursor-pointer flex items-center justify-center gap-2"
-        >
-          <span>Register Another Candidate</span>
-        </button>
       </div>
     );
   }
@@ -416,24 +424,31 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
               </div>
             </div>
 
+            {/* Date of Birth */}
+            <div>
+              <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">
+                Date of Birth
+              </label>
+              <DatePicker
+                date={dateOfBirth}
+                onDateChange={setDateOfBirth}
+                placeholder="Select date of birth..."
+                className="w-full"
+              />
+            </div>
+
             {/* Highest Qualification */}
             <div>
               <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">
                 Highest Qualification <span className="text-[var(--accent-red)]">*</span>
               </label>
-              <select
+              <Select
+                options={QUALIFICATION_OPTIONS}
                 value={highestQualification}
-                onChange={(e) => setHighestQualification(e.target.value)}
-                className="w-full h-10 px-3.5 rounded-[var(--radius-xl)] border border-[var(--border-default)] bg-[var(--surface-1)] text-xs text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[var(--focus-glow)] transition-all"
-              >
-                <option value="B.Tech / B.E.">B.Tech / B.E.</option>
-                <option value="BCA / MCA">BCA / MCA</option>
-                <option value="M.Tech / M.E.">M.Tech / M.E.</option>
-                <option value="B.Sc / M.Sc">B.Sc / M.Sc</option>
-                <option value="Diploma">Diploma in Engineering</option>
-                <option value="MBA / PGDM">MBA / PGDM</option>
-                <option value="Other Graduate">Other Graduate Degree</option>
-              </select>
+                onChange={setHighestQualification}
+                placeholder="Select qualification..."
+                widthClass="w-full"
+              />
             </div>
 
             {/* Experienced Fields */}
@@ -477,15 +492,14 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
 
                   <div>
                     <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">
-                      Notice Period (Days)
+                      Notice Period
                     </label>
-                    <input
-                      type="number"
-                      min="0"
+                    <Select
+                      options={NOTICE_PERIOD_OPTIONS}
                       value={noticePeriodDays}
-                      onChange={(e) => setNoticePeriodDays(e.target.value)}
-                      placeholder="e.g. 30"
-                      className="w-full h-10 px-3.5 rounded-[var(--radius-xl)] border border-[var(--border-default)] bg-[var(--surface-1)] text-xs text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)] focus:ring-2 focus:ring-[var(--focus-glow)] transition-all font-mono"
+                      onChange={setNoticePeriodDays}
+                      placeholder="Select notice period..."
+                      widthClass="w-full"
                     />
                   </div>
                 </div>

@@ -44,6 +44,191 @@ export interface MasterRecord {
   isActive: boolean;
 }
 
+export interface ExamOptionData {
+  id: number;
+  label: string;
+  text: string;
+}
+
+export interface ExamQuestionData {
+  id: number;
+  displayOrder: number;
+  questionType: string;
+  questionText: string;
+  marks: number;
+  timeAllowedMinutes: number | null;
+  programmingLanguage: string | null;
+  sqlSchema: string | null;
+  maxWordCount: number | null;
+  options: ExamOptionData[];
+  submittedAnswerText: string | null;
+  selectedOptionIds: number[];
+}
+
+export interface LiveExamWorkspaceData {
+  sessionToken: string;
+  candidateName: string;
+  vacancyTitle: string;
+  paperTitle: string;
+  durationMinutes: number;
+  totalTimeLeftSeconds: number;
+  activeQuestionIndex: number;
+  sessionStatus: string;
+  questions: ExamQuestionData[];
+}
+
+export interface SubmitExamResultData {
+  sessionStatus: string;
+  totalScore: number;
+  totalMarks: number;
+  pendingManualEvaluationCount: number;
+}
+
+export interface ReportExamViolationResultData {
+  tabSwitchWarnings: number;
+  assessmentIntegrityScore: number;
+  autoSubmitted: boolean;
+  submitResult: SubmitExamResultData | null;
+}
+
+export interface EvaluationOptionData {
+  id: number;
+  label: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+export interface ExamAnswerEvaluationData {
+  candidateExamAnswerId: number;
+  questionDisplayOrder: number;
+  questionType: string;
+  questionText: string;
+  submittedAnswerText: string | null;
+  marks: number;
+  marksObtained: number;
+  evaluationStatus: string;
+  evaluationLocked: boolean;
+  evaluatorRemarks: string | null;
+  options: EvaluationOptionData[];
+  selectedOptionIds: number[];
+}
+
+export interface ExamEvaluationViewData {
+  candidateExamSessionId: number;
+  candidateName: string;
+  vacancyTitle: string;
+  paperTitle: string;
+  sessionStatus: string;
+  evaluationStatus: string;
+  totalMarks: number;
+  totalScore: number;
+  frozenTotalDurationMinutes: number;
+  startedAt: string | null;
+  submittedAt: string | null;
+  tabSwitchWarnings: number;
+  assessmentIntegrityScore: number;
+  answers: ExamAnswerEvaluationData[];
+}
+
+export interface PublishResultData {
+  candidateExamSessionId: number;
+  resultStatus: string;
+  totalScore: number;
+  totalMarks: number;
+  percentage: number;
+  advancedToNextRound: boolean;
+  nextRoundTitle: string | null;
+  nextRoundExamPasscode: string | null;
+  candidateStatus: string;
+}
+
+export interface QRCodeData {
+  id: number;
+  vacancyId: number;
+  vacancyTitle: string;
+  code: string;
+  registrationUrl: string;
+  venueName: string;
+  venueAddress: string | null;
+  driveDate: string;
+  driveStartTime: string | null;
+  driveEndTime: string | null;
+  capacity: number | null;
+  registrationDeadline: string | null;
+  status: string;
+}
+
+export interface QRCodeAnalyticsData {
+  qrCodeId: number;
+  totalScans: number;
+  successfulRegistrations: number;
+  conversionRate: number;
+}
+
+export interface PipelineProgressData {
+  id: number;
+  roundNumber: number;
+  roundTitle: string;
+  roundType: string;
+  status: string;
+  scoreObtained: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  candidateExamSessionId: number | null;
+  interviewId: number | null;
+}
+
+export interface InterviewRoundDetailData {
+  id: number;
+  panelistUserId: number;
+  panelistName: string;
+  technicalRating: number;
+  communicationRating: number;
+  problemSolvingRating: number;
+  culturalFitRating: number;
+  strengths: string | null;
+  weaknesses: string | null;
+  recommendation: string;
+  comments: string | null;
+  submittedAt: string;
+}
+
+export interface InterviewData {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  vacancyTitle: string;
+  interviewerUserId: number | null;
+  interviewerName: string | null;
+  scheduledAt: string;
+  durationMinutes: number;
+  mode: string;
+  meetingLinkOrLocation: string | null;
+  status: string;
+  roundDetails: InterviewRoundDetailData[];
+}
+
+export interface ScheduleInterviewRequest {
+  candidateId: number;
+  interviewerUserId: number;
+  scheduledAt: string;
+  durationMinutes: number;
+  mode: 'Online' | 'Onsite' | 'Phone';
+  meetingLinkOrLocation?: string;
+}
+
+export interface SubmitInterviewFeedbackRequest {
+  interviewId: number;
+  technicalRating: number;
+  communicationRating: number;
+  problemSolvingRating: number;
+  culturalFitRating: number;
+  strengths?: string;
+  weaknesses?: string;
+  recommendation: 'Hire' | 'Reject' | 'OnHold';
+  comments?: string;
+}
+
 export interface UserItem {
   id: number;
   employeeCode: string;
@@ -104,6 +289,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
           localStorage.setItem('step_role', newData.user.role || '');
           localStorage.setItem('step_name', `${newData.user.firstName || ''} ${newData.user.lastName || ''}`.trim());
           localStorage.setItem('step_emp_code', newData.user.employeeCode || '');
+          localStorage.setItem('step_user_id', newData.user.id ? String(newData.user.id) : '');
         }
         // Retry initial request with new token
         result = await rawBaseQuery(args, api, extraOptions);
@@ -299,25 +485,28 @@ export const stepApi = createApi({
     }),
 
     // --- Exam Portal Endpoints ---
-    startExamSession: builder.mutation<ApiEnvelope<any>, { candidateCode: string; passcode: string; testSource?: string }>({
+    startExamSession: builder.mutation<ApiEnvelope<LiveExamWorkspaceData>, { candidateCode: string; passcode: string; testSource?: string }>({
       query: (data) => ({
         url: '/exams/start',
         method: 'POST',
         body: data,
       }),
     }),
-    resumeExamSession: builder.query<ApiEnvelope<any>, string>({
+    resumeExamSession: builder.query<ApiEnvelope<LiveExamWorkspaceData>, string>({
       query: (sessionToken) => `/exams/resume/${sessionToken}`,
       providesTags: ['Exams'],
     }),
-    saveExamAnswer: builder.mutation<ApiEnvelope<any>, Record<string, any>>({
+    saveExamAnswer: builder.mutation<
+      ApiEnvelope<boolean>,
+      { sessionToken: string; candidateExamSessionQuestionId: number; submittedAnswerText?: string | null; selectedOptionIds: number[] }
+    >({
       query: (data) => ({
         url: '/exams/answers',
         method: 'POST',
         body: data,
       }),
     }),
-    submitExam: builder.mutation<ApiEnvelope<any>, { sessionToken: string }>({
+    submitExam: builder.mutation<ApiEnvelope<SubmitExamResultData>, { sessionToken: string }>({
       query: (data) => ({
         url: '/exams/submit',
         method: 'POST',
@@ -325,11 +514,18 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['Exams'],
     }),
-    getExamEvaluation: builder.query<ApiEnvelope<any>, number>({
+    reportExamViolation: builder.mutation<ApiEnvelope<ReportExamViolationResultData>, { sessionToken: string; violationType: string }>({
+      query: (data) => ({
+        url: '/exams/violations',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    getExamEvaluation: builder.query<ApiEnvelope<ExamEvaluationViewData>, number>({
       query: (sessionId) => `/exams/${sessionId}/evaluation`,
       providesTags: ['Exams'],
     }),
-    evaluateAnswer: builder.mutation<ApiEnvelope<any>, { candidateExamAnswerId: number; marksObtained: number; evaluatorRemarks?: string }>({
+    evaluateAnswer: builder.mutation<ApiEnvelope<boolean>, { candidateExamAnswerId: number; marksObtained: number; evaluatorRemarks?: string }>({
       query: (data) => ({
         url: '/exams/evaluate',
         method: 'POST',
@@ -337,7 +533,7 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['Exams'],
     }),
-    publishAssessmentResult: builder.mutation<ApiEnvelope<any>, { sessionId: number; remarks?: string }>({
+    publishAssessmentResult: builder.mutation<ApiEnvelope<PublishResultData>, { sessionId: number; remarks?: string }>({
       query: ({ sessionId, remarks }) => ({
         url: `/exams/${sessionId}/publish`,
         method: 'POST',
@@ -347,11 +543,11 @@ export const stepApi = createApi({
     }),
 
     // --- Interviews Endpoints ---
-    getInterviewById: builder.query<ApiEnvelope<any>, number>({
+    getInterviewById: builder.query<ApiEnvelope<InterviewData>, number>({
       query: (id) => `/interviews/${id}`,
       providesTags: ['Interviews'],
     }),
-    scheduleInterview: builder.mutation<ApiEnvelope<any>, Record<string, any>>({
+    scheduleInterview: builder.mutation<ApiEnvelope<InterviewData>, ScheduleInterviewRequest>({
       query: (data) => ({
         url: '/interviews/schedule',
         method: 'POST',
@@ -359,7 +555,7 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['Interviews', 'Candidates'],
     }),
-    submitInterviewFeedback: builder.mutation<ApiEnvelope<any>, Record<string, any>>({
+    submitInterviewFeedback: builder.mutation<ApiEnvelope<object>, SubmitInterviewFeedbackRequest>({
       query: (data) => ({
         url: '/interviews/feedback',
         method: 'POST',
@@ -399,7 +595,7 @@ export const stepApi = createApi({
     }),
 
     // --- QR Code & Walk-In Registration Endpoints ---
-    generateQRCode: builder.mutation<ApiEnvelope<any>, Record<string, any>>({
+    generateQRCode: builder.mutation<ApiEnvelope<QRCodeData>, Record<string, any>>({
       query: (data) => ({
         url: '/qrcodes',
         method: 'POST',
@@ -407,9 +603,13 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['QRCodes'],
     }),
-    getQRCodeAnalytics: builder.query<ApiEnvelope<any>, number>({
+    getQRCodeAnalytics: builder.query<ApiEnvelope<QRCodeAnalyticsData>, number>({
       query: (id) => `/qrcodes/${id}/analytics`,
       providesTags: ['QRCodes'],
+    }),
+    getQRCodeByVacancy: builder.query<ApiEnvelope<QRCodeData | null>, number>({
+      query: (vacancyId) => `/qrcodes/vacancy/${vacancyId}`,
+      providesTags: (result, error, vacancyId) => [{ type: 'QRCodes', id: vacancyId }],
     }),
     recordQRScan: builder.query<ApiEnvelope<any>, string>({
       query: (code) => `/publicregistration/${code}`,
@@ -459,6 +659,7 @@ export const {
   useResumeExamSessionQuery,
   useSaveExamAnswerMutation,
   useSubmitExamMutation,
+  useReportExamViolationMutation,
   useGetExamEvaluationQuery,
   useEvaluateAnswerMutation,
   usePublishAssessmentResultMutation,
@@ -471,6 +672,7 @@ export const {
   useApproveOfferMutation,
   useGenerateQRCodeMutation,
   useGetQRCodeAnalyticsQuery,
+  useGetQRCodeByVacancyQuery,
   useRecordQRScanQuery,
   useRegisterCandidateViaQRMutation,
   useGetRecruitmentFunnelQuery,

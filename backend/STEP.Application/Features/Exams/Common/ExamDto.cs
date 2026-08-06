@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace STEP.Application.Features.Exams.Common
@@ -32,6 +33,11 @@ namespace STEP.Application.Features.Exams.Common
 
     public record SubmitExamResultDto(string SessionStatus, decimal TotalScore, decimal TotalMarks, int PendingManualEvaluationCount);
 
+    /// <summary>Evaluator-facing option — unlike ExamOptionDto, IsCorrect is included here since an
+    /// evaluator legitimately needs to see which option was right; never reuse this for the
+    /// candidate-facing exam-taking API.</summary>
+    public record EvaluationOptionDto(int Id, string Label, string Text, bool IsCorrect);
+
     public record ExamAnswerEvaluationDto(
         int CandidateExamAnswerId,
         int QuestionDisplayOrder,
@@ -42,7 +48,9 @@ namespace STEP.Application.Features.Exams.Common
         decimal MarksObtained,
         string EvaluationStatus,
         bool EvaluationLocked,
-        string? EvaluatorRemarks);
+        string? EvaluatorRemarks,
+        List<EvaluationOptionDto> Options,
+        List<int> SelectedOptionIds);
 
     public record ExamEvaluationViewDto(
         int CandidateExamSessionId,
@@ -53,6 +61,11 @@ namespace STEP.Application.Features.Exams.Common
         string EvaluationStatus,
         decimal TotalMarks,
         decimal TotalScore,
+        int FrozenTotalDurationMinutes,
+        DateTime? StartedAt,
+        DateTime? SubmittedAt,
+        int TabSwitchWarnings,
+        decimal AssessmentIntegrityScore,
         List<ExamAnswerEvaluationDto> Answers);
 
     public record PublishResultDto(

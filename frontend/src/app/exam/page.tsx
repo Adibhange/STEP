@@ -38,12 +38,6 @@ function ExamContent() {
       sessionToken={tokenParam}
       testMode={testMode}
       candidateCode={candidateIdParam}
-      candidateName="Anjali Sharma"
-      candidateEmail="anjali.sharma@email.com"
-      vacancyTitle="Frontend Developer - React (V123)"
-      paperTitle="Advanced React 19 & Next.js Enterprise Assessment"
-      durationMinutes={60}
-      passingPercentage={70}
     />
   );
 }

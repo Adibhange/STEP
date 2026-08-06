@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using STEP.Api.Middleware;
+using STEP.Api.Services;
 using STEP.Application;
 using STEP.Application.Common.Interfaces;
 using STEP.Infrastructure;
@@ -58,6 +59,8 @@ builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<Ap
 // 3b. Application (MediatR/CQRS, FluentValidation, AutoMapper) & Infrastructure (JWT, password hashing)
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // 4. Read JWT Environment Variable Placeholders
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")

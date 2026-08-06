@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,10 @@ namespace STEP.Application.Features.Exams.Commands.SaveExamAnswer
 {
     public class SaveExamAnswerCommandHandler(IApplicationDbContext db) : IRequestHandler<SaveExamAnswerCommand, bool>
     {
+        // Small buffer over the nominal duration to absorb client/server clock skew and network
+        // latency around the exact deadline moment — not a real time extension.
+        private const int GracePeriodSeconds = 60;
+
         public async Task<bool> Handle(SaveExamAnswerCommand request, CancellationToken cancellationToken)
         {
             var session = await db.CandidateExamSessions
@@ -23,6 +28,13 @@ namespace STEP.Application.Features.Exams.Commands.SaveExamAnswer
             {
                 throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(session.SessionStatus),
                     $"Cannot save an answer — session status is '{session.SessionStatus}'.")]);
+            }
+
+            var deadline = (session.StartedAt ?? DateTime.UtcNow).AddMinutes(session.FrozenTotalDurationMinutes).AddSeconds(GracePeriodSeconds);
+            if (session.StartedAt.HasValue && DateTime.UtcNow > deadline)
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(session.SessionStatus),
+                    "The allotted exam time has expired. Please submit your exam — further answer changes are no longer accepted.")]);
             }
 
             var question = session.Questions.FirstOrDefault(q => q.Id == request.CandidateExamSessionQuestionId)

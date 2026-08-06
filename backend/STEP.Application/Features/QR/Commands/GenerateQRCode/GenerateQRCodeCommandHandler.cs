@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
 using STEP.Application.Features.QR.Common;
@@ -12,18 +13,18 @@ using VacancyEntity = STEP.Domain.Entities.Vacancy.Vacancy;
 
 namespace STEP.Application.Features.QR.Commands.GenerateQRCode
 {
-    public class GenerateQRCodeCommandHandler(IApplicationDbContext db) : IRequestHandler<GenerateQRCodeCommand, QRCodeDto>
+    public class GenerateQRCodeCommandHandler(IApplicationDbContext db, IConfiguration configuration)
+        : IRequestHandler<GenerateQRCodeCommand, QRCodeDto>
     {
-        // Placeholder public-facing domain — swap for the real deployed frontend URL when known.
-        private const string PublicRegistrationBaseUrl = "https://step.sthapatya.in";
 
         public async Task<QRCodeDto> Handle(GenerateQRCodeCommand request, CancellationToken cancellationToken)
         {
             var vacancy = await db.Vacancies.FirstOrDefaultAsync(v => v.Id == request.VacancyId, cancellationToken)
                 ?? throw new NotFoundException(nameof(VacancyEntity), request.VacancyId);
 
+            var frontendUrl = (configuration["FRONTEND_URL"] ?? "https://step.sthapatya.in").TrimEnd('/');
             var code = $"WD-{Convert.ToHexString(RandomNumberGenerator.GetBytes(4))}";
-            var registrationUrl = $"{PublicRegistrationBaseUrl}/apply/{code}";
+            var registrationUrl = $"{frontendUrl}/apply/{code}";
 
             var qrCode = new QRCode
             {

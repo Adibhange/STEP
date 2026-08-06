@@ -25,6 +25,12 @@ namespace STEP.Application.Features.Exams.Commands.EvaluateCandidateAnswer
                     "This answer has already been published and is locked.")]);
             }
 
+            if (answer.CandidateExamSessionQuestion.QuestionType is "SINGLE_CHOICE" or "MULTI_CHOICE")
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(answer.CandidateExamSessionQuestion.QuestionType),
+                    "MCQ answers are auto-evaluated at submission and cannot be manually re-scored before publish.")]);
+            }
+
             if (request.MarksObtained > answer.Marks)
             {
                 throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(request.MarksObtained),

@@ -2,10 +2,17 @@
 
 import React, { useState } from 'react';
 import { Icon } from '@/design-system';
+import { toast } from '@/design-system/feedback/toast';
 import { PipelineFlowVersions } from './PipelineFlowVersions';
 import { AssessmentPatternBuilder } from './AssessmentPatternBuilder';
 import { CandidateBulkFlowAssignment } from './CandidateBulkFlowAssignment';
 import type { VacancyItem } from '../types/vacancy.types';
+import {
+  useGetVacancyByIdQuery,
+  useGetQRCodeByVacancyQuery,
+  useGetQRCodeAnalyticsQuery,
+  useGenerateQRCodeMutation,
+} from '@/store/services/api';
 
 import { getAppOrigin } from '@/lib/utils/url-helper';
 
@@ -23,22 +30,71 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [qrCopied, setQrCopied] = useState(false);
   const [walkInEnabled, setWalkInEnabled] = useState(true);
+  const [isGenerateQrOpen, setIsGenerateQrOpen] = useState(false);
+  const [genVenueName, setGenVenueName] = useState('');
+  const [genDriveDate, setGenDriveDate] = useState('');
+
+  const vacancyIdNum = Number(vacancy?.id);
+  const isDirectHiring = vacancy?.driveType === 'Direct / Sourced Hiring';
+
+  // Real vacancy detail (test locations, real experience range) — the `vacancy` prop is only the
+  // list-summary shape and is missing/wrong for several fields shown here.
+  const { data: vacancyDetailRes } = useGetVacancyByIdQuery(vacancyIdNum, { skip: !vacancyIdNum || isDirectHiring });
+  const vacancyDetail = vacancyDetailRes?.data;
+
+  // Real QR code + its real scan/registration analytics, if one has been generated for this
+  // walk-in vacancy yet.
+  const { data: qrCodeRes, isLoading: isQrLoading } = useGetQRCodeByVacancyQuery(vacancyIdNum, { skip: !vacancyIdNum || isDirectHiring });
+  const qrCode = qrCodeRes?.data;
+  const { data: qrAnalyticsRes } = useGetQRCodeAnalyticsQuery(qrCode?.id ?? 0, { skip: !qrCode });
+  const qrAnalytics = qrAnalyticsRes?.data;
+  const [generateQRCodeApi, { isLoading: isGeneratingQr }] = useGenerateQRCodeMutation();
 
   if (!isOpen || !vacancy) return null;
 
-  const isDirectHiring = vacancy.driveType === 'Direct / Sourced Hiring';
   const origin = getAppOrigin();
   const applyUrl = `${origin}/apply/${vacancy.code || vacancy.id}`;
-  const dynamicQrUrl = vacancy.qrAnalytics?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(applyUrl)}`;
+  const dynamicQrUrl = qrCode
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrCode.registrationUrl)}`
+    : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(applyUrl)}`;
 
   const handleCopyQrUrl = () => {
-    const copyTarget = vacancy.qrAnalytics?.registrationUrl || applyUrl;
+    const copyTarget = qrCode?.registrationUrl || applyUrl;
     if (typeof window !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(copyTarget);
       setQrCopied(true);
       setTimeout(() => setQrCopied(false), 2000);
     }
   };
+
+  const handleGenerateQrCode = async () => {
+    if (!genVenueName.trim() || !genDriveDate) {
+      toast.error('Missing Details', { description: 'Venue name and drive date are required to generate a QR code.' });
+      return;
+    }
+    try {
+      await generateQRCodeApi({
+        vacancyId: vacancyIdNum,
+        venueName: genVenueName.trim(),
+        driveDate: genDriveDate,
+      }).unwrap();
+      toast.success('QR Code Generated', { description: `Walk-in registration QR code created for "${genVenueName.trim()}".` });
+      setIsGenerateQrOpen(false);
+      setGenVenueName('');
+      setGenDriveDate('');
+    } catch (err: any) {
+      toast.error('Generation Failed', { description: err?.data?.message || 'Could not generate a QR code for this vacancy.' });
+    }
+  };
+
+  const experienceTier =
+    vacancyDetail?.minExperienceYears !== undefined && vacancyDetail?.maxExperienceYears !== undefined
+      ? `${vacancyDetail.minExperienceYears}-${vacancyDetail.maxExperienceYears} Years`
+      : vacancy.experience;
+  const testLocationDisplay =
+    vacancyDetail?.testLocations && vacancyDetail.testLocations.length > 0
+      ? vacancyDetail.testLocations.join(', ')
+      : vacancy.testLocation;
 
   // Dynamic Tabs based on Drive Type (Direct Hiring gets 2 tabs: Overview & Specs, Assessment Paper)
   const TABS = isDirectHiring
@@ -149,7 +205,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                     </div>
                     <div>
                       <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Experience Tier</span>
-                      <span className="font-bold text-[var(--text-primary)] mt-0.5 block">{vacancy.experience}</span>
+                      <span className="font-bold text-[var(--text-primary)] mt-0.5 block">{experienceTier}</span>
                     </div>
                     <div>
                       <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Primary Hiring Location</span>
@@ -157,7 +213,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                     </div>
                     <div>
                       <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Test Center</span>
-                      <span className="font-bold text-[var(--text-primary)] mt-0.5 block">{vacancy.testLocation}</span>
+                      <span className="font-bold text-[var(--text-primary)] mt-0.5 block">{testLocationDisplay}</span>
                     </div>
                   </div>
                 </div>
@@ -197,54 +253,131 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
-                  <div className="sm:col-span-4 flex flex-col items-center text-center bg-[var(--surface-1)] border border-[var(--border-default)] p-4 rounded-xl shadow-xs">
-                    <img
-                      src={dynamicQrUrl}
-                      alt="Vacancy QR Code"
-                      className="w-36 h-36 rounded-lg border border-[var(--accent-indigo)] bg-white p-1.5 shadow-2xs"
-                    />
-                    <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono mt-2">
-                      {isDirectHiring ? 'Direct Apply Link' : 'Scan to Register'}
-                    </span>
-                    <div className="flex items-center gap-2 mt-3">
-                      <button type="button" onClick={handleCopyQrUrl} className="px-3 h-7.5 text-[11.5px] font-bold border border-[var(--border-default)] rounded-full hover:bg-[var(--surface-hover)] cursor-pointer">
-                        {qrCopied ? 'Copied!' : 'Copy Link'}
-                      </button>
-                      <a href={dynamicQrUrl} target="_blank" rel="noreferrer" download="vacancy_qr_poster.png" className="px-3 h-7.5 text-[11.5px] font-bold bg-[var(--accent-indigo)] text-white rounded-full flex items-center gap-1 cursor-pointer">
-                        <Icon name="download" size="xs" />
-                        <span>{isDirectHiring ? 'Share' : 'Poster'}</span>
-                      </a>
+                {/* Direct Hiring has no real backend-tracked portal analytics yet — left as an
+                    illustrative placeholder, unlike the walk-in QR path below which is now real. */}
+                {isDirectHiring ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
+                    <div className="sm:col-span-4 flex flex-col items-center text-center bg-[var(--surface-1)] border border-[var(--border-default)] p-4 rounded-xl shadow-xs">
+                      <img src={dynamicQrUrl} alt="Vacancy Apply Link" className="w-36 h-36 rounded-lg border border-[var(--accent-indigo)] bg-white p-1.5 shadow-2xs" />
+                      <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono mt-2">Direct Apply Link</span>
+                      <div className="flex items-center gap-2 mt-3">
+                        <button type="button" onClick={handleCopyQrUrl} className="px-3 h-7.5 text-[11.5px] font-bold border border-[var(--border-default)] rounded-full hover:bg-[var(--surface-hover)] cursor-pointer">
+                          {qrCopied ? 'Copied!' : 'Copy Link'}
+                        </button>
+                        <a href={dynamicQrUrl} target="_blank" rel="noreferrer" download="vacancy_qr_poster.png" className="px-3 h-7.5 text-[11.5px] font-bold bg-[var(--accent-indigo)] text-white rounded-full flex items-center gap-1 cursor-pointer">
+                          <Icon name="download" size="xs" />
+                          <span>Share</span>
+                        </a>
+                      </div>
+                    </div>
+                    <div className="sm:col-span-8 grid grid-cols-2 gap-3 text-[12px]">
+                      <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
+                        <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Portal Visits</span>
+                        <span className="text-xl font-black font-mono text-[var(--text-tertiary)] block mt-0.5">—</span>
+                      </div>
+                      <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
+                        <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Direct Applicants</span>
+                        <span className="text-xl font-black font-mono text-[var(--text-tertiary)] block mt-0.5">{vacancy.appliedCount}</span>
+                      </div>
+                      <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)] col-span-2">
+                        <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Sourced Channels</span>
+                        <span className="text-[11px] text-[var(--text-tertiary)] block mt-0.5">Not tracked yet — no channel-attribution data source is wired up.</span>
+                      </div>
                     </div>
                   </div>
+                ) : isQrLoading ? (
+                  <div className="p-6 text-center text-[12px] text-[var(--text-tertiary)] font-semibold flex items-center justify-center gap-2">
+                    <Icon name="spinner" size="xs" className="animate-spin" />
+                    <span>Loading QR code…</span>
+                  </div>
+                ) : qrCode ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
+                    <div className="sm:col-span-4 flex flex-col items-center text-center bg-[var(--surface-1)] border border-[var(--border-default)] p-4 rounded-xl shadow-xs">
+                      <img src={dynamicQrUrl} alt="Vacancy QR Code" className="w-36 h-36 rounded-lg border border-[var(--accent-indigo)] bg-white p-1.5 shadow-2xs" />
+                      <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono mt-2">Scan to Register</span>
+                      <div className="flex items-center gap-2 mt-3">
+                        <button type="button" onClick={handleCopyQrUrl} className="px-3 h-7.5 text-[11.5px] font-bold border border-[var(--border-default)] rounded-full hover:bg-[var(--surface-hover)] cursor-pointer">
+                          {qrCopied ? 'Copied!' : 'Copy Link'}
+                        </button>
+                        <a href={dynamicQrUrl} target="_blank" rel="noreferrer" download="vacancy_qr_poster.png" className="px-3 h-7.5 text-[11.5px] font-bold bg-[var(--accent-indigo)] text-white rounded-full flex items-center gap-1 cursor-pointer">
+                          <Icon name="download" size="xs" />
+                          <span>Poster</span>
+                        </a>
+                      </div>
+                    </div>
 
-                  <div className="sm:col-span-8 grid grid-cols-2 gap-3 text-[12px]">
-                    <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
-                      <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">
-                        {isDirectHiring ? 'Portal Visits' : 'Total Scans'}
-                      </span>
-                      <span className="text-xl font-black font-mono text-[var(--text-primary)] block mt-0.5">{vacancy.qrAnalytics?.totalScans || 184}</span>
-                    </div>
-                    <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
-                      <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">
-                        {isDirectHiring ? 'Direct Applicants' : 'Registrations'}
-                      </span>
-                      <span className="text-xl font-black font-mono text-emerald-600 block mt-0.5">{vacancy.qrAnalytics?.successfulRegistrations || 142}</span>
-                    </div>
-                    <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
-                      <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Conversion Rate</span>
-                      <span className="text-xl font-black font-mono text-[var(--accent-indigo)] block mt-0.5">{vacancy.qrAnalytics?.conversionRate || 77.1}%</span>
-                    </div>
-                    <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
-                      <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">
-                        {isDirectHiring ? 'Sourced Channels' : 'Walk-in Venue'}
-                      </span>
-                      <span className="font-bold text-[var(--text-primary)] block mt-0.5">
-                        {isDirectHiring ? 'LinkedIn, Naukri, Direct' : 'Pune Tech Park'}
-                      </span>
+                    <div className="sm:col-span-8 grid grid-cols-2 gap-3 text-[12px]">
+                      <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
+                        <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Total Scans</span>
+                        <span className="text-xl font-black font-mono text-[var(--text-primary)] block mt-0.5">{qrAnalytics?.totalScans ?? 0}</span>
+                      </div>
+                      <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
+                        <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Registrations</span>
+                        <span className="text-xl font-black font-mono text-emerald-600 block mt-0.5">{qrAnalytics?.successfulRegistrations ?? 0}</span>
+                      </div>
+                      <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
+                        <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Conversion Rate</span>
+                        <span className="text-xl font-black font-mono text-[var(--accent-indigo)] block mt-0.5">{qrAnalytics?.conversionRate ?? 0}%</span>
+                      </div>
+                      <div className="bg-[var(--surface-1)] p-3 rounded-lg border border-[var(--border-default)]">
+                        <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Walk-in Venue</span>
+                        <span className="font-bold text-[var(--text-primary)] block mt-0.5">{qrCode.venueName}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 py-4 text-center">
+                    <Icon name="alert-triangle" size="md" className="text-amber-500" />
+                    <p className="text-[12.5px] text-[var(--text-tertiary)] font-semibold">
+                      No QR code has been generated for this vacancy yet.
+                    </p>
+                    {!isGenerateQrOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsGenerateQrOpen(true)}
+                        className="px-4 h-9 rounded-full bg-[var(--accent-indigo)] text-white text-[12px] font-bold shadow-xs hover:bg-[var(--accent-indigo-hover)] transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Icon name="plus" size="xs" />
+                        <span>Generate QR Code</span>
+                      </button>
+                    ) : (
+                      <div className="w-full max-w-sm flex flex-col gap-2.5 bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl p-4 text-left">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block mb-1">Venue Name</label>
+                          <input
+                            type="text"
+                            value={genVenueName}
+                            onChange={(e) => setGenVenueName(e.target.value)}
+                            placeholder="e.g. Pune Tech Park"
+                            className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[12px] text-[var(--text-primary)] outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block mb-1">Drive Date</label>
+                          <input
+                            type="date"
+                            value={genDriveDate}
+                            onChange={(e) => setGenDriveDate(e.target.value)}
+                            className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[12px] text-[var(--text-primary)] outline-none"
+                          />
+                        </div>
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button type="button" onClick={() => setIsGenerateQrOpen(false)} className="h-8 px-3 rounded-lg text-[11.5px] font-bold border border-[var(--border-default)] hover:bg-[var(--surface-hover)] cursor-pointer">
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleGenerateQrCode}
+                            disabled={isGeneratingQr}
+                            className="h-8 px-3 rounded-lg text-[11.5px] font-bold bg-[var(--accent-indigo)] text-white hover:bg-[var(--accent-indigo-hover)] cursor-pointer disabled:opacity-60"
+                          >
+                            {isGeneratingQr ? 'Generating…' : 'Generate'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

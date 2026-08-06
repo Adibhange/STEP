@@ -89,7 +89,7 @@ namespace STEP.Application.Features.Candidates.Commands.AssignPipelineFlow
 
             var progressDtos = candidate.PipelineProgressHistory
                 .OrderBy(p => p.RoundNumber)
-                .Select(p => new PipelineProgressDto(p.Id, p.RoundNumber, p.RoundTitle, p.RoundType, p.Status, p.ScoreObtained, p.StartedAt, p.CompletedAt))
+                .Select(p => new PipelineProgressDto(p.Id, p.RoundNumber, p.RoundTitle, p.RoundType, p.Status, p.ScoreObtained, p.StartedAt, p.CompletedAt, null, null))
                 .ToList();
 
             var candidateDto = new CandidateDto(
