@@ -7,9 +7,13 @@ import { toast } from '@/design-system/feedback/toast';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 import { ScheduleTestModal } from '@/features/assessments/components/ScheduleTestModal';
 import {
+  getApiBaseUrl,
+  useApproveOfferMutation,
+  useGenerateOfferLetterMutation,
   useGetCandidateByIdQuery,
   useGetCandidatesQuery,
   useGetInterviewByIdQuery,
+  useGetOfferByIdQuery,
   useGetUsersQuery,
   useScheduleInterviewMutation,
   useSubmitInterviewFeedbackMutation,
@@ -694,6 +698,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           { id: 1, name: `Registration_Data_${apiData.lastName || 'Candidate'}.pdf`, date: candDate, size: '120 KB', type: 'Application Form' },
         ]);
       }
+
+      // Sync the real OfferLetterId once one exists, so the Offer modal knows to fetch/display it
+      // instead of offering to generate a duplicate.
+      if (apiData.offerLetterId) {
+        setOfferLetterId(apiData.offerLetterId);
+      }
     }
   }, [candidateRes, candidatesListRes, candidateId, numericId]);
 
@@ -713,22 +723,19 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   // Document Preview Modal State
   const [docDeletedToast, setDocDeletedToast] = useState<string | null>(null);
 
-  // Offer Letter Rollout Form Modal State
+  // Offer Letter Rollout Form Modal State — real backend-backed now. offerLetterId is synced from
+  // the candidate's real OfferLetterId (see the apiData useEffect below) once one exists; the CTC/
+  // JoiningDate inputs are only editable before generation — GenerateOfferLetterCommandHandler
+  // rejects a second offer while one is already active, so once generated they become read-only.
   const [showOfferModal, setShowOfferModal] = useState(false);
-  const [offerStatus, setOfferStatus] = useState<'draft' | 'rolled_out'>('draft');
-  const [offerSuccessToast, setOfferSuccessToast] = useState(false);
+  const [offerLetterId, setOfferLetterId] = useState<number | null>(null);
+  const [offerCtc, setOfferCtc] = useState('');
+  const [offerJoiningDate, setOfferJoiningDate] = useState('');
+  const [offerApprovalPin, setOfferApprovalPin] = useState('');
 
-  // Offer Form Inputs
-  const [offerRole, setOfferRole] = useState('Senior Frontend Developer (React)');
-  const [offerCtc, setOfferCtc] = useState('14.50');
-  const [offerFixed, setOfferFixed] = useState('13.00');
-  const [offerVariable, setOfferVariable] = useState('1.50');
-  const [offerManager, setOfferManager] = useState('Rajesh Sharma (Director of Engineering)');
-  const [offerLocation, setOfferLocation] = useState('Bengaluru Office (Hybrid)');
-  const [offerJoiningDate, setOfferJoiningDate] = useState('2025-06-01');
-  const [offerExpiryDays, setOfferExpiryDays] = useState('7');
-  const [offerCandidateEmail, setOfferCandidateEmail] = useState('anjali.sharma@email.com');
-  const [offerRemarks, setOfferRemarks] = useState('Includes ₹50,000 relocation allowance & ₹5 Lakhs health insurance coverage.');
+  const { data: offerRes } = useGetOfferByIdQuery(offerLetterId ?? 0, { skip: !offerLetterId });
+  const [generateOfferLetter, { isLoading: isGeneratingOffer }] = useGenerateOfferLetterMutation();
+  const [approveOffer, { isLoading: isApprovingOffer }] = useApproveOfferMutation();
 
   // Submit Feedback / Director Decision Modal State
   const [selectedFeedbackStage, setSelectedFeedbackStage] = useState<StageItem | null>(null);
@@ -748,7 +755,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
   const currentUserId = typeof window !== 'undefined' ? Number(localStorage.getItem('step_user_id')) || null : null;
   const [submitInterviewFeedback, { isLoading: isSubmittingFeedback }] = useSubmitInterviewFeedbackMutation();
-  const [publishInterviewResult] = usePublishInterviewResultMutation();
+  const [publishInterviewResult, { isLoading: isPublishingDecision }] = usePublishInterviewResultMutation();
   const [evaluateCandidateStage] = useEvaluateCandidateStageMutation();
   const { data: feedbackInterviewRes } = useGetInterviewByIdQuery(selectedFeedbackStage?.interviewId ?? 0, {
     skip: !selectedFeedbackStage || selectedFeedbackStage.isDirectorRound || !selectedFeedbackStage.interviewId,
@@ -804,20 +811,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     { value: 'Google Meet', label: 'Google Meet (Online Link)' },
     { value: 'Microsoft Teams', label: 'Microsoft Teams' },
     { value: 'In Office', label: 'In Office Venue' },
-  ];
-
-  const offerManagerOptions = [
-    { value: 'Rajesh Sharma (Director of Engineering)', label: 'Rajesh Sharma (Director of Engineering)' },
-    { value: 'Anil Mehta (Managing Director)', label: 'Anil Mehta (Managing Director)' },
-    { value: 'Sneha Kulkarni', label: 'Sneha Kulkarni (Technical Lead)' },
-    { value: 'Rahul Patel (HR Lead)', label: 'Rahul Patel (HR Lead)' },
-  ];
-
-  const offerLocationOptions = [
-    { value: 'Bengaluru Office (Hybrid)', label: 'Bengaluru Office (Hybrid)' },
-    { value: 'Mumbai HQ (On-Site)', label: 'Mumbai HQ (On-Site)' },
-    { value: 'Pune Tech Hub (Hybrid)', label: 'Pune Tech Hub (Hybrid)' },
-    { value: 'Full Remote (Work From Anywhere)', label: 'Full Remote (Work From Anywhere)' },
   ];
 
   // Main Dynamic Recruitment Stages Stack
@@ -989,26 +982,84 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     toast.success('Profile Saved', { description: 'Candidate profile details updated successfully.' });
   };
 
-  const handleRolloutOffer = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleRolloutOffer = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setOfferStatus('rolled_out');
-    setCandidate((prev) => ({ ...prev, status: 'Offered' }));
-    setStagesData((prev) =>
-      prev.map((s) =>
-        s.id === 5
-          ? {
-            ...s,
-            status: 'Offered',
-            statusType: 'passed',
-            date: offerJoiningDate || '22 May 2025',
-            feedback: `Offered ₹${offerCtc} LPA (${offerRole}) by ${offerManager}. Joining Date: ${offerJoiningDate}. Letter dispatched to ${offerCandidateEmail}.`,
-            result: 'Offer Rolled Out',
-          }
-          : s
-      )
-    );
+    const currentOfferStatus = offerRes?.data?.status;
+
+    // Step 1: no offer generated yet — create it (real PDF + PendingApproval row).
+    if (!offerLetterId) {
+      const ctcNum = parseFloat(offerCtc);
+      if (!offerCtc || Number.isNaN(ctcNum) || ctcNum <= 0) {
+        toast.error('Invalid CTC', { description: 'Enter a valid offered CTC greater than 0.' });
+        return;
+      }
+      if (!offerJoiningDate) {
+        toast.error('Joining Date Required', { description: 'Select a joining date.' });
+        return;
+      }
+
+      try {
+        const result = await generateOfferLetter({
+          candidateId: numericId,
+          offeredCTC: ctcNum,
+          joiningDate: offerJoiningDate,
+        }).unwrap();
+        setOfferLetterId(result.data.id);
+        toast.success('Offer Letter Generated', {
+          description: 'PDF generated and saved — awaiting Director PIN approval before it\'s final.',
+        });
+      } catch (err) {
+        const description = (err as { data?: { errors?: string[]; message?: string } })?.data?.errors?.[0]
+          || (err as { data?: { message?: string } })?.data?.message
+          || 'Could not generate the offer letter.';
+        toast.error('Generation Failed', { description });
+      }
+      return;
+    }
+
+    // Step 2: offer exists and is awaiting the Director's PIN approval.
+    if (currentOfferStatus === 'PendingApproval') {
+      if (offerApprovalPin.length !== 6) {
+        toast.error('Invalid PIN', { description: "Enter the Director's 6-digit security PIN." });
+        return;
+      }
+      try {
+        await approveOffer({ id: offerLetterId, directorPin: offerApprovalPin }).unwrap();
+        setOfferApprovalPin('');
+        toast.success('Offer Approved', { description: 'Director approval recorded — the offer letter is now finalized.' });
+      } catch (err) {
+        const description = (err as { data?: { errors?: string[]; message?: string } })?.data?.errors?.[0]
+          || (err as { data?: { message?: string } })?.data?.message
+          || 'Could not approve the offer letter — check the PIN and try again.';
+        toast.error('Approval Failed', { description });
+      }
+      return;
+    }
+
+    // Already Approved — nothing left to submit.
     setShowOfferModal(false);
-    toast.success('Offer Letter Rolled Out', { description: `Official offer dispatched to ${offerCandidateEmail}.` });
+  };
+
+  const handleDownloadOffer = async () => {
+    if (!offerLetterId) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('step_token') : null;
+      const res = await fetch(`${getApiBaseUrl()}/offers/${offerLetterId}/download`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `Offer_${candidate.name.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch {
+      toast.error('Download Failed', { description: 'Could not download the offer letter PDF.' });
+    }
   };
 
   const handleSaveFeedback = async (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -1083,55 +1134,42 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       return;
     }
 
-    // Director Decision — still local-only simulation (out of scope for this pass; the real
-    // backend equivalent is PublishInterviewResultCommand, which this does not call yet).
-    let newResult = 'Offered';
-    let newStatusType: 'passed' | 'rejected' | 'pending' = 'passed';
-    let newStatus = 'Passed';
-
-    if (directorDecision === 'reject') {
-      newResult = 'Rejected';
-      newStatusType = 'rejected';
-      newStatus = 'Rejected';
-    } else if (directorDecision === 'hold') {
-      newResult = 'On Hold';
-      newStatusType = 'pending';
-      newStatus = 'On Hold';
-
-      setStagesData((prev) =>
-        prev.map((s) =>
-          s.id === 2
-            ? {
-              ...s,
-              status: 'Retake Needed',
-              statusType: 'pending',
-              actionLabel: 'Re-send / Schedule Test (2nd Attempt)',
-              attempts: [
-                ...(s.attempts || []),
-                { attempt: 2, date: 'Pending', score: '—', result: 'Re-test Triggered' },
-              ],
-            }
-            : s
-        )
-      );
+    // Director Decision — real backend call. "On Hold" has no equivalent in
+    // PublishInterviewResultCommand (it only ever takes a bool Passed) — rather than fake a
+    // "retake" flow the backend has no concept of, it just leaves the decision unrecorded.
+    if (directorDecision === 'hold') {
+      setSelectedFeedbackStage(null);
+      toast.success('Decision Deferred', { description: 'No outcome was recorded — the candidate\'s status is unchanged. Come back and choose Offer or Reject to finalize.' });
+      return;
     }
 
-    setStagesData((prev) =>
-      prev.map((s) =>
-        s.id === 4
-          ? {
-            ...s,
-            feedback: feedbackText || s.feedback,
-            result: newResult,
-            status: newStatus,
-            statusType: newStatusType,
-          }
-          : s
-      )
-    );
+    if (!selectedFeedbackStage.interviewId) {
+      toast.error('No Interview Scheduled', {
+        description: 'Assign a Director and schedule this round before recording a decision.',
+      });
+      return;
+    }
 
-    setSelectedFeedbackStage(null);
-    toast.success('Feedback Saved', { description: 'Interviewer feedback and stage decision recorded.' });
+    try {
+      await publishInterviewResult({
+        id: selectedFeedbackStage.interviewId,
+        passed: directorDecision === 'offer',
+        remarks: feedbackText || undefined,
+      }).unwrap();
+
+      // Publishing genuinely advances/rejects/offers the candidate server-side — let the
+      // invalidated 'Candidates' tag refetch drive the real post-decision stage data instead of
+      // hand-guessing what changed here.
+      setSelectedFeedbackStage(null);
+      toast.success('Decision Published', {
+        description: directorDecision === 'offer' ? 'Candidate advanced/offered — pipeline updated.' : 'Candidate rejected — pipeline updated.',
+      });
+    } catch (err) {
+      const description = (err as { data?: { message?: string; errors?: string[] } })?.data?.errors?.[0]
+        || (err as { data?: { message?: string } })?.data?.message
+        || 'Could not publish the decision. Please try again.';
+      toast.error('Publish Failed', { description });
+    }
   };
 
   const MEETING_MODE_TO_BACKEND: Record<string, 'Online' | 'Onsite' | 'Phone'> = {
@@ -2176,10 +2214,16 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 </div>
                 <div className="flex flex-col">
                   <h3 className="text-base font-bold text-slate-900 font-heading">
-                    Generate & Rollout Offer Letter — {candidate.name}
+                    Offer Letter — {candidate.name}
                   </h3>
                   <span className="text-xs text-slate-500 font-medium">
-                    Fill in compensation, manager, location, and joining date below before dispatching
+                    {!offerLetterId
+                      ? 'Set the offered CTC and joining date, then generate the letter'
+                      : offerRes?.data?.status === 'PendingApproval'
+                        ? 'Awaiting Director PIN approval before it can be sent'
+                        : offerRes?.data?.status === 'Approved'
+                          ? 'Approved — ready to download and dispatch'
+                          : 'Loading offer status…'}
                   </span>
                 </div>
               </div>
@@ -2193,129 +2237,114 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </button>
             </div>
 
-            {/* Form Fields Section */}
+            {/* Real fields only — Role/Email are derived, not independently settable; CTC/Joining
+             * Date lock once generated since GenerateOfferLetterCommandHandler rejects a re-generate
+             * while an offer is already active. Manager/Location/Fixed-Variable-split/Expiry/Remarks
+             * were removed — none of them have any backing field on OfferLetter, so editing them
+             * here never persisted anything. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Offered Role / Designation</label>
-                <input
-                  type="text"
-                  value={offerRole}
-                  onChange={(e) => setOfferRole(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
+                <label className="font-bold text-slate-700 block mb-1">Role / Vacancy</label>
+                <div className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-semibold flex items-center truncate">
+                  {candidate.designation}
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Candidate Email</label>
+                <div className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium flex items-center truncate">
+                  {candidate.email}
+                </div>
               </div>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Total Offered CTC (₹ LPA)</label>
-                <input
-                  type="text"
-                  value={offerCtc}
-                  onChange={(e) => setOfferCtc(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Fixed Component (₹ LPA)</label>
-                <input
-                  type="text"
-                  value={offerFixed}
-                  onChange={(e) => setOfferFixed(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Variable / Bonus Component (₹ LPA)</label>
-                <input
-                  type="text"
-                  value={offerVariable}
-                  onChange={(e) => setOfferVariable(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Reporting Manager</label>
-                <FormSelect
-                  value={offerManager}
-                  onChange={setOfferManager}
-                  options={offerManagerOptions}
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Work Location</label>
-                <FormSelect
-                  value={offerLocation}
-                  onChange={setOfferLocation}
-                  options={offerLocationOptions}
-                />
+                {offerLetterId ? (
+                  <div className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-emerald-700 font-bold flex items-center">
+                    ₹{offerRes?.data?.offeredCTC ?? offerCtc} LPA
+                  </div>
+                ) : (
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={offerCtc}
+                    onChange={(e) => setOfferCtc(e.target.value)}
+                    placeholder="e.g. 14.5"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                )}
               </div>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Joining Date</label>
-                <FormDatePicker
-                  value={offerJoiningDate}
-                  onChange={setOfferJoiningDate}
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Offer Acceptance Expiry (Days)</label>
-                <input
-                  type="number"
-                  value={offerExpiryDays}
-                  onChange={(e) => setOfferExpiryDays(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="font-bold text-slate-700 block mb-1">Candidate Email Address</label>
-                <input
-                  type="email"
-                  value={offerCandidateEmail}
-                  onChange={(e) => setOfferCandidateEmail(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="font-bold text-slate-700 block mb-1">Special Perks & Remarks</label>
-                <textarea
-                  value={offerRemarks}
-                  onChange={(e) => setOfferRemarks(e.target.value)}
-                  rows={2}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-sans resize-none"
-                />
+                {offerLetterId ? (
+                  <div className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-semibold flex items-center">
+                    {offerRes?.data?.joiningDate
+                      ? new Date(offerRes.data.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : offerJoiningDate}
+                  </div>
+                ) : (
+                  <FormDatePicker value={offerJoiningDate} onChange={setOfferJoiningDate} />
+                )}
               </div>
             </div>
 
-            {/* Generated Document Card Preview */}
-            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 shadow-2xs mt-1">
-              <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded bg-red-100 text-red-600 font-bold text-xs flex items-center justify-center shrink-0">
-                  PDF
-                </span>
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-900 text-xs">
-                    Offer_Letter_{candidate.name.replace(' ', '_')}_Generated.pdf
-                  </span>
-                  <span className="text-[10.5px] text-slate-500 font-mono">
-                    Auto-compiled with ₹{offerCtc} LPA, {offerRole}, Joining {offerJoiningDate}
-                  </span>
+            {/* Generated Document + Director PIN Approval */}
+            {offerLetterId && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded bg-red-100 text-red-600 font-bold text-xs flex items-center justify-center shrink-0">
+                      PDF
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-900 text-xs">
+                        Offer_{candidate.name.replace(/\s+/g, '_')}.pdf
+                      </span>
+                      <span className="text-[10.5px] text-slate-500 font-mono">
+                        Prepared by {offerRes?.data?.preparedByName || '…'} • Status: {offerRes?.data?.status || 'Loading…'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadOffer}
+                    className="h-7.5 px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-1"
+                  >
+                    <Icon name="download" size="xs" />
+                    <span>Download PDF</span>
+                  </button>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                className="h-7.5 px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-1"
-              >
-                <Icon name="download" size="xs" />
-                <span>Preview Draft</span>
-              </button>
-            </div>
+                {offerRes?.data?.status === 'PendingApproval' && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700">Director Security PIN (6 digits)</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={offerApprovalPin}
+                      onChange={(e) => setOfferApprovalPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="••••••"
+                      className="w-full h-9 px-3 rounded-xl border border-slate-300 text-sm font-mono tracking-widest text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                    />
+                    <span className="text-[11px] text-slate-500">Only a Director account can approve this — verified against the same PIN used for Director login.</span>
+                  </div>
+                )}
+
+                {offerRes?.data?.status === 'Approved' && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-700">
+                    <Icon name="check-circle" size="xs" />
+                    <span>
+                      Approved by {offerRes.data.approvedByName || 'the Director'}
+                      {offerRes.data.approvedAt ? ` on ${new Date(offerRes.data.approvedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : ''}.
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Footer Buttons */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-100">
@@ -2327,13 +2356,20 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 Cancel
               </button>
 
-              <button
-                type="submit"
-                className="h-8.5 px-4 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
-              >
-                <Icon name="check-circle" size="xs" />
-                <span>Generate & Send Offer Letter</span>
-              </button>
+              {offerRes?.data?.status !== 'Approved' && (
+                <button
+                  type="submit"
+                  disabled={isGeneratingOffer || isApprovingOffer}
+                  className="h-8.5 px-4 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 cursor-pointer shadow-2xs inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Icon name="check-circle" size="xs" />
+                  <span>
+                    {!offerLetterId
+                      ? isGeneratingOffer ? 'Generating…' : 'Generate Offer Letter'
+                      : isApprovingOffer ? 'Approving…' : 'Approve with PIN'}
+                  </span>
+                </button>
+              )}
             </div>
           </form>
         </div>
@@ -2680,11 +2716,17 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!selectedFeedbackStage.isDirectorRound && (!selectedFeedbackStage.interviewId || isSubmittingFeedback)}
+                disabled={
+                  selectedFeedbackStage.roundType === 'Assessment'
+                    ? false
+                    : selectedFeedbackStage.isDirectorRound
+                      ? (directorDecision !== 'hold' && !selectedFeedbackStage.interviewId) || isPublishingDecision
+                      : !selectedFeedbackStage.interviewId || isSubmittingFeedback
+                }
                 className="h-8.5 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {selectedFeedbackStage.isDirectorRound
-                  ? 'Save Decision & Update Status'
+                  ? isPublishingDecision ? 'Publishing…' : 'Save Decision & Update Status'
                   : isSubmittingFeedback
                     ? 'Saving…'
                     : 'Submit Scorecard'}

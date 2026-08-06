@@ -61,6 +61,16 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                 .Where(u => evaluatorUserIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), cancellationToken);
 
+            // Offer isn't a pipeline round — it's a separate entity keyed only by CandidateId — so
+            // the frontend needs this looked up here the same way CandidateExamSessionId/InterviewId
+            // are looked up per-round above, otherwise there's no way to know an OfferLetterId exists
+            // to call GetOfferById/ApproveOffer/download against.
+            var latestOffer = await db.OfferLetters
+                .Where(o => o.CandidateId == candidate.Id)
+                .OrderByDescending(o => o.Id)
+                .Select(o => new { o.Id, o.Status })
+                .FirstOrDefaultAsync(cancellationToken);
+
             return new CandidateDto(
                 candidate.Id, candidate.CandidateCode, candidate.FirstName, candidate.LastName, candidate.Email, candidate.Phone,
                 candidate.VacancyId, candidate.Vacancy.Title, candidate.CurrentStage, candidate.Status, candidate.RegistrationChannel,
@@ -80,7 +90,8 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                     .ToList(),
                 candidate.Documents
                     .Select(d => new CandidateDocumentDto(d.Id, d.DocumentType, d.FileName, d.ContentType, d.FileSizeBytes, d.StorageProvider, d.UploadedAt))
-                    .ToList());
+                    .ToList(),
+                latestOffer?.Id, latestOffer?.Status);
         }
     }
 }

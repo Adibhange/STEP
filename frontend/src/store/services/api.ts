@@ -229,6 +229,50 @@ export interface SubmitInterviewFeedbackRequest {
   comments?: string;
 }
 
+export interface OfferLetterData {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  vacancyId: number;
+  vacancyTitle: string;
+  offeredCTC: number;
+  joiningDate: string;
+  status: string;
+  preparedByName: string;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  generatedPdfPath: string | null;
+}
+
+export interface GenerateOfferLetterRequest {
+  candidateId: number;
+  offeredCTC: number;
+  joiningDate: string;
+}
+
+export interface QRScanResultData {
+  qrCodeId: number;
+  vacancyId: number;
+  vacancyTitle: string;
+  venueName: string;
+  isOpenForRegistration: boolean;
+  message: string | null;
+}
+
+export interface RegisterCandidateViaQRRequest {
+  code: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  totalExperienceYears: number;
+  currentCTC?: number;
+  expectedCTC?: number;
+  noticePeriodDays?: number;
+  currentLocation?: string;
+  highestQualification?: string;
+}
+
 export interface UserItem {
   id: number;
   employeeCode: string;
@@ -240,7 +284,7 @@ export interface UserItem {
   status: string;
 }
 
-const getApiBaseUrl = (): string => {
+export const getApiBaseUrl = (): string => {
   const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5125/api/v1';
   const cleanUrl = envUrl.replace(/\/+$/, '');
   return cleanUrl.endsWith('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
@@ -608,11 +652,11 @@ export const stepApi = createApi({
     }),
 
     // --- Offers Endpoints ---
-    getOfferById: builder.query<ApiEnvelope<any>, number>({
+    getOfferById: builder.query<ApiEnvelope<OfferLetterData>, number>({
       query: (id) => `/offers/${id}`,
       providesTags: ['Offers'],
     }),
-    generateOfferLetter: builder.mutation<ApiEnvelope<any>, Record<string, any>>({
+    generateOfferLetter: builder.mutation<ApiEnvelope<OfferLetterData>, GenerateOfferLetterRequest>({
       query: (data) => ({
         url: '/offers',
         method: 'POST',
@@ -646,10 +690,10 @@ export const stepApi = createApi({
       query: (vacancyId) => `/qrcodes/vacancy/${vacancyId}`,
       providesTags: (result, error, vacancyId) => [{ type: 'QRCodes', id: vacancyId }],
     }),
-    recordQRScan: builder.query<ApiEnvelope<any>, string>({
+    recordQRScan: builder.query<ApiEnvelope<QRScanResultData>, string>({
       query: (code) => `/publicregistration/${code}`,
     }),
-    registerCandidateViaQR: builder.mutation<ApiEnvelope<any>, Record<string, any>>({
+    registerCandidateViaQR: builder.mutation<ApiEnvelope<any>, RegisterCandidateViaQRRequest>({
       query: (data) => ({
         url: '/publicregistration',
         method: 'POST',

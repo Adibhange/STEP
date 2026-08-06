@@ -34,9 +34,10 @@ namespace STEP.Api.Controllers.v1
         }
 
         [HttpPost]
-        public async Task<IActionResult> Generate([FromBody] GenerateOfferLetterCommand command)
+        public async Task<IActionResult> Generate([FromBody] GenerateOfferLetterRequestBody body)
         {
-            var offer = await mediator.Send(command);
+            var preparedByUserId = CurrentUserId ?? throw new System.UnauthorizedAccessException("Unable to resolve the current user.");
+            var offer = await mediator.Send(new GenerateOfferLetterCommand(body.CandidateId, body.OfferedCTC, body.JoiningDate, preparedByUserId));
             return Ok(ApiResponse<object>.Ok(offer, "Offer letter generated successfully"));
         }
 
@@ -50,4 +51,8 @@ namespace STEP.Api.Controllers.v1
     }
 
     public record ApproveOfferRequestBody(string DirectorPin);
+
+    /// <summary>Same shape as GenerateOfferLetterCommand minus PreparedByUserId — that's derived
+    /// server-side from the JWT, never trusted from the client (mirrors ApproveOffer/Interviews.Publish).</summary>
+    public record GenerateOfferLetterRequestBody(int CandidateId, decimal OfferedCTC, System.DateTime JoiningDate);
 }

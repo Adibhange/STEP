@@ -96,7 +96,25 @@
       "Bash(node -e \"let d='';process.stdin.on\\('data',x=>d+=x\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.parse\\(d\\).data.candidate.pipelineProgress\\)\\)\")",
       "Bash(tee /tmp/step-interview2.json)",
       "Bash(curl -s http://localhost:5125/api/v1/candidates/13 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
-      "Bash(curl -s http://localhost:5125/api/v1/users -H 'Authorization: Bearer __CMDSUB_OUTPUT__')"
+      "Bash(curl -s http://localhost:5125/api/v1/users -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(npm run *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"started PID $!\")",
+      "Bash(curl -s -X POST http://localhost:5125/api/v1/candidates/16/assign-pipeline-flow -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"vacancyPipelineFlowId\":10}')",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',x=>d+=x\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.parse\\(d\\).data.candidate.pipelineProgress.map\\(p=>[p.id,p.roundTitle,p.roundType]\\)\\)\\)\")",
+      "Bash(curl -s -X POST http://localhost:5125/api/v1/interviews/4/publish -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"passed\":false,\"remarks\":\"Failed the final technical round.\"}')",
+      "Bash(curl -s -X POST http://localhost:5125/api/v1/interviews/5/publish -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"passed\":true,\"remarks\":\"Strong technical performance.\"}')",
+      "Bash(curl -s -X POST http://localhost:5125/api/v1/offers -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(tee /tmp/step-offer.json)",
+      "Bash(curl -s http://localhost:5125/api/v1/candidates/17 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s http://localhost:5125/api/v1/offers/2 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -o /tmp/offer_test.pdf -w 'HTTP %{http_code}, size=%{size_download} bytes\\\\n' http://localhost:5125/api/v1/offers/2/download -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(rm -rf \"c:\\\\Users\\\\Aditya.Bhange\\\\STEP\\\\backend\\\\STEP.Api\\\\App_Data\\\\uploads\\\\offers\\\\17\" *)",
+      "Bash(echo \"TSC_EXIT:$?\")",
+      "Bash(xargs grep -ln \"Report\")"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

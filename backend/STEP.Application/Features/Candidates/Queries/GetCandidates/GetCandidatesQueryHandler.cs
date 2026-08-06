@@ -103,16 +103,14 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
                     }
                 }
 
-                var r1 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
-                var r2 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 2);
-                var r3 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 3);
-
-                var r1Failed = r1?.Status?.ToLower() == "failed" || r1?.Status?.ToLower() == "rejected";
-                var r2Failed = r2?.Status?.ToLower() == "failed" || r2?.Status?.ToLower() == "rejected";
-                var r3Failed = r3?.Status?.ToLower() == "failed" || r3?.Status?.ToLower() == "rejected";
-
-                bool isTrulyRejected = r1Failed || (r2Failed && r3Failed);
-                string effectiveStatus = isTrulyRejected ? "Rejected" : c.Status == "Offered" || c.Status == "Hired" ? c.Status : "In-Progress";
+                // candidate.Status is the authoritative terminal/interim status maintained by
+                // CandidateAdvancementService — trust it directly instead of recomputing from raw
+                // round data. (A prior version of this recompute hardcoded a 3-round assumption,
+                // which silently downgraded real "Rejected" candidates back to "In-Progress" for
+                // any 2-round or 4+-round pipeline flow — those are real, per-vacancy-configurable
+                // shapes, not hypothetical.) "Applied" (pre-pipeline-assignment) still collapses to
+                // "In-Progress" for display, matching the existing list-view terminology.
+                string effectiveStatus = c.Status is "Offered" or "Hired" or "Rejected" ? c.Status : "In-Progress";
 
                 string hiringLocation = c.Vacancy?.HiringLocation?.Name ?? c.CurrentLocation ?? "Primary Center";
                 string testLocation = c.Vacancy?.TestLocations?.Select(tl => tl.MasterTestLocation?.Name).FirstOrDefault(name => name != null) ?? c.CurrentLocation ?? "Test Center";

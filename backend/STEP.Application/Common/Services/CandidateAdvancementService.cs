@@ -47,8 +47,26 @@ namespace STEP.Application.Common.Services
                     candidate.Status = "Rejected";
                     return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
                 }
+
+                // Has a passed technical round on record, so this failure alone doesn't disqualify
+                // them — but if there's nowhere left to send them (this was the last round), failing
+                // it is a rejection, never an offer. Previously this fell through to the shared
+                // "no next round" logic below, which unconditionally set Status="Offered" — so
+                // failing the final round (e.g. the Director round) could get recorded as an offer.
+                if (nextRound == null)
+                {
+                    candidate.Status = "Rejected";
+                    return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
+                }
+
+                // Otherwise: leniency — advance them to the next round anyway despite this failure.
+                candidate.CurrentPipelineProgressId = nextRound.Id;
+                candidate.CurrentStage = nextRound.RoundTitle;
+                candidate.Status = "In-Progress";
+                return Task.FromResult(new CandidateAdvancementResult(true, nextRound.RoundTitle, null, candidate.Status));
             }
 
+            // passed == true from here on.
             if (nextRound == null)
             {
                 candidate.Status = "Offered";

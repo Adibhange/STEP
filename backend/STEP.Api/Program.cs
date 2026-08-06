@@ -62,10 +62,24 @@ builder.Services.AddInfrastructure();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-// 4. Read JWT Environment Variable Placeholders
+// 4. Read JWT Environment Variables — no hardcoded fallback. A silent fallback here would mean
+// any deployment that forgets to set JWT_SECRET starts signing tokens with a value sitting in
+// git history, letting anyone with repo access forge a valid token for any user/role. Fail fast
+// instead, same as the DB_CONNECTION check above.
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
-                ?? builder.Configuration["JWT_SECRET"]
-                ?? "STEP_ENTERPRISE_ATS_V1_PRODUCTION_JWT_SECRET_KEY_256_BITS_CRYPTO_SECURE_KEY_2026_PROD_VERIFIED";
+                ?? builder.Configuration["JWT_SECRET"];
+
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    Log.Fatal("❌ CRITICAL ERROR: 'JWT_SECRET' environment variable is missing. Please configure JWT_SECRET in the backend .env file.");
+    throw new InvalidOperationException("CRITICAL ERROR: 'JWT_SECRET' environment variable is missing. Please configure JWT_SECRET in the backend .env file.");
+}
+
+if (jwtSecret.Length < 32)
+{
+    Log.Fatal("❌ CRITICAL ERROR: 'JWT_SECRET' is too short ({Length} chars) — use at least 32 random characters (256 bits) for HS256 signing.", jwtSecret.Length);
+    throw new InvalidOperationException("CRITICAL ERROR: 'JWT_SECRET' is too short — use at least 32 random characters (256 bits) for HS256 signing.");
+}
 
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
                 ?? builder.Configuration["JWT_ISSUER"]

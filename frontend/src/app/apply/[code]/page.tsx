@@ -35,8 +35,8 @@ export default function ApplyPage({ params }: ApplyPageProps) {
     vacancyId: scanResult?.vacancyId || vacancyResult?.id || 1,
     vacancyTitle: scanResult?.vacancyTitle || vacancyResult?.title || 'Senior Software Engineer (Walk-in Drive)',
     venueName: scanResult?.venueName || vacancyResult?.hiringLocation || 'Pune Assessment Hub (Hinjawadi Phase 2)',
-    isOpen: scanResult?.isOpen ?? true,
-    message: scanResult?.message,
+    isOpen: scanResult?.isOpenForRegistration ?? true,
+    message: scanResult?.message ?? undefined,
   };
 
   return (

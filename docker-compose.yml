@@ -1,0 +1,35 @@
+# Runs the two STEP app services (API + Next.js frontend) in containers, connecting out to the
+# already-existing SQL Server database (see DB_CONNECTION) — this file does NOT provision a
+# database container. The real candidate/vacancy/etc. data lives on that external server; nothing
+# here creates or resets it.
+#
+# Before running: copy .env.example to .env in this directory and fill in real values.
+# `docker compose up --build` then reads that .env for the variables referenced below.
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: STEP.Api/Dockerfile
+    ports:
+      - "5125:5125"
+    environment:
+      DB_CONNECTION: ${DB_CONNECTION}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-STEP.Enterprise}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-STEP.Users}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:7001}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:5125/api/v1}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:7001}
+    ports:
+      - "7001:7001"
+    depends_on:
+      - backend
+    restart: unless-stopped

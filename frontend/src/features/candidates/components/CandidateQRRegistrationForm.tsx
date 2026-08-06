@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Icon } from '@/design-system';
 import { Select } from '@/design-system/components/select';
-import { DatePicker } from '@/design-system/components/date-picker';
 import { useRegisterCandidateViaQRMutation } from '@/store/services/api';
 
 const QUALIFICATION_OPTIONS = [
@@ -59,7 +58,6 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
   const [currentCTC, setCurrentCTC] = useState<string>('');
   const [expectedCTC, setExpectedCTC] = useState<string>('');
   const [noticePeriodDays, setNoticePeriodDays] = useState<string>('30');
-  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(undefined);
 
   // Validation & Error States
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -120,21 +118,7 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
       };
 
       const res = await registerCandidate(payload).unwrap();
-      if (res?.data) {
-        setRegisteredCandidate(res.data);
-      } else {
-        // Fallback simulated success object if mock endpoint wrapper
-        setRegisteredCandidate({
-          candidateCode: `CND-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-          vacancyTitle: driveInfo.vacancyTitle || 'Walk-in Drive Vacancy',
-          currentStage: 'Registered',
-          status: 'Applied',
-        });
-      }
+      setRegisteredCandidate(res.data);
     } catch (err: any) {
       const serverMsg = err?.data?.message || err?.message || 'Registration failed. Please check your details and try again.';
       setSubmitError(serverMsg);
@@ -422,19 +406,6 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
                   <span>Experienced</span>
                 </button>
               </div>
-            </div>
-
-            {/* Date of Birth */}
-            <div>
-              <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">
-                Date of Birth
-              </label>
-              <DatePicker
-                date={dateOfBirth}
-                onDateChange={setDateOfBirth}
-                placeholder="Select date of birth..."
-                className="w-full"
-              />
             </div>
 
             {/* Highest Qualification */}

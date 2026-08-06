@@ -65,5 +65,7 @@ namespace STEP.Application.Features.Candidates.Common
         string? HighestQualification,
         DateTime CreatedAt,
         List<PipelineProgressDto> PipelineProgress,
-        List<CandidateDocumentDto> Documents);
+        List<CandidateDocumentDto> Documents,
+        int? OfferLetterId = null,
+        string? OfferStatus = null);
 }
