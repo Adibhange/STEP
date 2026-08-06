@@ -16,6 +16,8 @@ import {
 } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 
+import { useChangePasswordMutation, useChangePinMutation } from '@/store/services/api';
+
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -40,6 +42,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [changePasswordApi] = useChangePasswordMutation();
+  const [changePinApi] = useChangePinMutation();
+
   // Reset on open/close
   useEffect(() => {
     if (!isOpen) {
@@ -49,13 +54,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
     if (isDirector) {
-      if (currentPin.length < 6) { setError('Please enter your current 6-digit PIN.'); return; }
-      if (newPin.length < 6) { setError('New PIN must be exactly 6 digits.'); return; }
+      if (!currentPin) { setError('Please enter your current PIN.'); return; }
+      if (!newPin) { setError('Please enter a new PIN.'); return; }
       if (newPin !== confirmPin) { setError('New PIN and confirm PIN do not match.'); return; }
     } else {
       if (!currentPassword) { setError('Please enter your current password.'); return; }
@@ -64,12 +69,20 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     }
 
     setIsSubmitting(true);
-    // TODO: wire to actual API (change-password / change-pin endpoint)
-    setTimeout(() => {
-      setIsSubmitting(false);
-      toast.success(isDirector ? 'PIN updated successfully!' : 'Password updated successfully!');
+    try {
+      if (isDirector) {
+        await changePinApi({ currentPin, newPin }).unwrap();
+        toast.success('PIN updated successfully in SQL Server!');
+      } else {
+        await changePasswordApi({ currentPassword, newPassword }).unwrap();
+        toast.success('Password updated successfully in SQL Server!');
+      }
       onClose();
-    }, 600);
+    } catch (err: any) {
+      setError(err.data?.message || err.message || 'Failed to update credentials.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const title = isDirector ? 'Change Security PIN' : 'Change Password';

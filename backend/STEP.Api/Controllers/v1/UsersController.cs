@@ -25,5 +25,26 @@ namespace STEP.Api.Controllers.v1
             var user = await mediator.Send(command);
             return Ok(ApiResponse<object>.Ok(user, "User created successfully"));
         }
+
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestBody body)
+        {
+            var userId = CurrentUserId ?? throw new UnauthorizedAccessException("Unable to resolve the current user.");
+            await mediator.Send(new STEP.Application.Features.Users.Commands.ChangeUserPassword.ChangeUserPasswordCommand(
+                userId, body.CurrentPassword, body.NewPassword));
+            return Ok(ApiResponse<object>.Ok(true, "Password changed successfully"));
+        }
+
+        [HttpPost("change-pin")]
+        public async Task<IActionResult> ChangePin([FromBody] ChangePinRequestBody body)
+        {
+            var userId = CurrentUserId ?? throw new UnauthorizedAccessException("Unable to resolve the current user.");
+            await mediator.Send(new STEP.Application.Features.Users.Commands.ChangeUserPin.ChangeUserPinCommand(
+                userId, body.CurrentPin, body.NewPin));
+            return Ok(ApiResponse<object>.Ok(true, "4-Digit PIN changed successfully"));
+        }
     }
+
+    public record ChangePasswordRequestBody(string CurrentPassword, string NewPassword);
+    public record ChangePinRequestBody(string CurrentPin, string NewPin);
 }

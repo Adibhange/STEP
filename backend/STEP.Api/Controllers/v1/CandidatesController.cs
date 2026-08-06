@@ -81,6 +81,30 @@ namespace STEP.Api.Controllers.v1
             return Ok(ApiResponse<object>.Ok(candidate, "Evaluator assigned successfully"));
         }
 
+        [HttpPut("{id:int}")]
+        [Authorize(Policy = "Candidate.Approve")]
+        public async Task<IActionResult> UpdateCandidate(int id, [FromBody] UpdateCandidateRequestBody body)
+        {
+            var candidate = await mediator.Send(new STEP.Application.Features.Candidates.Commands.UpdateCandidate.UpdateCandidateCommand(
+                id, body.FirstName, body.LastName, body.Email, body.Phone, body.CurrentLocation, body.HighestQualification,
+                body.TotalExperienceYears, body.CurrentCTC, body.ExpectedCTC, body.NoticePeriodDays));
+            return Ok(ApiResponse<object>.Ok(candidate, "Candidate profile updated successfully"));
+        }
+
+        [HttpDelete("{id:int}/documents/{docId:int}")]
+        public async Task<IActionResult> DeleteDocument(int id, int docId)
+        {
+            await mediator.Send(new STEP.Application.Features.Candidates.Commands.DeleteCandidateDocument.DeleteCandidateDocumentCommand(id, docId));
+            return Ok(ApiResponse<object>.Ok(new { id, docId }, "Document deleted successfully"));
+        }
+
+        [HttpGet("{id:int}/documents/{docId:int}/download")]
+        public async Task<IActionResult> DownloadDocument(int id, int docId)
+        {
+            var docFile = await mediator.Send(new STEP.Application.Features.Candidates.Queries.GetCandidateDocumentFile.GetCandidateDocumentFileQuery(id, docId));
+            return File(docFile.FileBytes, docFile.ContentType, docFile.FileName);
+        }
+
         [HttpPost("{id:int}/schedule-test")]
         public async Task<IActionResult> ScheduleTest(int id, [FromBody] ScheduleTestRequestBody body)
         {
@@ -94,4 +118,7 @@ namespace STEP.Api.Controllers.v1
     public record EvaluateStageRequestBody(int RoundNumber, bool Passed, string? Remarks);
     public record AssignEvaluatorRequestBody(int RoundNumber, int EvaluatorUserId);
     public record ScheduleTestRequestBody(string TestMode, string ScheduledDate, string StartTime, string EndTime, string? Passcode);
+    public record UpdateCandidateRequestBody(
+        string FirstName, string LastName, string Email, string Phone, string? CurrentLocation,
+        string? HighestQualification, decimal TotalExperienceYears, decimal CurrentCTC, decimal ExpectedCTC, int NoticePeriodDays);
 }

@@ -38,6 +38,24 @@ namespace STEP.Api.Controllers.v1
             return Ok(ApiResponse<object>.Ok(vacancy, "Vacancy created successfully"));
         }
 
+        [HttpPut("{id:int}")]
+        [Authorize(Policy = "Vacancy.Create")]
+        public async Task<IActionResult> UpdateVacancy(int id, [FromBody] UpdateVacancyRequestBody body)
+        {
+            var vacancy = await mediator.Send(new STEP.Application.Features.Vacancies.Commands.UpdateVacancy.UpdateVacancyCommand(
+                id, body.Title, body.Status, body.JobDescription, body.MinExperienceYears, body.MaxExperienceYears));
+            return Ok(ApiResponse<object>.Ok(vacancy, "Vacancy updated successfully"));
+        }
+
+        [HttpPut("{vacancyId:int}/pipeline-flows/{flowId:int}")]
+        [Authorize(Policy = "Vacancy.Create")]
+        public async Task<IActionResult> UpdatePipelineFlow(int vacancyId, int flowId, [FromBody] UpdatePipelineFlowRequestBody body)
+        {
+            var flow = await mediator.Send(new STEP.Application.Features.Vacancies.Commands.UpdateVacancyPipelineFlow.UpdateVacancyPipelineFlowCommand(
+                vacancyId, flowId, body.VersionName, body.Description, body.Rounds));
+            return Ok(ApiResponse<object>.Ok(flow, "Pipeline flow updated successfully"));
+        }
+
         [HttpPost("pipeline-rounds/{roundId:int}/question-paper")]
         [Authorize(Policy = "Exam.Manage")]
         public async Task<IActionResult> AssignQuestionPaperToRound(int roundId, [FromBody] AssignQuestionPaperRequestBody body)
@@ -48,4 +66,10 @@ namespace STEP.Api.Controllers.v1
     }
 
     public record AssignQuestionPaperRequestBody(int VacancyQuestionPaperId);
+    public record UpdateVacancyRequestBody(
+        string Title, string Status, string? JobDescription,
+        decimal MinExperienceYears, decimal MaxExperienceYears);
+    public record UpdatePipelineFlowRequestBody(
+        string VersionName, string? Description,
+        List<STEP.Application.Features.Vacancies.Commands.UpdateVacancyPipelineFlow.UpdateRoundInput> Rounds);
 }

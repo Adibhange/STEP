@@ -29,6 +29,7 @@ namespace STEP.Api.Controllers.v1
         }
 
         [HttpPost("{category}")]
+        [Authorize(Policy = "MasterData.Manage")]
         public async Task<IActionResult> CreateRecord(string category, [FromBody] CreateMasterDataRequest request)
         {
             var command = new CreateMasterDataCommand(category, request.Name, request.Code, request.Description, request.IsActive);
@@ -37,6 +38,7 @@ namespace STEP.Api.Controllers.v1
         }
 
         [HttpPut("{category}/{id}")]
+        [Authorize(Policy = "MasterData.Manage")]
         public async Task<IActionResult> UpdateRecord(string category, int id, [FromBody] UpdateMasterDataRequest request)
         {
             var command = new UpdateMasterDataCommand(id, category, request.Name, request.Code, request.Description, request.IsActive);
@@ -45,6 +47,7 @@ namespace STEP.Api.Controllers.v1
         }
 
         [HttpPatch("{category}/{id}/toggle-status")]
+        [Authorize(Policy = "MasterData.Manage")]
         public async Task<IActionResult> ToggleStatus(string category, int id)
         {
             var isActive = await mediator.Send(new ToggleMasterDataStatusCommand(id, category));
@@ -53,6 +56,7 @@ namespace STEP.Api.Controllers.v1
         }
 
         [HttpDelete("{category}/{id}")]
+        [Authorize(Policy = "MasterData.Manage")]
         public async Task<IActionResult> DeleteRecord(string category, int id)
         {
             await mediator.Send(new DeleteMasterDataCommand(id, category));

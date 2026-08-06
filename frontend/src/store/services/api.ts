@@ -453,6 +453,22 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['Vacancies'],
     }),
+    updateVacancy: builder.mutation<ApiEnvelope<any>, { id: number; data: Record<string, any> }>({
+      query: ({ id, data }) => ({
+        url: `/vacancies/${id}`,
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Vacancies', id }, 'Vacancies'],
+    }),
+    updatePipelineFlow: builder.mutation<ApiEnvelope<any>, { vacancyId: number; flowId: number; data: Record<string, any> }>({
+      query: ({ vacancyId, flowId, data }) => ({
+        url: `/vacancies/${vacancyId}/pipeline-flows/${flowId}`,
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { vacancyId }) => [{ type: 'Vacancies', id: vacancyId }, 'Vacancies'],
+    }),
     assignQuestionPaperToRound: builder.mutation<ApiEnvelope<any>, { roundId: number; vacancyQuestionPaperId: number }>({
       query: ({ roundId, vacancyQuestionPaperId }) => ({
         url: `/vacancies/pipeline-rounds/${roundId}/question-paper`,
@@ -562,6 +578,40 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['Candidates'],
     }),
+
+    updateCandidate: builder.mutation<ApiEnvelope<any>, { candidateId: number; data: Record<string, any> }>({
+      query: ({ candidateId, data }) => ({
+        url: `/candidates/${candidateId}`,
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['Candidates'],
+    }),
+
+    deleteCandidateDocument: builder.mutation<ApiEnvelope<any>, { candidateId: number; documentId: number }>({
+      query: ({ candidateId, documentId }) => ({
+        url: `/candidates/${candidateId}/documents/${documentId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Candidates'],
+    }),
+
+    changePassword: builder.mutation<ApiEnvelope<any>, { currentPassword: string; newPassword: string }>({
+      query: (data) => ({
+        url: '/users/change-password',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    changePin: builder.mutation<ApiEnvelope<any>, { currentPin: string; newPin: string }>({
+      query: (data) => ({
+        url: '/users/change-pin',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
 
     // --- Exam Portal Endpoints ---
     startExamSession: builder.mutation<ApiEnvelope<LiveExamWorkspaceData>, { candidateCode: string; passcode: string; testSource?: string }>({
@@ -767,5 +817,11 @@ export const {
   useRegisterCandidateViaQRMutation,
   useEvaluateCandidateStageMutation,
   useScheduleCandidateTestMutation,
+  useUpdateCandidateMutation,
+  useDeleteCandidateDocumentMutation,
+  useChangePasswordMutation,
+  useChangePinMutation,
+  useUpdateVacancyMutation,
+  useUpdatePipelineFlowMutation,
   useGetRecruitmentFunnelQuery,
 } = stepApi;

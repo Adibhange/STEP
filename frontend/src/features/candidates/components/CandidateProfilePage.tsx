@@ -21,6 +21,8 @@ import {
   useEvaluateCandidateStageMutation,
   useAssignEvaluatorMutation,
   useUploadCandidateDocumentMutation,
+  useUpdateCandidateMutation,
+  useDeleteCandidateDocumentMutation,
 } from '@/store/services/api';
 
 export interface StageAttempt {
@@ -287,19 +289,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [showShareToast, setShowShareToast] = useState(false);
   const [selectedDocPreview, setSelectedDocPreview] = useState<CandidateDocument | null>(null);
 
-  const handleDeleteDocument = (docId: number, docName: string) => {
-    setDocumentsData((prev) => prev.filter((d) => d.id !== docId));
-    toast.success('Document Deleted', {
-      description: `${docName} removed from candidate record.`,
-    });
-  };
-
-  const handleDownloadDocument = (docName: string) => {
-    toast.success('Downloading Document', {
-      description: `Initiating download for ${docName}...`,
-    });
-  };
-
   // Dynamic Candidate Profile Details State
   const [candidate, setCandidate] = useState({
     id: candidateId,
@@ -442,14 +431,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             date: p.completedAt
               ? new Date(p.completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
               : p.startedAt
-              ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-              : candDate,
+                ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : candDate,
             interviewer: p.interviewerName || (p.roundNumber === 1 ? 'Assigned Evaluator' : 'Unassigned'),
             interviewerInitials: p.interviewerName
               ? p.interviewerName.split(' ').map((n: string) => n[0]).join('')
               : p.roundNumber === 1
-              ? 'AE'
-              : 'UA',
+                ? 'AE'
+                : 'UA',
             interviewerRole: p.roundType || 'Evaluator',
             mode: p.roundNumber === 1 ? 'Offline (Paper Test)' : p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
             feedback: isLocked
@@ -457,26 +446,26 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
                 : 'Round locked — candidate failed both technical rounds (Coding Challenge & Technical F2F).'
               : (() => {
-                  const hasScore = p.scoreObtained !== null && p.scoreObtained !== undefined;
-                  const scoreStr = hasScore ? `Candidate Exam Score: ${p.scoreObtained}%` : '';
+                const hasScore = p.scoreObtained !== null && p.scoreObtained !== undefined;
+                const scoreStr = hasScore ? `Candidate Exam Score: ${p.scoreObtained}%` : '';
 
-                  if (hasScore && p.remarks) {
-                    return `${scoreStr} • ${p.remarks}`;
-                  }
-                  if (hasScore) {
-                    return `${scoreStr} (${p.status || 'Evaluated'})`;
-                  }
-                  if (isCurrentRoundFailed) {
-                    return p.remarks || 'Candidate failed evaluation for this round.';
-                  }
-                  if (p.remarks) {
-                    return p.remarks;
-                  }
-                  if (hasCompletedTest) {
-                    return 'Candidate submitted exam (Awaiting scorecard evaluation)';
-                  }
-                  return 'Evaluation in progress';
-                })(),
+                if (hasScore && p.remarks) {
+                  return `${scoreStr} • ${p.remarks}`;
+                }
+                if (hasScore) {
+                  return `${scoreStr} (${p.status || 'Evaluated'})`;
+                }
+                if (isCurrentRoundFailed) {
+                  return p.remarks || 'Candidate failed evaluation for this round.';
+                }
+                if (p.remarks) {
+                  return p.remarks;
+                }
+                if (hasCompletedTest) {
+                  return 'Candidate submitted exam (Awaiting scorecard evaluation)';
+                }
+                return 'Evaluation in progress';
+              })(),
             result: isLocked ? 'Locked' : isCurrentRoundFailed ? 'Failed' : p.status || 'Pending',
             interviewId: p.interviewId ?? null,
             candidateExamSessionId: p.candidateExamSessionId ?? null,
@@ -736,6 +725,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const { data: offerRes } = useGetOfferByIdQuery(offerLetterId ?? 0, { skip: !offerLetterId });
   const [generateOfferLetter, { isLoading: isGeneratingOffer }] = useGenerateOfferLetterMutation();
   const [approveOffer, { isLoading: isApprovingOffer }] = useApproveOfferMutation();
+  const [updateCandidateApi] = useUpdateCandidateMutation();
+  const [deleteCandidateDocApi] = useDeleteCandidateDocumentMutation();
 
   // Submit Feedback / Director Decision Modal State
   const [selectedFeedbackStage, setSelectedFeedbackStage] = useState<StageItem | null>(null);
@@ -914,7 +905,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     toast.error('Validation Error', { description: msg });
   };
 
-  const handleSaveProfileEdit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleSaveProfileEdit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const f = editProfileForm;
@@ -976,10 +967,54 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       return fireValidationToast('Education field is required.');
     }
 
-    // All validations passed — save
-    setCandidate({ ...editProfileForm });
-    setShowEditProfileModal(false);
-    toast.success('Profile Saved', { description: 'Candidate profile details updated successfully.' });
+    // All validations passed — save to SQL Server DB
+    try {
+      const nameParts = f.name.trim().split(' ');
+      const firstName = nameParts[0] || 'Candidate';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      await updateCandidateApi({
+        candidateId: numericId,
+        data: {
+          firstName,
+          lastName,
+          email: f.email,
+          phone: f.phone,
+          currentLocation: f.location,
+          highestQualification: f.education,
+          totalExperienceYears: parseFloat(f.experience) || 0,
+          currentCTC: parseFloat(f.currentCtc) || 0,
+          expectedCTC: parseFloat(f.expectedCtc) || 0,
+          noticePeriodDays: parseInt(f.noticePeriod, 10) || 0,
+        },
+      }).unwrap();
+
+      setCandidate({ ...editProfileForm });
+      setShowEditProfileModal(false);
+      toast.success('Profile Saved', { description: 'Candidate profile details updated successfully' });
+    } catch (err: any) {
+      toast.error('Update Failed', { description: err.data?.message || err.message || 'Failed to update candidate profile.' });
+    }
+  };
+
+  const handleDeleteDocument = async (docId: number, docName: string) => {
+    try {
+      await deleteCandidateDocApi({ candidateId: numericId, documentId: docId }).unwrap();
+      setDocumentsData((prev) => prev.filter((d) => d.id !== docId));
+      toast.info('Document Deleted', { description: `"${docName}" removed from candidate profile.` });
+    } catch (err: any) {
+      toast.error('Delete Failed', { description: err.data?.message || 'Failed to delete document.' });
+    }
+  };
+
+  const handleDownloadDocument = (docName: string, docId?: number) => {
+    const targetId = docId || selectedDocPreview?.id;
+    if (targetId) {
+      window.open(`/api/v1/candidates/${numericId}/documents/${targetId}/download`, '_blank');
+      toast.success('Downloading Document', { description: `Downloading ${docName}...` });
+    } else {
+      toast.info('Downloading File', { description: `Downloading ${docName}...` });
+    }
   };
 
   const handleRolloutOffer = async (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -1080,13 +1115,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           prev.map((s) =>
             s.id === selectedFeedbackStage.id
               ? {
-                  ...s,
-                  status: isPassed ? 'Passed' : 'Failed',
-                  statusType: isPassed ? 'passed' : 'rejected',
-                  result: isPassed ? 'Passed' : 'Failed',
-                  feedback: feedbackText || `Assessment evaluation submitted (${scorecardRecommendation}).`,
-                  actionLabel: null,
-                }
+                ...s,
+                status: isPassed ? 'Passed' : 'Failed',
+                statusType: isPassed ? 'passed' : 'rejected',
+                result: isPassed ? 'Passed' : 'Failed',
+                feedback: feedbackText || `Assessment evaluation submitted (${scorecardRecommendation}).`,
+                actionLabel: null,
+              }
               : s
           )
         );
@@ -1259,13 +1294,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       prev.map((s) =>
         s.id === stageId || s.id === 1
           ? {
-              ...s,
-              status: 'Passed',
-              statusType: 'passed',
-              result: 'Passed',
-              feedback: `Paper Aptitude Test evaluated and passed on ${todayStr}. Candidate qualified for Next Round.`,
-              actionLabel: null,
-            }
+            ...s,
+            status: 'Passed',
+            statusType: 'passed',
+            result: 'Passed',
+            feedback: `Paper Aptitude Test evaluated and passed on ${todayStr}. Candidate qualified for Next Round.`,
+            actionLabel: null,
+          }
           : s
       )
     );
@@ -1293,13 +1328,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       prev.map((s) =>
         s.id === stageId || s.id === 1
           ? {
-              ...s,
-              status: 'Failed',
-              statusType: 'rejected',
-              result: 'Failed',
-              feedback: `Paper Aptitude Test evaluated on ${todayStr} — did not meet cutoff marks.`,
-              actionLabel: null,
-            }
+            ...s,
+            status: 'Failed',
+            statusType: 'rejected',
+            result: 'Failed',
+            feedback: `Paper Aptitude Test evaluated on ${todayStr} — did not meet cutoff marks.`,
+            actionLabel: null,
+          }
           : s
       )
     );
@@ -1464,13 +1499,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <h1 className="font-bold text-slate-900 text-base font-heading truncate">{candidate.name}</h1>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${
-                        candidate.status?.toLowerCase() === 'rejected' || candidate.status?.toLowerCase() === 'failed'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : candidate.status?.toLowerCase() === 'offered' || candidate.status?.toLowerCase() === 'hired'
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${candidate.status?.toLowerCase() === 'rejected' || candidate.status?.toLowerCase() === 'failed'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : candidate.status?.toLowerCase() === 'offered' || candidate.status?.toLowerCase() === 'hired'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-blue-50 text-blue-700 border-blue-200'
-                      }`}
+                        }`}
                     >
                       {candidate.status}
                     </span>
@@ -1690,7 +1724,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDownloadDocument(doc.name)}
+                        onClick={() => handleDownloadDocument(doc.name, doc.id)}
                         className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                         title="Download Document"
                       >
@@ -1845,8 +1879,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                     {stage.isDirectorRound
                                       ? 'Assign Director'
                                       : isAssessment
-                                      ? 'Assign Evaluator'
-                                      : 'Schedule & Assign Interviewer'}
+                                        ? 'Assign Evaluator'
+                                        : 'Schedule & Assign Interviewer'}
                                   </span>
                                 </button>
 
@@ -2198,7 +2232,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
       {/* ── 6. Editable Offer Letter Rollout Form Modal Dialog ───────────────── */}
       {showOfferModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setShowOfferModal(false)}
         >
@@ -2397,8 +2431,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     {selectedAssignStage.isDirectorRound
                       ? 'Assign Director'
                       : isAssessmentRound
-                      ? 'Assign Evaluator'
-                      : 'Assign Interviewer'}{' '}
+                        ? 'Assign Evaluator'
+                        : 'Assign Interviewer'}{' '}
                     — {selectedAssignStage.name}
                   </h3>
                   <span className="text-xs text-slate-500 font-medium">Candidate: {candidate.name}</span>
@@ -2418,8 +2452,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     {selectedAssignStage.isDirectorRound
                       ? 'Select Director (Exclusive Role)'
                       : isAssessmentRound
-                      ? 'Select Evaluator (Technical Grader)'
-                      : 'Select Interviewer'}
+                        ? 'Select Evaluator (Technical Grader)'
+                        : 'Select Interviewer'}
                   </label>
                   <FormSelect
                     value={assignedInterviewer}
@@ -2477,8 +2511,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   {isScheduling
                     ? 'Assigning…'
                     : isAssessmentRound
-                    ? 'Assign Evaluator'
-                    : 'Assign & Send Invites'}
+                      ? 'Assign Evaluator'
+                      : 'Assign & Send Invites'}
                 </button>
               </div>
             </form>
@@ -3062,9 +3096,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <span className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${
-                  selectedDocPreview.type === 'Profile Photo' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-600'
-                }`}>
+                <span className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${selectedDocPreview.type === 'Profile Photo' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-600'
+                  }`}>
                   {selectedDocPreview.type === 'Profile Photo' ? 'IMG' : 'PDF'}
                 </span>
                 <div>
