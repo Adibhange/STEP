@@ -40,7 +40,7 @@ export const UsersView: React.FC = () => {
     const found = (deptMasterRes?.data || []).find(
       (d: any) => d.name.toLowerCase() === deptName.toLowerCase()
     );
-    return found ? found.id : undefined;
+    return found ? Number(found.id) : undefined;
   };
 
   const displayUsers: UserItem[] = (apiUsersResponse?.data || []).map((u: any) => ({

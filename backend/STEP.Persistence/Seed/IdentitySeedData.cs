@@ -72,8 +72,11 @@ namespace STEP.Persistence.Seed
                 }
             }
 
-            AddGrants(RoleDirectorId, "Vacancy.View", "Vacancy.Create", "Candidate.View", "Candidate.Approve", "Report.View", "User.Manage", "MasterData.Manage");
-            AddGrants(RoleHRId, "Vacancy.View", "Vacancy.Create", "Candidate.View", "Candidate.Approve", "Report.View", "User.Manage", "MasterData.Manage");
+            // Director and HR carry every permission — both roles need to be able to complete
+            // the full vacancy-to-exam lifecycle (create vacancy, build assessment pattern,
+            // import/publish question papers) without a separate role handing off mid-flow.
+            AddGrants(RoleDirectorId);
+            AddGrants(RoleHRId);
             AddGrants(RoleInterviewerId, "Candidate.View", "Exam.Manage");
 
             modelBuilder.Entity<RolePermission>().HasData(grants);

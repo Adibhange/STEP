@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@/design-system';
+import { toast } from '@/design-system/feedback/toast';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { AssessmentSectionConfig } from '../types/vacancy.types';
-import { downloadAssessmentExcelTemplate, parseUploadedAssessmentExcel } from '../utils/excelGenerator';
+import { downloadAssessmentExcelTemplate } from '../utils/excelGenerator';
 import { AddMasterTitleModal } from './AddMasterTitleModal';
+import {
+  useGetVacancyByIdQuery,
+  useGetQuestionPapersQuery,
+  useCreateQuestionPaperMutation,
+  useImportQuestionPaperExcelMutation,
+} from '@/store/services/api';
 
 export const INITIAL_MASTER_ROUND_TITLES = [
   'MCQ Questions',
@@ -14,12 +21,18 @@ export const INITIAL_MASTER_ROUND_TITLES = [
   'Subjective & Essay Questions',
 ];
 
-export const AssessmentPatternBuilder: React.FC = () => {
+interface AssessmentPatternBuilderProps {
+  vacancyId: number;
+}
+
+export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> = ({ vacancyId }) => {
   // Master Titles List
   const [masterTitles, setMasterTitles] = useState<string[]>(INITIAL_MASTER_ROUND_TITLES);
   const [isAddMasterModalOpen, setIsAddMasterModalOpen] = useState(false);
 
-  // Pattern Sections State
+  // Pattern Sections State — starts with placeholder examples; replaced with the vacancy's real
+  // saved pattern below as soon as it loads (or left as an editable starting point if the
+  // vacancy genuinely has no pattern configured yet).
   const [sections, setSections] = useState<AssessmentSectionConfig[]>([
     {
       id: 'sec-1',
@@ -38,6 +51,7 @@ export const AssessmentPatternBuilder: React.FC = () => {
       totalMarks: 100,
     },
   ]);
+  const hasSyncedRealSections = useRef(false);
 
   // Anti-Cheating Shuffling Toggles
   const [shuffleQuestions, setShuffleQuestions] = useState(true);
@@ -47,6 +61,45 @@ export const AssessmentPatternBuilder: React.FC = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [lastImportedCount, setLastImportedCount] = useState<number | null>(null);
+
+  const { data: vacancyRes, isLoading: isVacancyLoading } = useGetVacancyByIdQuery(vacancyId);
+  const { data: papersRes } = useGetQuestionPapersQuery();
+  const [createQuestionPaperApi] = useCreateQuestionPaperMutation();
+  const [importQuestionPaperExcelApi] = useImportQuestionPaperExcelMutation();
+
+  // Load the vacancy's real, already-saved assessment pattern exactly once when it arrives —
+  // replacing the placeholder examples above with what was actually configured (or, if the
+  // vacancy has no sections saved at all yet, leaving the placeholders as an editable starting
+  // point for configuring one here for the first time).
+  useEffect(() => {
+    if (hasSyncedRealSections.current) return;
+    const realSections = vacancyRes?.data?.assessmentSections;
+    if (realSections && realSections.length > 0) {
+      setSections(
+        realSections
+          .slice()
+          .sort((a: any, b: any) => a.sectionOrder - b.sectionOrder)
+          .map((s: any) => ({
+            id: String(s.id),
+            sectionTitle: s.sectionTitle,
+            totalQuestions: s.totalQuestions,
+            timeLimitMinutes: s.timeLimitMinutes,
+            marksPerQuestion: s.marksPerQuestion,
+            totalMarks: s.totalMarks,
+          }))
+      );
+      hasSyncedRealSections.current = true;
+    } else if (vacancyRes?.data) {
+      // Confirmed: this vacancy really has no saved pattern yet — keep placeholders editable.
+      hasSyncedRealSections.current = true;
+    }
+  }, [vacancyRes]);
+
+  // The vacancy's existing question paper, if one was already created (during vacancy creation,
+  // or from a prior visit to this tab) — surfaced so the real state is visible instead of always
+  // showing an empty upload box regardless of what's actually been imported already.
+  const existingPaper = (papersRes?.data || []).find((p: any) => p.vacancyId === vacancyId);
 
   const grandTotalQuestions = sections.reduce((acc, s) => acc + s.totalQuestions, 0);
   const grandTotalTime = sections.reduce((acc, s) => acc + s.timeLimitMinutes, 0);
@@ -98,26 +151,81 @@ export const AssessmentPatternBuilder: React.FC = () => {
 
   const handleFileDrop = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      setIsUploading(true);
-      try {
-        await parseUploadedAssessmentExcel(file);
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadSuccess(true);
-        }, 1000);
-      } catch (err) {
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadSuccess(true);
-        }, 1000);
+    if (!file) return;
+
+    if (existingPaper?.status === 'Published') {
+      toast.error('Paper Already Published', {
+        description: 'This question paper is published and locked — it can no longer accept new imports.',
+      });
+      return;
+    }
+
+    setUploadedFile(file);
+    setIsUploading(true);
+    setUploadSuccess(false);
+    try {
+      // Reuse this vacancy's existing Draft question paper if one already exists, otherwise
+      // create one first — there's nothing to import questions into until a paper exists.
+      let paperId = existingPaper?.status === 'Draft' ? existingPaper.id : undefined;
+      if (!paperId) {
+        const paperRes = await createQuestionPaperApi({
+          vacancyId,
+          title: `Assessment Pattern (${grandTotalQuestions}Q / ${grandTotalMarks}M)`,
+          durationMinutes: grandTotalTime,
+          passingPercentage: 70,
+        }).unwrap();
+        paperId = paperRes.data.id;
       }
+
+      const importRes = await importQuestionPaperExcelApi({ id: paperId, file }).unwrap();
+      const imported = importRes.data;
+
+      setIsUploading(false);
+      setUploadSuccess(true);
+      setLastImportedCount(imported?.totalQuestionsImported ?? 0);
+      toast.success('Questions Imported', {
+        description: `${imported?.totalQuestionsImported ?? 0} question(s) imported${
+          imported?.worksheetsSkipped ? `, ${imported.worksheetsSkipped} worksheet(s) skipped` : ''
+        }.`,
+      });
+    } catch (err: any) {
+      setIsUploading(false);
+      setUploadSuccess(false);
+      setUploadedFile(null);
+      toast.error('Import Failed', {
+        description: err?.data?.message || 'Could not import this Excel file. Please check its format and try again.',
+      });
     }
   };
 
+  const hasRealSections = (vacancyRes?.data?.assessmentSections?.length ?? 0) > 0;
+
   return (
     <div className="flex flex-col gap-5 w-full">
+      {/* Real saved-state banner — reflects what's actually persisted for this vacancy, not
+          just whatever the editor below currently shows. */}
+      {isVacancyLoading ? (
+        <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border-default)] text-[12px] text-[var(--text-tertiary)] flex items-center gap-2">
+          <Icon name="spinner" size="xs" className="animate-spin" />
+          <span>Loading this vacancy's saved assessment pattern…</span>
+        </div>
+      ) : hasRealSections ? (
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-[12px] text-emerald-700 font-semibold flex items-center gap-2">
+          <Icon name="check-circle" size="xs" />
+          <span>
+            Showing the pattern already saved for this vacancy
+            {existingPaper ? ` — question paper "${existingPaper.paperCode}" is ${existingPaper.status}${
+              existingPaper.totalQuestions ? ` with ${existingPaper.totalQuestions} question(s) imported` : ' with no questions imported yet'
+            }.` : ' — no question paper has been created for it yet.'}
+          </span>
+        </div>
+      ) : (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-[12px] text-amber-700 font-semibold flex items-center gap-2">
+          <Icon name="alert-triangle" size="xs" />
+          <span>No assessment pattern was saved for this vacancy yet — configure one below.</span>
+        </div>
+      )}
+
       {/* STEP 1: Decide Round & Section Pattern */}
       <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-5 shadow-2xs flex flex-col gap-4">
         <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
@@ -316,7 +424,7 @@ export const AssessmentPatternBuilder: React.FC = () => {
 
           {uploadSuccess && (
             <span className="text-[11.5px] font-mono font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              ✓ Multi-Worksheet Question Bank Successfully Uploaded & Validated ({grandTotalQuestions} Questions Loaded)
+              ✓ Imported and saved to the database ({lastImportedCount ?? 0} question(s) loaded)
             </span>
           )}
         </div>
@@ -332,29 +440,33 @@ export const AssessmentPatternBuilder: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-3.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border-default)] flex items-center justify-between">
+          <div className="p-3.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border-default)] flex items-center justify-between opacity-70">
             <div>
               <span className="text-[12.5px] font-bold text-[var(--text-primary)] block">Shuffle Question Order</span>
-              <span className="text-[11px] text-[var(--text-tertiary)] block font-sans">Randomize question order dynamically per candidate</span>
+              <span className="text-[11px] text-[var(--text-tertiary)] block font-sans">Always enabled for every exam session — not currently configurable</span>
             </div>
             <input
               type="checkbox"
               checked={shuffleQuestions}
-              onChange={(e) => setShuffleQuestions(e.target.checked)}
-              className="w-4.5 h-4.5 accent-emerald-600 cursor-pointer"
+              disabled
+              readOnly
+              title="Question shuffling is always on and cannot be turned off yet"
+              className="w-4.5 h-4.5 accent-emerald-600 cursor-not-allowed"
             />
           </div>
 
-          <div className="p-3.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border-default)] flex items-center justify-between">
+          <div className="p-3.5 bg-[var(--surface-2)] rounded-xl border border-[var(--border-default)] flex items-center justify-between opacity-70">
             <div>
               <span className="text-[12.5px] font-bold text-[var(--text-primary)] block">Shuffle Answer Options</span>
-              <span className="text-[11px] text-[var(--text-tertiary)] block font-sans">Randomize A, B, C, D choices per question</span>
+              <span className="text-[11px] text-[var(--text-tertiary)] block font-sans">Always enabled for every exam session — not currently configurable</span>
             </div>
             <input
               type="checkbox"
               checked={shuffleOptions}
-              onChange={(e) => setShuffleOptions(e.target.checked)}
-              className="w-4.5 h-4.5 accent-emerald-600 cursor-pointer"
+              disabled
+              readOnly
+              title="Option shuffling is always on and cannot be turned off yet"
+              className="w-4.5 h-4.5 accent-emerald-600 cursor-not-allowed"
             />
           </div>
         </div>

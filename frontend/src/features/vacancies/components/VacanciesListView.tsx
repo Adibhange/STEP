@@ -5,8 +5,15 @@ import { Icon } from '@/design-system';
 import { CreateVacancyModal } from './CreateVacancyModal';
 import { VacancyDetailDialog } from './VacancyDetailDialog';
 import type { VacancyItem } from '../types/vacancy.types';
-import { useGetVacanciesQuery, useCreateVacancyMutation, useGetCandidatesQuery } from '@/store/services/api';
+import {
+  useGetVacanciesQuery,
+  useCreateVacancyMutation,
+  useCreateQuestionPaperMutation,
+  useImportQuestionPaperExcelMutation,
+  useGetCandidatesQuery,
+} from '@/store/services/api';
 import { useAppDispatch, notifySuccess, notifyError } from '@/store';
+import { buildCreateVacancyCommand } from '../utils/buildCreateVacancyCommand';
 
 /**
  * STEP Enterprise VacanciesListView
@@ -20,6 +27,8 @@ export const VacanciesListView: React.FC = () => {
   const { data: apiVacanciesResponse, isLoading, isError } = useGetVacanciesQuery();
   const { data: candidatesRes } = useGetCandidatesQuery();
   const [createVacancyApi] = useCreateVacancyMutation();
+  const [createQuestionPaperApi] = useCreateQuestionPaperMutation();
+  const [importQuestionPaperExcelApi] = useImportQuestionPaperExcelMutation();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [driveFilter, setDriveFilter] = useState<string>('All');
@@ -87,33 +96,14 @@ export const VacanciesListView: React.FC = () => {
   }, [apiVacancies, search, statusFilter, driveFilter]);
 
   const handleSaveVacancy = async (vacancyData: any) => {
+    let vacancy: any;
     try {
-      await createVacancyApi({
-        title: vacancyData.title,
-        masterRoleId: 1,
-        departmentId: 1,
-        hiringLocationId: 1,
-        employmentTypeId: 1,
-        driveType: vacancyData.driveType || 'Walk-in Drive',
-        workMode: vacancyData.workMode || 'Hybrid',
-        totalOpenings: vacancyData.openPositions || 1,
-        minExperienceYears: 1,
-        maxExperienceYears: 10,
+      const command = buildCreateVacancyCommand({
+        ...vacancyData,
         jobDescription: `${vacancyData.title} - ${vacancyData.department}`,
-        closingDate: vacancyData.closingDate || '2026-08-30',
-        status: vacancyData.status || 'Open',
-        testLocationIds: [1],
-        pipelineFlows: [],
-        assessmentSections: [],
-      }).unwrap();
-
-      dispatch(
-        notifySuccess({
-          title: 'Vacancy Created',
-          description: `Successfully published "${vacancyData.title}" to the database.`,
-        })
-      );
-      setIsCreateOpen(false);
+      });
+      const vacancyRes = await createVacancyApi(command).unwrap();
+      vacancy = vacancyRes.data;
     } catch (err: any) {
       dispatch(
         notifyError({
@@ -121,7 +111,58 @@ export const VacanciesListView: React.FC = () => {
           description: err?.data?.message || 'Failed to save vacancy to backend.',
         })
       );
+      throw err;
     }
+
+    // The vacancy itself is saved at this point — a failure past here (question paper creation
+    // or Excel import) shouldn't be reported as "vacancy creation failed", since it wasn't. It's
+    // surfaced as its own distinct warning instead, and doesn't re-throw: the modal should still
+    // close and the vacancy should still show up, with question-paper setup retryable afterward
+    // from the Assessment Pattern Builder tab.
+    try {
+      // A question paper (and any staged Excel import) is only meaningful once at least one
+      // assessment section was configured — an empty pattern has nothing to attach questions to.
+      if (vacancyData.assessmentSections?.length) {
+        const paperRes = await createQuestionPaperApi({
+          vacancyId: vacancy.id,
+          title: vacancyData.questionPaperTitle,
+          durationMinutes: vacancyData.assessmentDurationMinutes,
+          passingPercentage: vacancyData.passingCriteriaPercentage,
+        }).unwrap();
+        const paper = paperRes.data;
+
+        if (vacancyData.assessmentExcelFile) {
+          const importRes = await importQuestionPaperExcelApi({
+            id: paper.id,
+            file: vacancyData.assessmentExcelFile,
+          }).unwrap();
+          const imported = importRes.data;
+          dispatch(
+            notifySuccess({
+              title: 'Questions Imported',
+              description: `${imported?.totalQuestionsImported ?? 0} question(s) imported into "${vacancy.title}"'s question paper.`,
+            })
+          );
+        }
+      }
+    } catch (err: any) {
+      dispatch(
+        notifyError({
+          title: 'Question Paper Setup Incomplete',
+          description:
+            `"${vacancy.title}" was created, but its question paper could not be fully set up: ` +
+            `${err?.data?.message || 'an error occurred'}. You can retry the upload from its Assessment Pattern tab.`,
+        })
+      );
+    }
+
+    dispatch(
+      notifySuccess({
+        title: 'Vacancy Created',
+        description: `"${vacancy.title}" created successfully.`,
+      })
+    );
+    setIsCreateOpen(false);
   };
 
   const statusVariantMap: Record<string, string> = {

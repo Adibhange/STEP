@@ -35,12 +35,22 @@ namespace STEP.Persistence.Seed
                 await db.SaveChangesAsync();
             }
 
-            // Ensure HR Role has User.Manage (7) and MasterData.Manage (8) permissions
+            // Ensure Director (RoleId=2) and HR (RoleId=3) carry every permission (1-8), matching
+            // IdentitySeedData's AddGrants(RoleDirectorId)/AddGrants(RoleHRId) with no filter —
+            // both need the full vacancy-to-exam lifecycle (create vacancy, build assessment
+            // pattern, import/publish question papers) without handing off to another role
+            // mid-flow. This runtime sync exists because a prior narrower patch here only granted
+            // permissions 7 and 8 to HR, silently leaving HR (and Director) unable to create
+            // vacancies or manage exams despite IdentitySeedData's declared intent.
             var syncPermissionsSql = @"
-                IF NOT EXISTS (SELECT 1 FROM master.RolePermissions WHERE RoleId = 3 AND PermissionId = 7)
-                    INSERT INTO master.RolePermissions (RoleId, PermissionId, CreatedAt, IsDeleted) VALUES (3, 7, GETUTCDATE(), 0);
-                IF NOT EXISTS (SELECT 1 FROM master.RolePermissions WHERE RoleId = 3 AND PermissionId = 8)
-                    INSERT INTO master.RolePermissions (RoleId, PermissionId, CreatedAt, IsDeleted) VALUES (3, 8, GETUTCDATE(), 0);
+                INSERT INTO master.RolePermissions (RoleId, PermissionId, CreatedAt, IsDeleted)
+                SELECT r.RoleId, p.PermissionId, GETUTCDATE(), 0
+                FROM (VALUES (2), (3)) AS r(RoleId)
+                CROSS JOIN (VALUES (1), (2), (3), (4), (5), (6), (7), (8)) AS p(PermissionId)
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM master.RolePermissions rp
+                    WHERE rp.RoleId = r.RoleId AND rp.PermissionId = p.PermissionId
+                );
             ";
             await db.Database.ExecuteSqlRawAsync(syncPermissionsSql);
         }

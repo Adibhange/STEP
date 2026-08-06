@@ -24,6 +24,7 @@ namespace STEP.Infrastructure.Documents
             using var workbook = new XLWorkbook(fileStream);
             var rows = new List<ParsedQuestionRow>();
             var skipped = new List<string>();
+            var warnings = new List<string>();
 
             foreach (var worksheet in workbook.Worksheets)
             {
@@ -52,16 +53,33 @@ namespace STEP.Infrastructure.Documents
                     }
                 }
 
+                // A missing 'question_text' column means every row would silently read as blank
+                // and every row would be skipped with zero explanation — flag it explicitly and
+                // skip the whole worksheet instead of pretending it had no questions to import.
+                if (!columnIndex.ContainsKey("question_text"))
+                {
+                    warnings.Add($"{worksheet.Name}: missing required column 'question_text' — worksheet skipped.");
+                    skipped.Add(worksheet.Name);
+                    continue;
+                }
+
+                if (!columnIndex.ContainsKey("question_type"))
+                {
+                    warnings.Add($"{worksheet.Name}: missing 'question_type' column — every row defaulted to SUBJECTIVE.");
+                }
+
                 string Cell(IXLRow row, string header) =>
                     columnIndex.TryGetValue(header, out var col) ? row.Cell(col).GetString().Trim() : string.Empty;
 
                 var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 1;
+                var blankRowCount = 0;
                 for (var r = 2; r <= lastRow; r++)
                 {
                     var row = worksheet.Row(r);
                     var questionText = Cell(row, "question_text");
                     if (string.IsNullOrWhiteSpace(questionText))
                     {
+                        blankRowCount++;
                         continue;
                     }
 
@@ -102,9 +120,14 @@ namespace STEP.Infrastructure.Documents
                         maxWordCount,
                         options));
                 }
+
+                if (blankRowCount > 0)
+                {
+                    warnings.Add($"{worksheet.Name}: {blankRowCount} row(s) skipped (blank 'question_text').");
+                }
             }
 
-            return new ExcelImportParseResult(rows, skipped);
+            return new ExcelImportParseResult(rows, skipped, warnings);
         }
     }
 }

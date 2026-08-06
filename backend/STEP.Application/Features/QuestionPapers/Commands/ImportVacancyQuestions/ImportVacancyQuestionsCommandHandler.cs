@@ -17,7 +17,7 @@ namespace STEP.Application.Features.QuestionPapers.Commands.ImportVacancyQuestio
         {
             var paper = await db.VacancyQuestionPapers
                 .Include(p => p.Vacancy).ThenInclude(v => v.AssessmentSections)
-                .Include(p => p.Questions)
+                .Include(p => p.Questions).ThenInclude(q => q.Options)
                 .FirstOrDefaultAsync(p => p.Id == request.VacancyQuestionPaperId, cancellationToken)
                 ?? throw new NotFoundException(nameof(VacancyQuestionPaper), request.VacancyQuestionPaperId);
 
@@ -81,7 +81,14 @@ namespace STEP.Application.Features.QuestionPapers.Commands.ImportVacancyQuestio
                 skipped.Add($"{unmatchedSectionRowCount} row(s) referenced a section not defined on this vacancy");
             }
 
-            return new QuestionImportResultDto(paper.Questions.Count, skipped.Count, skipped);
+            // Informational only — reuses the same checklist Publish enforces as a hard gate, but
+            // here it's just surfaced as warnings so problems are visible right after import
+            // instead of only being discovered when someone later tries to publish the paper.
+            // A partial import mid-pattern is expected and not itself an error at this point.
+            var warnings = parsed.Warnings.ToList();
+            warnings.AddRange(QuestionPaperValidation.Validate(paper).Select(f => f.ErrorMessage));
+
+            return new QuestionImportResultDto(paper.Questions.Count, skipped.Count, skipped, warnings);
         }
     }
 }

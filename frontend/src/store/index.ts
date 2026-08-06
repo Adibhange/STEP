@@ -22,6 +22,8 @@ export const store = configureStore({
           'meta.baseQueryMeta.request',
           'meta.baseQueryMeta.response',
           'meta.baseQueryMeta',
+          // importQuestionPaperExcel's mutation arg legitimately carries a raw File for upload.
+          'meta.arg.originalArgs.file',
         ],
         ignoredPaths: ['notification.queue', 'notification.history'],
       },

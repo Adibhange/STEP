@@ -253,7 +253,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
           {!isDirectHiring && activeTab === 'flow-versions' && <PipelineFlowVersions vacancyId={vacancy.id} />}
 
           {/* ASSESSMENT BUILDER & EXCEL (Both Walk-in Drive & Direct Hiring) */}
-          {activeTab === 'assessment-builder' && <AssessmentPatternBuilder />}
+          {activeTab === 'assessment-builder' && <AssessmentPatternBuilder vacancyId={Number(vacancy.id)} />}
 
           {/* CANDIDATES & BULK FLOW ASSIGNMENT (Walk-in Drive & Direct Hiring) */}
           {activeTab === 'bulk-assignment' && (

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
-import { useGetMasterDataByCategoryQuery, useGetUsersQuery, useCreateVacancyMutation } from '@/store/services/api';
+import { useGetMasterDataByCategoryQuery, useGetUsersQuery } from '@/store/services/api';
 import { AssessmentSectionConfig, PipelineFlowVersion, PipelineRound } from '../types/vacancy.types';
 import { downloadAssessmentExcelTemplate, parseUploadedAssessmentExcel } from '../utils/excelGenerator';
 import { AddMasterTitleModal } from './AddMasterTitleModal';
@@ -12,7 +12,7 @@ import { AddMasterTitleModal } from './AddMasterTitleModal';
 interface CreateVacancyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave?: (vacancyData: any) => void;
+  onSave?: (vacancyData: any) => Promise<void>;
 }
 
 export const INITIAL_MASTER_TITLES = [
@@ -33,7 +33,6 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
   const { data: hiringLocRes } = useGetMasterDataByCategoryQuery('hiringlocations');
   const { data: testLocRes } = useGetMasterDataByCategoryQuery('testlocations');
   const { data: usersRes } = useGetUsersQuery();
-  const [createVacancyApi] = useCreateVacancyMutation();
 
   const roleOptions = useMemo(() => (rolesRes?.data || []).map((r) => ({ value: r.name, label: `${r.name} (${r.code || '—'})` })), [rolesRes]);
   const expOptions = useMemo(() => (expRes?.data || []).map((e) => ({ value: e.name, label: e.name })), [expRes]);
@@ -61,6 +60,46 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
 
   const [assignedRecruiter, setAssignedRecruiter] = useState(userOptions[0]?.value || 'Aditya Bhange');
   const [hiringManager, setHiringManager] = useState(userOptions[1]?.value || 'Rajesh Sharma');
+
+  // Derived numeric master-data/user IDs — the selects above bind on display name for UI
+  // simplicity, so the real backend-required IDs are looked up here from the same fetched
+  // lists rather than threading id-based value binding through every CustomSelect.
+  //
+  // Note: GetMasterDataQueryHandler deliberately serializes master-data ids as strings
+  // (`m.Id.ToString()`), even though CreateVacancyCommand's matching fields are C# `int`s —
+  // Number(...) below converts back, otherwise JSON model binding rejects the whole request
+  // before validation even runs. User ids (UserDto.Id) are genuine numbers already.
+  const roleId = useMemo(() => {
+    const id = (rolesRes?.data || []).find((r) => r.name === role)?.id;
+    return id !== undefined ? Number(id) : undefined;
+  }, [rolesRes, role]);
+  const departmentId = useMemo(() => {
+    const id = (deptRes?.data || []).find((d) => d.name === department)?.id;
+    return id !== undefined ? Number(id) : undefined;
+  }, [deptRes, department]);
+  const employmentTypeId = useMemo(() => {
+    const id = (empTypeRes?.data || []).find((et) => et.name === employmentType)?.id;
+    return id !== undefined ? Number(id) : undefined;
+  }, [empTypeRes, employmentType]);
+  const hiringLocationId = useMemo(() => {
+    const id = (hiringLocRes?.data || []).find((hl) => hl.name === hiringLocation)?.id;
+    return id !== undefined ? Number(id) : undefined;
+  }, [hiringLocRes, hiringLocation]);
+  const testLocationIds = useMemo(
+    () => selectedTestLocations
+      .map((locName) => (testLocRes?.data || []).find((tl) => tl.name === locName)?.id)
+      .filter((id): id is string => id !== undefined)
+      .map((id) => Number(id)),
+    [testLocRes, selectedTestLocations]
+  );
+  const assignedRecruiterId = useMemo(
+    () => (usersRes?.data || []).find((u: any) => `${u.firstName} ${u.lastName}`.trim() === assignedRecruiter)?.id,
+    [usersRes, assignedRecruiter]
+  );
+  const hiringManagerId = useMemo(
+    () => (usersRes?.data || []).find((u: any) => `${u.firstName} ${u.lastName}`.trim() === hiringManager)?.id,
+    [usersRes, hiringManager]
+  );
 
   // Filter test locations by search
   const filteredTestLocations = useMemo(() => {
@@ -257,6 +296,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const grandTotalQuestions = sections.reduce((acc, s) => acc + (Number(s.totalQuestions) || 0), 0);
   const grandTotalTime = sections.reduce((acc, s) => acc + (Number(s.timeLimitMinutes) || 0), 0);
@@ -313,19 +353,18 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
     if (file) {
       setUploadedFile(file);
       setIsUploading(true);
+      // The vacancy (and its question paper) don't exist yet at this step — the file is only
+      // sanity-checked client-side here and actually imported once the vacancy is created below.
       try {
         await parseUploadedAssessmentExcel(file);
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadSuccess(true);
-          toast.success('Excel File Loaded', { description: `${file.name} successfully parsed into question sections.` });
-        }, 800);
+        setIsUploading(false);
+        setUploadSuccess(true);
+        toast.success('File Staged', { description: `${file.name} will be imported once this vacancy is created.` });
       } catch (err) {
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadSuccess(true);
-          toast.success('Excel File Processed', { description: `${file.name} imported.` });
-        }, 800);
+        setIsUploading(false);
+        setUploadSuccess(false);
+        setUploadedFile(null);
+        toast.error('Invalid Excel File', { description: `${file.name} could not be read. Please check the file and try again.` });
       }
     }
   };
@@ -362,50 +401,69 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
     if (step > 1) setStep((s) => (s - 1) as any);
   };
 
-  const handleSubmit = (e?: React.SyntheticEvent) => {
+  const handleSubmit = async (e?: React.SyntheticEvent) => {
     e?.preventDefault();
+    if (isSubmitting) return;
     const isWalkIn = driveType === 'Walk-in Drive';
 
-    onSave?.({
-      title: title.trim() || 'New Vacancy',
-      driveType,
-      role,
-      department,
-      employmentType,
-      experience,
-      openPositions,
-      hiringLocation,
-      testLocation: selectedTestLocations.join(', '),
-      testLocationsList: selectedTestLocations,
-      workMode,
-      flowVersions,
-      assessmentSections: sections,
-      questionPaperTitle: `${title} Question Paper (${grandTotalQuestions}Q / ${grandTotalMarks}M)`,
-      assessmentDurationMinutes: grandTotalTime,
-      passingCriteriaPercentage: 70,
-      assignedRecruiter,
-      hiringManager,
-      walkInEnabled: isWalkIn && walkInEnabled,
-      walkInDrive: isWalkIn
-        ? {
-            enabled: walkInEnabled,
-            name: walkInName,
-            venue: walkInVenue,
-            date: walkInDate,
-            time: walkInTime,
-            capacity: walkInCapacity,
-            registrationDeadline: `${walkInDate} 06:00 PM`,
-            status: 'Scheduled',
-          }
-        : undefined,
-      status,
-      closingDate: '2026-08-30',
-    });
+    setIsSubmitting(true);
+    try {
+      await onSave?.({
+        title: title.trim() || 'New Vacancy',
+        driveType,
+        role,
+        department,
+        employmentType,
+        experience,
+        openPositions,
+        hiringLocation,
+        testLocation: selectedTestLocations.join(', '),
+        testLocationsList: selectedTestLocations,
+        workMode,
+        flowVersions,
+        assessmentSections: sections,
+        questionPaperTitle: `${title} Question Paper (${grandTotalQuestions}Q / ${grandTotalMarks}M)`,
+        assessmentDurationMinutes: grandTotalTime,
+        passingCriteriaPercentage: 70,
+        assignedRecruiter,
+        hiringManager,
+        roleId,
+        departmentId,
+        employmentTypeId,
+        hiringLocationId,
+        testLocationIds,
+        assignedRecruiterId,
+        hiringManagerId,
+        assessmentExcelFile: uploadedFile,
+        walkInEnabled: isWalkIn && walkInEnabled,
+        walkInDrive: isWalkIn
+          ? {
+              enabled: walkInEnabled,
+              name: walkInName,
+              venue: walkInVenue,
+              date: walkInDate,
+              time: walkInTime,
+              capacity: walkInCapacity,
+              registrationDeadline: `${walkInDate} 06:00 PM`,
+              status: 'Scheduled',
+            }
+          : undefined,
+        status,
+        closingDate: '2026-08-30',
+      });
 
-    toast.success('Vacancy Published', {
-      description: `"${title || 'New Vacancy'}" created successfully with ${openPositions} open position(s).`,
-    });
-    onClose();
+      // Only announce success once the real save above has actually resolved — the parent
+      // (VacanciesListView) is the one that knows whether the backend call truly succeeded.
+      toast.success('Vacancy Published', {
+        description: `"${title || 'New Vacancy'}" created successfully with ${openPositions} open position(s).`,
+      });
+      onClose();
+    } catch (err) {
+      // The parent already surfaces the real error (e.g. via a notifyError toast) — keep the
+      // modal open here so the user can fix and retry instead of losing their input.
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -1325,10 +1383,11 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="h-10 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2 hover:from-indigo-700 hover:to-purple-700 cursor-pointer select-none w-full"
+                  disabled={isSubmitting}
+                  className="h-10 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2 hover:from-indigo-700 hover:to-purple-700 cursor-pointer select-none w-full disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Icon name="check" size="xs" />
-                  <span>Publish Vacancy</span>
+                  <Icon name={isSubmitting ? 'spinner' : 'check'} size="xs" className={isSubmitting ? 'animate-spin' : ''} />
+                  <span>{isSubmitting ? 'Publishing...' : 'Publish Vacancy'}</span>
                 </button>
               )}
             </div>

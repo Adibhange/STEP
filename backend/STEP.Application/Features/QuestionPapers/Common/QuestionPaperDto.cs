@@ -30,5 +30,5 @@ namespace STEP.Application.Features.QuestionPapers.Common
         DateTime? PublishedAt,
         List<QuestionDto> Questions);
 
-    public record QuestionImportResultDto(int TotalQuestionsImported, int WorksheetsSkipped, List<string> SkippedWorksheetNames);
+    public record QuestionImportResultDto(int TotalQuestionsImported, int WorksheetsSkipped, List<string> SkippedWorksheetNames, List<string> Warnings);
 }

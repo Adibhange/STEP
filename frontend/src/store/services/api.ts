@@ -33,7 +33,9 @@ export interface AuthResultData {
 }
 
 export interface MasterRecord {
-  id: number;
+  // GetMasterDataQueryHandler deliberately serializes this as a string (`m.Id.ToString()`) —
+  // convert with Number(...) before sending it to any endpoint expecting a real int id.
+  id: string;
   category: string;
   code: string;
   name: string;
@@ -254,6 +256,18 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['QuestionPapers'],
     }),
+    importQuestionPaperExcel: builder.mutation<ApiEnvelope<any>, { id: number; file: File }>({
+      query: ({ id, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/questionpapers/${id}/import-excel`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: (result, error, { id }) => [{ type: 'QuestionPapers', id }],
+    }),
 
     // --- Candidates Endpoints ---
     getCandidates: builder.query<ApiEnvelope<any[]>, { pageIndex?: number; pageSize?: number; search?: string; status?: string; vacancyId?: number } | void>({
@@ -436,6 +450,7 @@ export const {
   useGetQuestionPaperByIdQuery,
   useCreateQuestionPaperMutation,
   usePublishQuestionPaperMutation,
+  useImportQuestionPaperExcelMutation,
   useGetCandidatesQuery,
   useGetCandidateByIdQuery,
   useRegisterCandidateMutation,

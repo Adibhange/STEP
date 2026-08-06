@@ -1,7 +1,35 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(dotnet build *)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5125/api/v1/masterdata/departments)",
+      "Bash(tasklist)",
+      "Bash(powershell -NoProfile -Command 'Get-Process | Where-Object {$_.ProcessName -like '\\\\''*dotnet*'\\\\'' -or $_.ProcessName -like '\\\\''*STEP*'\\\\''} | Select-Object Id,ProcessName')",
+      "Bash(xargs cat)",
+      "Bash(nohup dotnet run --no-build)",
+      "Bash(tee /tmp/step-api.log)",
+      "Bash(curl -s -o /dev/null -w \"HTTP:%{http_code}\\\\n\" http://localhost:5125/api/v1/masterdata/departments)",
+      "Read(//tmp/**)",
+      "Bash(tail -n 150 /tmp/step-api.log 2>&1)",
+      "Bash(curl -s -o /dev/null -w \"Frontend HTTP:%{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; cat \"{}\"')",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(curl -s http://localhost:5125/api/v1/masterdata/hiringlocations -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s http://localhost:5125/api/v1/masterdata/employmenttypes -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s http://localhost:5125/api/v1/masterdata/testlocations -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(tail -n 30 /tmp/step-api.log)",
+      "Bash(taskkill //F //IM STEP.Api.exe)",
+      "Bash(curl -s -w '\\\\nHTTP_STATUS:%{http_code}\\\\n' -X POST http://localhost:5125/api/v1/vacancies -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' --data @/tmp/vacancy-payload.json)",
+      "Bash(curl -s -w '\\\\nHTTP_STATUS:%{http_code}\\\\n' -X POST http://localhost:5125/api/v1/questionpapers -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"vacancyId\":8,\"title\":\"SQL Developer Question Paper\",\"durationMinutes\":65,\"passingPercentage\":70}')",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -w '\\\\nHTTP_STATUS:%{http_code}\\\\n' -X POST http://localhost:5125/api/v1/questionpapers/4/import-excel -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -F file=@/tmp/test-import.xlsx)",
+      "Bash(grep -n \"questionpapers\\\\|Exception\\\\|error\\\\|Error\" /tmp/step-api.log | tail -60)",
+      "Bash(xargs grep -l \"isJsonContentType\\\\|FormData\")",
+      "Read(//c/tmp/**)",
+      "Bash(curl -v -X POST http://localhost:5125/api/v1/questionpapers/4/import-excel -H 'Authorization: Bearer __TRACKED_VAR__' -F 'file=@/tmp/test-import.xlsx;type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')",
+      "Bash(curl -s -w '\\\\nHTTP_STATUS:%{http_code}\\\\n' -X POST http://localhost:5125/api/v1/questionpapers/4/import-excel -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -F 'file=@/tmp/test-import.xlsx;type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')"
     ]
   }
 }

@@ -48,7 +48,12 @@ export async function downloadAssessmentExcelTemplate(
     ['2. In MCQ worksheets, select SINGLE_CHOICE or MULTI_CHOICE from the question_type dropdown.'],
     ['3. For MULTI_CHOICE questions, specify comma-separated correct options in correct_option (e.g. A,C).'],
     ['4. Marks are automatically assigned per section based on your Step 3 pattern configuration.'],
-    ['5. Save the completed Excel workbook (.xlsx) and upload it in Step 3.']
+    ['5. Save the completed Excel workbook (.xlsx) and upload it in Step 3.'],
+    [''],
+    ['FIELDS YOU WILL NOT FIND IN THIS SHEET (AND WHY):'],
+    ['• Question Number — assigned automatically in the order questions are uploaded. Do not add this column.'],
+    ['• Marks — fixed per section from your Step 1 pattern (Marks / Q), not entered per question.'],
+    ['• Round / Section — determined by which worksheet tab a question is on, matching its Section order in the pattern above.']
   );
 
   instrRows.forEach((r) => instrSheet.addRow(r));

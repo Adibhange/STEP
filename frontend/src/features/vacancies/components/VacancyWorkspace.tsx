@@ -242,7 +242,7 @@ export const VacancyWorkspace: React.FC<VacancyWorkspaceProps> = ({ vacancy }) =
         {activeTab === 'flow-versions' && <PipelineFlowVersions vacancyId={vacancy.id} />}
 
         {/* 3. ASSESSMENT BUILDER & EXCEL TAB */}
-        {activeTab === 'assessment-builder' && <AssessmentPatternBuilder />}
+        {activeTab === 'assessment-builder' && <AssessmentPatternBuilder vacancyId={Number(vacancy.id)} />}
 
         {/* 4. CANDIDATES & BULK FLOW ASSIGNMENT TAB */}
         {activeTab === 'bulk-assignment' && <CandidateBulkFlowAssignment vacancyId={vacancy.id} vacancyTitle={vacancy.title} />}

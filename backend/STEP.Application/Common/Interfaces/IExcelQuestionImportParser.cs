@@ -14,7 +14,7 @@ namespace STEP.Application.Common.Interfaces
         int? MaxWordCount,
         List<ParsedOption> Options);
 
-    public record ExcelImportParseResult(List<ParsedQuestionRow> Rows, List<string> SkippedWorksheetNames);
+    public record ExcelImportParseResult(List<ParsedQuestionRow> Rows, List<string> SkippedWorksheetNames, List<string> Warnings);
 
     /// <summary>
     /// Parses the multi-worksheet question-bank workbook produced by the frontend's
