@@ -18,6 +18,8 @@ namespace STEP.Persistence.Configurations
             builder.Property(e => e.ScoreObtained).HasColumnType("decimal(6,2)");
             builder.Property(e => e.SkipReason).HasColumnType("nvarchar(max)");
             builder.Property(e => e.Remarks).HasColumnType("nvarchar(max)");
+            builder.Property(e => e.AssessmentMode).HasMaxLength(50);
+            builder.Property(e => e.TestPasscode).HasMaxLength(20);
             builder.Property(e => e.RowVersion).IsRowVersion();
 
             builder.HasIndex(e => new { e.CandidateId, e.RoundNumber }).IsUnique();

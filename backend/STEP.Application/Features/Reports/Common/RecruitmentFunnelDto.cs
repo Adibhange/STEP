@@ -7,6 +7,7 @@ namespace STEP.Application.Features.Reports.Common
         int OfferedCount,
         int RejectedCount,
         int WithdrawnCount,
+        int JoinedCount,
         decimal PassRatePercentage,
         decimal? AverageTimeToHireDays,
         decimal OfferAcceptanceRate);

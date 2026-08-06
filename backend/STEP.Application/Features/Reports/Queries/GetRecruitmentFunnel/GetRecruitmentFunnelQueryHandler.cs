@@ -14,12 +14,51 @@ namespace STEP.Application.Features.Reports.Queries.GetRecruitmentFunnel
     {
         public async Task<RecruitmentFunnelDto> Handle(GetRecruitmentFunnelQuery request, CancellationToken cancellationToken)
         {
-            var totalCandidates = await db.Candidates.CountAsync(cancellationToken);
-            var applied = await db.Candidates.CountAsync(c => c.Status == "Applied", cancellationToken);
-            var inProgress = await db.Candidates.CountAsync(c => c.Status == "In-Progress", cancellationToken);
-            var offered = await db.Candidates.CountAsync(c => c.Status == "Offered", cancellationToken);
-            var rejected = await db.Candidates.CountAsync(c => c.Status == "Rejected", cancellationToken);
-            var withdrawn = await db.Candidates.CountAsync(c => c.Status == "Withdrawn", cancellationToken);
+            var candidates = await db.Candidates
+                .Include(c => c.PipelineProgressHistory)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            int totalCandidates = candidates.Count;
+            int applied = 0;
+            int inProgress = 0;
+            int offered = 0;
+            int rejected = 0;
+            int withdrawn = 0;
+
+            foreach (var c in candidates)
+            {
+                var r1 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
+                var r2 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 2);
+                var r3 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 3);
+
+                var r1Failed = r1?.Status?.ToLower() == "failed" || r1?.Status?.ToLower() == "rejected";
+                var r2Failed = r2?.Status?.ToLower() == "failed" || r2?.Status?.ToLower() == "rejected";
+                var r3Failed = r3?.Status?.ToLower() == "failed" || r3?.Status?.ToLower() == "rejected";
+
+                bool isTrulyRejected = r1Failed || (r2Failed && r3Failed);
+
+                if (isTrulyRejected)
+                {
+                    rejected++;
+                }
+                else if (c.Status == "Offered")
+                {
+                    offered++;
+                }
+                else if (c.Status == "Withdrawn")
+                {
+                    withdrawn++;
+                }
+                else if (c.Status == "Applied")
+                {
+                    applied++;
+                }
+                else
+                {
+                    inProgress++;
+                }
+            }
 
             var passedRounds = await db.CandidatePipelineProgresses.CountAsync(p => p.Status == "Passed", cancellationToken);
             var failedRounds = await db.CandidatePipelineProgresses.CountAsync(p => p.Status == "Failed", cancellationToken);
@@ -41,7 +80,7 @@ namespace STEP.Application.Features.Reports.Queries.GetRecruitmentFunnel
             var offerAcceptanceRate = decidedOffers > 0 ? Math.Round((decimal)accepted / decidedOffers * 100, 2) : 0;
 
             return new RecruitmentFunnelDto(
-                totalCandidates, applied, inProgress, offered, rejected, withdrawn,
+                totalCandidates, applied, inProgress, offered, rejected, withdrawn, accepted,
                 passRate, averageTimeToHireDays, offerAcceptanceRate);
         }
     }

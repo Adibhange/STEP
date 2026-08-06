@@ -14,7 +14,10 @@ namespace STEP.Application.Features.Candidates.Common
         string VacancyTitle,
         string CurrentStage,
         string Status,
-        DateTime CreatedAt);
+        DateTime CreatedAt,
+        string? AssignedInterviewer = null,
+        string? HiringLocation = null,
+        string? TestLocation = null);
 
     public record CandidateListResultDto(List<CandidateSummaryDto> Items, int TotalCount);
 
@@ -28,7 +31,9 @@ namespace STEP.Application.Features.Candidates.Common
         DateTime? StartedAt,
         DateTime? CompletedAt,
         int? CandidateExamSessionId,
-        int? InterviewId);
+        int? InterviewId,
+        string? Remarks = null,
+        string? InterviewerName = null);
 
     public record CandidateDocumentDto(
         int Id,

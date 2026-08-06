@@ -484,6 +484,41 @@ export const stepApi = createApi({
       invalidatesTags: ['Candidates'],
     }),
 
+    assignEvaluator: builder.mutation<ApiEnvelope<any>, { candidateId: number; roundNumber: number; evaluatorUserId: number }>({
+      query: ({ candidateId, ...body }) => ({
+        url: `/candidates/${candidateId}/assign-evaluator`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Candidates'],
+    }),
+
+    uploadCandidateDocument: builder.mutation<ApiEnvelope<any>, { candidateId: number; documentType: string; file: File }>({
+      query: ({ candidateId, documentType, file }) => {
+        const formData = new FormData();
+        formData.append('documentType', documentType);
+        formData.append('file', file);
+        return {
+          url: `/candidates/${candidateId}/documents`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: ['Candidates'],
+    }),
+
+    scheduleCandidateTest: builder.mutation<
+      ApiEnvelope<any>,
+      { candidateId: number; testMode: string; scheduledDate: string; startTime: string; endTime: string; passcode?: string }
+    >({
+      query: ({ candidateId, ...body }) => ({
+        url: `/candidates/${candidateId}/schedule-test`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Candidates'],
+    }),
+
     // --- Exam Portal Endpoints ---
     startExamSession: builder.mutation<ApiEnvelope<LiveExamWorkspaceData>, { candidateCode: string; passcode: string; testSource?: string }>({
       query: (data) => ({
@@ -623,6 +658,15 @@ export const stepApi = createApi({
       invalidatesTags: ['Candidates'],
     }),
 
+    evaluateCandidateStage: builder.mutation<ApiEnvelope<any>, { candidateId: number; roundNumber: number; passed: boolean; remarks?: string }>({
+      query: ({ candidateId, roundNumber, passed, remarks }) => ({
+        url: `/candidates/${candidateId}/evaluate-stage`,
+        method: 'POST',
+        body: { roundNumber, passed, remarks },
+      }),
+      invalidatesTags: ['Candidates', 'Interviews'],
+    }),
+
     // --- Reports Endpoints ---
     getRecruitmentFunnel: builder.query<ApiEnvelope<any>, void>({
       query: () => '/reports/recruitment-funnel',
@@ -655,6 +699,8 @@ export const {
   useGetCandidateByIdQuery,
   useRegisterCandidateMutation,
   useAssignPipelineFlowMutation,
+  useAssignEvaluatorMutation,
+  useUploadCandidateDocumentMutation,
   useStartExamSessionMutation,
   useResumeExamSessionQuery,
   useSaveExamAnswerMutation,
@@ -675,5 +721,7 @@ export const {
   useGetQRCodeByVacancyQuery,
   useRecordQRScanQuery,
   useRegisterCandidateViaQRMutation,
+  useEvaluateCandidateStageMutation,
+  useScheduleCandidateTestMutation,
   useGetRecruitmentFunnelQuery,
 } = stepApi;

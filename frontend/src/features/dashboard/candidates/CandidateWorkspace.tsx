@@ -31,7 +31,7 @@ export const CandidateWorkspace: React.FC = () => {
       name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || "Candidate",
       email: c.email || "",
       mobile: c.phone || "",
-      role: c.role || "Candidate",
+      role: c.vacancyTitle || c.role || "Applicant",
       experience: c.experienceYears ? `${c.experienceYears} Years` : "0 Years",
       experienceYears: c.experienceYears || 0,
       source: (c.registrationChannel === "Walk-in"
@@ -40,9 +40,9 @@ export const CandidateWorkspace: React.FC = () => {
       stage: (c.currentStage || "Screening") as any,
       currentRound: (c.currentStage || "Screening") as any,
       assignedInterviewer: c.assignedInterviewer || "Unassigned",
-      status: (c.status || "Screening") as any,
-      hiringLocation: c.currentLocation || "Primary Center",
-      testLocation: "Test Center",
+      status: (c.status || "In-Progress") as any,
+      hiringLocation: c.hiringLocation || c.currentLocation || "Primary Center",
+      testLocation: c.testLocation || c.currentLocation || "Test Center",
       riskScore: 0,
       city: c.currentLocation || "",
       appliedDate: c.createdAt

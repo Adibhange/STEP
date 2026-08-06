@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,10 +13,12 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
     {
         public async Task<CandidateListResultDto> Handle(GetCandidatesQuery request, CancellationToken cancellationToken)
         {
-            var query = db.Candidates.Include(c => c.Vacancy).AsNoTracking().AsQueryable();
+            var query = db.Candidates
+                .Include(c => c.Vacancy).ThenInclude(v => v.HiringLocation)
+                .Include(c => c.Vacancy).ThenInclude(v => v.TestLocations).ThenInclude(tl => tl.MasterTestLocation)
+                .Include(c => c.PipelineProgressHistory)
+                .AsNoTracking().AsQueryable();
 
-            // Interviewers only ever see candidates they've actually been assigned an interview
-            // for — HR/Director keep full visibility, they own the whole pipeline.
             if (currentUser.Role == "Interviewer" && currentUser.UserId is int interviewerId)
             {
                 query = query.Where(c => db.Interviews.Any(i => i.CandidateId == c.Id && i.InterviewerUserId == interviewerId));
@@ -43,14 +46,81 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
             var pageIndex = request.PageIndex < 1 ? 1 : request.PageIndex;
             var pageSize = request.PageSize is < 1 or > 200 ? 20 : request.PageSize;
 
-            var items = await query
+            var rawCandidates = await query
                 .OrderByDescending(c => c.Id)
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
-                .Select(c => new CandidateSummaryDto(
-                    c.Id, c.CandidateCode, c.FirstName, c.LastName, c.Email, c.Phone,
-                    c.VacancyId, c.Vacancy.Title, c.CurrentStage, c.Status, c.CreatedAt))
                 .ToListAsync(cancellationToken);
+
+            var candidateIds = rawCandidates.Select(c => c.Id).ToList();
+
+            var activeInterviews = await db.Interviews
+                .Include(i => i.InterviewerUser)
+                .Where(i => candidateIds.Contains(i.CandidateId) && i.Status != "Cancelled")
+                .OrderByDescending(i => i.Id)
+                .ToListAsync(cancellationToken);
+
+            var interviewByCandidate = activeInterviews
+                .GroupBy(i => i.CandidateId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var evaluatorUserIds = rawCandidates
+                .SelectMany(c => c.PipelineProgressHistory)
+                .Where(p => p.EvaluatorId != null)
+                .Select(p => p.EvaluatorId!.Value)
+                .Distinct()
+                .ToList();
+
+            var evaluatorNames = await db.Users
+                .Where(u => evaluatorUserIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), cancellationToken);
+
+            var items = new List<CandidateSummaryDto>();
+
+            foreach (var c in rawCandidates)
+            {
+                string? assignedInterviewer = null;
+                if (interviewByCandidate.TryGetValue(c.Id, out var interview) && interview.InterviewerUser != null)
+                {
+                    assignedInterviewer = $"{interview.InterviewerUser.FirstName} {interview.InterviewerUser.LastName}".Trim();
+                }
+                else
+                {
+                    var activeProgress = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundTitle == c.CurrentStage)
+                        ?? c.PipelineProgressHistory.OrderByDescending(p => p.RoundNumber).FirstOrDefault();
+
+                    if (activeProgress?.EvaluatorId != null)
+                    {
+                        assignedInterviewer = evaluatorNames.GetValueOrDefault(activeProgress.EvaluatorId.Value);
+                    }
+                    else
+                    {
+                        var anyEvaluator = c.PipelineProgressHistory.Where(p => p.EvaluatorId != null).Select(p => p.EvaluatorId!.Value).FirstOrDefault();
+                        if (anyEvaluator != 0)
+                        {
+                            assignedInterviewer = evaluatorNames.GetValueOrDefault(anyEvaluator);
+                        }
+                    }
+                }
+
+                var r1 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
+                var r2 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 2);
+                var r3 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 3);
+
+                var r1Failed = r1?.Status?.ToLower() == "failed" || r1?.Status?.ToLower() == "rejected";
+                var r2Failed = r2?.Status?.ToLower() == "failed" || r2?.Status?.ToLower() == "rejected";
+                var r3Failed = r3?.Status?.ToLower() == "failed" || r3?.Status?.ToLower() == "rejected";
+
+                bool isTrulyRejected = r1Failed || (r2Failed && r3Failed);
+                string effectiveStatus = isTrulyRejected ? "Rejected" : c.Status == "Offered" || c.Status == "Hired" ? c.Status : "In-Progress";
+
+                string hiringLocation = c.Vacancy?.HiringLocation?.Name ?? c.CurrentLocation ?? "Primary Center";
+                string testLocation = c.Vacancy?.TestLocations?.Select(tl => tl.MasterTestLocation?.Name).FirstOrDefault(name => name != null) ?? c.CurrentLocation ?? "Test Center";
+
+                items.Add(new CandidateSummaryDto(
+                    c.Id, c.CandidateCode, c.FirstName, c.LastName, c.Email, c.Phone,
+                    c.VacancyId, c.Vacancy?.Title ?? "Position", c.CurrentStage ?? "Screening", effectiveStatus, c.CreatedAt, assignedInterviewer, hiringLocation, testLocation));
+            }
 
             return new CandidateListResultDto(items, totalCount);
         }

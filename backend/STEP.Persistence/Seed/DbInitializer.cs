@@ -70,6 +70,43 @@ namespace STEP.Persistence.Seed
                 );
             ";
             await db.Database.ExecuteSqlRawAsync(syncInterviewerPermissionsSql);
+
+            // Auto-Add new columns to CandidatePipelineProgress if missing in existing database
+            var addMissingColumnsSql = @"
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'candidate.CandidatePipelineProgress') AND name = N'ScheduledTestDate')
+                BEGIN
+                    ALTER TABLE candidate.CandidatePipelineProgress ADD ScheduledTestDate DATETIME2 NULL;
+                END
+
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'candidate.CandidatePipelineProgress') AND name = N'ScheduledStartTimeUtc')
+                BEGIN
+                    ALTER TABLE candidate.CandidatePipelineProgress ADD ScheduledStartTimeUtc DATETIME2 NULL;
+                END
+
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'candidate.CandidatePipelineProgress') AND name = N'ScheduledEndTimeUtc')
+                BEGIN
+                    ALTER TABLE candidate.CandidatePipelineProgress ADD ScheduledEndTimeUtc DATETIME2 NULL;
+                END
+
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'candidate.CandidatePipelineProgress') AND name = N'AssessmentMode')
+                BEGIN
+                    ALTER TABLE candidate.CandidatePipelineProgress ADD AssessmentMode NVARCHAR(50) NULL;
+                END
+                ELSE
+                BEGIN
+                    ALTER TABLE candidate.CandidatePipelineProgress ALTER COLUMN AssessmentMode NVARCHAR(50) NULL;
+                END
+
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'candidate.CandidatePipelineProgress') AND name = N'TestPasscode')
+                BEGIN
+                    ALTER TABLE candidate.CandidatePipelineProgress ADD TestPasscode NVARCHAR(20) NULL;
+                END
+                ELSE
+                BEGIN
+                    ALTER TABLE candidate.CandidatePipelineProgress ALTER COLUMN TestPasscode NVARCHAR(20) NULL;
+                END
+            ";
+            await db.Database.ExecuteSqlRawAsync(addMissingColumnsSql);
         }
     }
 }

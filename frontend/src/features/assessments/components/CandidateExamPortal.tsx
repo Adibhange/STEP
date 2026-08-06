@@ -193,6 +193,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
 
   // ── Authentication & Gatekeeper State ──────────────────────────────────────
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginFallback, setShowLoginFallback] = useState(false);
   const [loginCode, setLoginCode] = useState(candidateCode);
   const [loginPasscode, setLoginPasscode] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -551,6 +552,22 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     }
   };
 
+  const handleInOfficeDirectStart = async () => {
+    setLoginError(null);
+    try {
+      const res = await startExamSessionApi({
+        candidateCode: loginCode.trim() || candidateCode || '15',
+        passcode: 'IN_OFFICE',
+        testSource: 'Office',
+      }).unwrap();
+      setWorkspace(res.data);
+      setActiveSessionToken(res.data.sessionToken);
+      setIsAuthenticated(true);
+    } catch (err: any) {
+      setLoginError(err?.data?.message || 'Could not load assessment session for candidate.');
+    }
+  };
+
   // Start Exam Action — the real session already began server-side at login/resume; this just
   // moves the local UI from the instructions screen into the live timed view.
   const handleStartExam = () => {
@@ -667,16 +684,23 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   if (!isAuthenticated) {
     // Office mode: no login form — the session is expected to already exist (e.g. via a
     // walk-in check-in flow); just resolve it silently.
-    if (testMode === 'In Office') {
+    if (testMode === 'In Office' && sessionTokenFromUrl && !showLoginFallback) {
       if (isResumeError) {
         return (
           <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans text-center">
             <div className="max-w-md w-full bg-white border border-rose-200 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3">
               <Icon name="alert-triangle" size="lg" className="text-rose-600" />
-              <h2 className="text-lg font-extrabold text-rose-700 font-heading">Unable to Load Assessment Session</h2>
+              <h2 className="text-lg font-extrabold text-rose-700 font-heading">Unable to Resolve Token Link</h2>
               <p className="text-xs text-slate-500">
-                This exam link could not be resolved. Please check with the venue proctor or contact the recruitment team.
+                The session token in this link could not be resolved. You can log in manually using your Access ID and 4-digit Passcode.
               </p>
+              <button
+                type="button"
+                onClick={() => setShowLoginFallback(true)}
+                className="mt-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+              >
+                Log in with Access ID &amp; Passcode
+              </button>
             </div>
           </div>
         );
@@ -694,68 +718,124 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     return (
       <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans relative">
         <div className="max-w-lg w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col gap-5">
-          <div className="flex flex-col gap-1 text-center">
-            <div className="mx-auto w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mb-2">
-              <Icon name="lock" size="md" />
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-900 font-heading tracking-tight">
-              Candidate Home Exam Access Portal
-            </h2>
-            <p className="text-xs text-slate-500">
-              Please enter your Candidate Access ID and Passcode provided in your exam invitation.
-            </p>
-          </div>
-
-          <form onSubmit={handleCandidateLogin} className="flex flex-col gap-4">
-            {loginError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
-                <Icon name="alert-triangle" size="xs" className="shrink-0" />
-                <span>{loginError}</span>
+          {testMode === 'In Office' ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1 text-center">
+                <div className="mx-auto w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mb-2">
+                  <Icon name="check-circle" size="md" />
+                </div>
+                <h2 className="text-xl font-extrabold text-slate-900 font-heading tracking-tight">
+                  In-Office Assessment Station
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Venue exam session — Candidate identity verified directly by office station.
+                </p>
               </div>
-            )}
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700">Candidate Access ID / Code</label>
-              <input
-                type="text"
-                value={loginCode}
-                onChange={(e) => setLoginCode(e.target.value)}
-                placeholder="e.g. CND-2026-1042"
-                className="w-full h-10 px-3.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 font-mono text-xs outline-none focus:border-blue-500 focus:bg-white transition-colors"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700">Exam Passcode / PIN</label>
-              <input
-                type="password"
-                value={loginPasscode}
-                onChange={(e) => setLoginPasscode(e.target.value)}
-                placeholder="Enter 4-digit exam PIN"
-                className="w-full h-10 px-3.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 font-mono text-xs outline-none focus:border-blue-500 focus:bg-white transition-colors"
-              />
-            </div>
-
-            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 flex items-center gap-2">
-              <Icon name="info" size="xs" className="shrink-0 text-blue-600" />
-              <span><strong>Test Option:</strong> Remote Home Online Proctored (Single Device Lock Active).</span>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isStarting}
-              className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isStarting ? (
-                <>
-                  <Icon name="spinner" size="xs" className="animate-spin" />
-                  <span>Verifying…</span>
-                </>
-              ) : (
-                <span>Verify &amp; Launch Exam Session</span>
+              {loginError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                  <Icon name="alert-triangle" size="xs" className="shrink-0" />
+                  <span>{loginError}</span>
+                </div>
               )}
-            </button>
-          </form>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500 font-semibold">Candidate Access ID:</span>
+                  <span className="font-bold font-mono text-slate-900">{loginCode || candidateCode || '15'}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500 font-semibold">Execution Mode:</span>
+                  <span className="font-bold text-emerald-700">In Office (Venue Test)</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500 font-semibold">PIN Requirement:</span>
+                  <span className="font-bold text-slate-700">None (Bypassed for Venue)</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleInOfficeDirectStart}
+                disabled={isStarting}
+                className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-colors cursor-pointer shadow-md shadow-emerald-600/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isStarting ? (
+                  <>
+                    <Icon name="spinner" size="xs" className="animate-spin" />
+                    <span>Loading Assessment…</span>
+                  </>
+                ) : (
+                  <span>Start Assessment Now</span>
+                )}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-1 text-center">
+                <div className="mx-auto w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mb-2">
+                  <Icon name="lock" size="md" />
+                </div>
+                <h2 className="text-xl font-extrabold text-slate-900 font-heading tracking-tight">
+                  Candidate Home Exam Access Portal
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Please enter your Candidate Access ID and Passcode provided in your exam invitation.
+                </p>
+              </div>
+
+              <form onSubmit={handleCandidateLogin} className="flex flex-col gap-4">
+                {loginError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                    <Icon name="alert-triangle" size="xs" className="shrink-0" />
+                    <span>{loginError}</span>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700">Candidate Access ID / Code</label>
+                  <input
+                    type="text"
+                    value={loginCode}
+                    onChange={(e) => setLoginCode(e.target.value)}
+                    placeholder="e.g. CND-2026-1042"
+                    className="w-full h-10 px-3.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 font-mono text-xs outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-700">Exam Passcode / PIN</label>
+                  <input
+                    type="password"
+                    value={loginPasscode}
+                    onChange={(e) => setLoginPasscode(e.target.value)}
+                    placeholder="Enter 4-digit exam PIN"
+                    className="w-full h-10 px-3.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 font-mono text-xs outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 flex items-center gap-2">
+                  <Icon name="info" size="xs" className="shrink-0 text-blue-600" />
+                  <span><strong>Test Option:</strong> Remote Home Online Proctored (Single Device Lock Active).</span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isStarting}
+                  className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs transition-colors cursor-pointer shadow-md shadow-blue-600/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isStarting ? (
+                    <>
+                      <Icon name="spinner" size="xs" className="animate-spin" />
+                      <span>Verifying…</span>
+                    </>
+                  ) : (
+                    <span>Verify &amp; Launch Exam Session</span>
+                  )}
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     );

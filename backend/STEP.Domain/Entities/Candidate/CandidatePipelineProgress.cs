@@ -41,5 +41,11 @@ namespace STEP.Domain.Entities.Candidate
         public string? SkipReason { get; set; }
 
         public string? Remarks { get; set; }
+
+        public DateTime? ScheduledTestDate { get; set; }
+        public DateTime? ScheduledStartTimeUtc { get; set; }
+        public DateTime? ScheduledEndTimeUtc { get; set; }
+        public string? AssessmentMode { get; set; }
+        public string? TestPasscode { get; set; }
     }
 }

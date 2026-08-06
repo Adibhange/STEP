@@ -39,19 +39,27 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
             // separately here (most recent session per round, matching the resume-on-reconnect
             // semantics StartExamSessionCommandHandler already uses).
             var progressIds = candidate.PipelineProgressHistory.Select(p => p.Id).ToList();
-            var latestSessionIdByProgress = await db.CandidateExamSessions
+            var latestSessionByProgress = await db.CandidateExamSessions
                 .Where(s => s.CandidatePipelineProgressId != null && progressIds.Contains(s.CandidatePipelineProgressId.Value))
                 .GroupBy(s => s.CandidatePipelineProgressId!.Value)
-                .Select(g => new { ProgressId = g.Key, SessionId = g.Max(s => s.Id) })
-                .ToDictionaryAsync(x => x.ProgressId, x => x.SessionId, cancellationToken);
+                .Select(g => new { 
+                    ProgressId = g.Key, 
+                    SessionId = g.Max(s => s.Id),
+                    Score = g.OrderByDescending(s => s.Id).Select(s => (decimal?)s.Percentage).FirstOrDefault()
+                })
+                .ToDictionaryAsync(x => x.ProgressId, x => x, cancellationToken);
 
-            // Same idea as CandidateExamSessionId above — the Submit Feedback screen needs to know
-            // which Interview row (if any) has been scheduled for a given round.
-            var latestInterviewIdByProgress = await db.Interviews
-                .Where(i => progressIds.Contains(i.CandidatePipelineProgressId))
+            var latestInterviewByProgress = await db.Interviews
+                .Include(i => i.InterviewerUser)
+                .Where(i => progressIds.Contains(i.CandidatePipelineProgressId) && i.Status != "Cancelled")
                 .GroupBy(i => i.CandidatePipelineProgressId)
-                .Select(g => new { ProgressId = g.Key, InterviewId = g.Max(i => i.Id) })
-                .ToDictionaryAsync(x => x.ProgressId, x => x.InterviewId, cancellationToken);
+                .Select(g => g.OrderByDescending(i => i.Id).First())
+                .ToDictionaryAsync(x => x.CandidatePipelineProgressId, x => new { x.Id, InterviewerName = x.InterviewerUser != null ? $"{x.InterviewerUser.FirstName} {x.InterviewerUser.LastName}".Trim() : null }, cancellationToken);
+
+            var evaluatorUserIds = candidate.PipelineProgressHistory.Where(p => p.EvaluatorId != null).Select(p => p.EvaluatorId!.Value).Distinct().ToList();
+            var evaluatorNames = await db.Users
+                .Where(u => evaluatorUserIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), cancellationToken);
 
             return new CandidateDto(
                 candidate.Id, candidate.CandidateCode, candidate.FirstName, candidate.LastName, candidate.Email, candidate.Phone,
@@ -59,8 +67,16 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                 candidate.ReferralEmployeeName, candidate.TotalExperienceYears, candidate.CurrentCTC, candidate.ExpectedCTC,
                 candidate.NoticePeriodDays, candidate.CurrentLocation, candidate.HighestQualification, candidate.CreatedAt,
                 candidate.PipelineProgressHistory.OrderBy(p => p.RoundNumber)
-                    .Select(p => new PipelineProgressDto(p.Id, p.RoundNumber, p.RoundTitle, p.RoundType, p.Status, p.ScoreObtained, p.StartedAt, p.CompletedAt,
-                        latestSessionIdByProgress.GetValueOrDefault(p.Id), latestInterviewIdByProgress.GetValueOrDefault(p.Id)))
+                    .Select(p => {
+                        var sessInfo = latestSessionByProgress.GetValueOrDefault(p.Id);
+                        var interviewInfo = latestInterviewByProgress.GetValueOrDefault(p.Id);
+                        var effectiveScore = p.ScoreObtained ?? sessInfo?.Score;
+                        var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : null);
+
+                        return new PipelineProgressDto(
+                            p.Id, p.RoundNumber, p.RoundTitle, p.RoundType, p.Status, effectiveScore, p.StartedAt, p.CompletedAt,
+                            sessInfo?.SessionId, interviewInfo?.Id, p.Remarks, interviewerName);
+                    })
                     .ToList(),
                 candidate.Documents
                     .Select(d => new CandidateDocumentDto(d.Id, d.DocumentType, d.FileName, d.ContentType, d.FileSizeBytes, d.StorageProvider, d.UploadedAt))

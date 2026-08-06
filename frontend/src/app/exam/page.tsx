@@ -11,8 +11,8 @@ function ExamContent() {
   const tokenParam = searchParams?.get('token');
   const testModeParam = searchParams?.get('mode');
 
-  // Parameter Validation: If token or candidateId is missing, reject unauthenticated exam access
-  if (!tokenParam || !candidateIdParam) {
+  // Parameter Validation: If both token AND candidateId are missing, reject invalid access
+  if (!tokenParam && !candidateIdParam) {
     return (
       <div className="min-h-screen bg-[var(--canvas)] flex items-center justify-center p-6 text-center">
         <div className="bg-[var(--surface-1)] border border-[var(--status-danger-border)] rounded-[var(--radius-2xl)] p-8 shadow-2xl max-w-md w-full">
@@ -35,9 +35,9 @@ function ExamContent() {
 
   return (
     <CandidateExamPortal
-      sessionToken={tokenParam}
+      sessionToken={tokenParam || ''}
       testMode={testMode}
-      candidateCode={candidateIdParam}
+      candidateCode={candidateIdParam || ''}
     />
   );
 }

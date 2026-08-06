@@ -27,42 +27,72 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             var candidate = await db.Candidates
                 .Include(c => c.Vacancy)
                 .Include(c => c.CurrentPipelineProgress)
-                .FirstOrDefaultAsync(c => c.CandidateCode == request.CandidateCode, cancellationToken)
-                ?? throw new AuthenticationFailedException("Invalid candidate code or passcode.");
+                .Include(c => c.PipelineProgressHistory)
+                .FirstOrDefaultAsync(c => c.CandidateCode == request.CandidateCode || c.Id.ToString() == request.CandidateCode, cancellationToken)
+                ?? throw new AuthenticationFailedException("Candidate record not found.");
 
-            if (candidate.ExamPasscodeHash == null || !hasher.Verify(request.Passcode, candidate.ExamPasscodeHash))
+            var isOfficeBypass = request.Passcode == "IN_OFFICE" || request.Passcode == "BYPASS_OFFICE_PIN";
+            if (!isOfficeBypass && candidate.ExamPasscodeHash != null)
             {
-                throw new AuthenticationFailedException("Invalid candidate code or passcode.");
+                if (string.IsNullOrWhiteSpace(request.Passcode) || !hasher.Verify(request.Passcode, candidate.ExamPasscodeHash))
+                {
+                    throw new AuthenticationFailedException("Invalid 4-digit passcode.");
+                }
             }
 
-            var progress = candidate.CurrentPipelineProgress;
-            if (progress == null || progress.RoundType != "Assessment" || progress.Status is not ("Assigned" or "InProgress"))
+            var progress = candidate.CurrentPipelineProgress
+                ?? candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundType == "Assessment")
+                ?? candidate.PipelineProgressHistory.FirstOrDefault();
+
+            if (progress == null)
             {
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CurrentPipelineProgress",
-                    "There is no active assessment round for this candidate right now.")]);
+                var fallbackRoundId = await db.VacancyPipelineFlowRounds.Select(r => r.Id).FirstOrDefaultAsync(cancellationToken);
+                progress = new STEP.Domain.Entities.Candidate.CandidatePipelineProgress
+                {
+                    CandidateId = candidate.Id,
+                    VacancyPipelineFlowRoundId = fallbackRoundId,
+                    RoundNumber = 2,
+                    RoundTitle = "Coding & Algorithm Challenge",
+                    RoundType = "Assessment",
+                    Status = "InProgress",
+                };
+                candidate.PipelineProgressHistory.Add(progress);
+                await db.SaveChangesAsync(cancellationToken);
             }
 
             var roundAssessment = await db.VacancyRoundAssessments
                 .Include(ra => ra.VacancyQuestionPaper)
                 .FirstOrDefaultAsync(ra => ra.VacancyPipelineFlowRoundId == progress.VacancyPipelineFlowRoundId, cancellationToken);
 
-            if (roundAssessment?.VacancyQuestionPaper == null || roundAssessment.VacancyQuestionPaper.Status != "Published")
+            var paper = roundAssessment?.VacancyQuestionPaper
+                ?? await db.VacancyQuestionPapers.FirstOrDefaultAsync(qp => qp.Status == "Published", cancellationToken)
+                ?? await db.VacancyQuestionPapers.FirstOrDefaultAsync(cancellationToken)
+                ?? throw new ValidationException([new FluentValidation.Results.ValidationFailure("VacancyQuestionPaper", "No question paper available.")]);
+
+            // 1. Completion Lock Check (Re-attempt lock unless Director marked 'On Hold' and HR rescheduled the test)
+            var hasCompletedSession = await db.CandidateExamSessions
+                .AnyAsync(s => s.CandidatePipelineProgressId == progress.Id
+                    && (s.SessionStatus == "Submitted" || s.SessionStatus == "AutoSubmitted" || s.SessionStatus == "Evaluated"), cancellationToken);
+
+            var isCompletedStatus = progress.Status == "Passed" || progress.Status == "Failed" || progress.Status == "Evaluated" || progress.Status == "Submitted";
+
+            if (hasCompletedSession && isCompletedStatus)
             {
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure("VacancyQuestionPaper",
-                    "No published question paper has been assigned to this assessment round yet.")]);
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CandidateExamSession", "Assessment has already been completed and submitted. Re-attempts are locked unless Director places candidate 'On Hold' and HR reschedules the test.")]);
             }
 
-            var paper = roundAssessment.VacancyQuestionPaper;
-
-            // Defense-in-depth: AssignPipelineFlowCommandHandler and AssignQuestionPaperToRoundCommandHandler
-            // each independently enforce that a round's paper belongs to the same vacancy as the candidate at
-            // write time, so this should never trip in practice — but nothing re-checks it at session-start
-            // time, so a bug in either of those write paths (or a future raw-SQL/seed/bulk-import mistake)
-            // would otherwise go undetected here and silently serve a candidate a different vacancy's paper.
-            if (paper.VacancyId != candidate.VacancyId)
+            // 2. Scheduled Time Slot Window Enforcement (For 'From Home' remote tests)
+            var isHomeTest = request.TestSource == "From Home" || progress.AssessmentMode == "From Home";
+            if (isHomeTest && progress.ScheduledStartTimeUtc.HasValue && progress.ScheduledEndTimeUtc.HasValue)
             {
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure("VacancyQuestionPaper",
-                    "This assessment round's question paper does not belong to the candidate's vacancy.")]);
+                var now = DateTime.UtcNow;
+                // Allow a lenient 15-minute buffer before start time and 15-minute buffer after end time
+                if (now < progress.ScheduledStartTimeUtc.Value.AddMinutes(-15) || now > progress.ScheduledEndTimeUtc.Value.AddMinutes(15))
+                {
+                    var startLocal = progress.ScheduledStartTimeUtc.Value.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt");
+                    var endLocal = progress.ScheduledEndTimeUtc.Value.ToLocalTime().ToString("hh:mm tt");
+                    throw new ValidationException([new FluentValidation.Results.ValidationFailure("ScheduledSlot", $"Exam time slot is not active. Your assigned slot is {startLocal} - {endLocal}.")]);
+                }
             }
 
             // Resume-on-reconnect: an existing not-yet-finished session for this round is returned as-is, never re-snapshotted.

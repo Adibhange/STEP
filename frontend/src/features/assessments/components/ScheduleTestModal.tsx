@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
+import { getAppOrigin } from '@/lib/utils/url-helper';
 
 export interface ScheduleTestModalProps {
   candidateId?: string;
@@ -24,7 +25,7 @@ export interface ScheduleTestModalProps {
   }) => void;
 }
 
-import { useGetMasterDataByCategoryQuery } from '@/store/services/api';
+import { useGetMasterDataByCategoryQuery, useScheduleCandidateTestMutation } from '@/store/services/api';
 
 const TIME_SLOT_OPTIONS = [
   { value: '09:00', label: '09:00 AM' },
@@ -311,8 +312,11 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
   const [sendSms, setSendSms] = useState(true);
 
   // Generate Direct Links
-  const homeExamUrl = `http://localhost:3000/exam?id=${accessCode}&mode=home`;
-  const officeExamUrl = `http://localhost:3000/exam?id=${accessCode}&token=EXAM-MUM-2026-X89&mode=office`;
+  const origin = getAppOrigin();
+  const homeExamUrl = `${origin}/exam?id=${accessCode}&mode=home`;
+  const officeExamUrl = `${origin}/exam?id=${accessCode}&mode=office`;
+
+  const [scheduleTestApi, { isLoading: isScheduling }] = useScheduleCandidateTestMutation();
 
   // Regenerate Passcode
   const handleRegeneratePasscode = () => {
@@ -322,13 +326,29 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
   };
 
   // Submit & Schedule Action
-  const handleScheduleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleScheduleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const startFormatted = TIME_SLOT_OPTIONS.find((t) => t.value === startTime)?.label || `${startTime} AM`;
     const endFormatted = TIME_SLOT_OPTIONS.find((t) => t.value === endTime)?.label || `${endTime} PM`;
     const timeSlotStr = `${startFormatted} - ${endFormatted}`;
     const finalUrl = testMode === 'From Home' ? homeExamUrl : officeExamUrl;
+
+    const candIdNum = parseInt(candidateId, 10);
+    if (!isNaN(candIdNum) && candIdNum > 0) {
+      try {
+        await scheduleTestApi({
+          candidateId: candIdNum,
+          testMode,
+          scheduledDate,
+          startTime,
+          endTime,
+          passcode: testMode === 'From Home' ? passcode : undefined,
+        }).unwrap();
+      } catch (err: any) {
+        console.error('Failed to schedule test on backend:', err);
+      }
+    }
 
     toast.success(`Test Scheduled Successfully (${testMode})`, {
       description: `Invitation sent to ${candidateEmail}. Valid on ${scheduledDate} (${timeSlotStr}).`,

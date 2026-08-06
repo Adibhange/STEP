@@ -63,7 +63,35 @@ namespace STEP.Api.Controllers.v1
 
             return Ok(ApiResponse<object>.Ok(result, "Document uploaded successfully"));
         }
+        [HttpPost("{id:int}/evaluate-stage")]
+        [Authorize(Policy = "Candidate.Approve")]
+        public async Task<IActionResult> EvaluateStage(int id, [FromBody] EvaluateStageRequestBody body)
+        {
+            var candidate = await mediator.Send(new STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage.EvaluateCandidateStageCommand(
+                id, body.RoundNumber, body.Passed, body.Remarks));
+            return Ok(ApiResponse<object>.Ok(candidate, "Stage evaluated successfully"));
+        }
+
+        [HttpPost("{id:int}/assign-evaluator")]
+        [Authorize(Policy = "Candidate.Approve")]
+        public async Task<IActionResult> AssignEvaluator(int id, [FromBody] AssignEvaluatorRequestBody body)
+        {
+            var candidate = await mediator.Send(new STEP.Application.Features.Candidates.Commands.AssignEvaluator.AssignEvaluatorCommand(
+                id, body.RoundNumber, body.EvaluatorUserId));
+            return Ok(ApiResponse<object>.Ok(candidate, "Evaluator assigned successfully"));
+        }
+
+        [HttpPost("{id:int}/schedule-test")]
+        public async Task<IActionResult> ScheduleTest(int id, [FromBody] ScheduleTestRequestBody body)
+        {
+            var candidate = await mediator.Send(new STEP.Application.Features.Candidates.Commands.ScheduleCandidateTest.ScheduleCandidateTestCommand(
+                id, body.TestMode, body.ScheduledDate, body.StartTime, body.EndTime, body.Passcode));
+            return Ok(ApiResponse<object>.Ok(candidate, "Test scheduled successfully"));
+        }
     }
 
     public record AssignPipelineFlowRequestBody(int VacancyPipelineFlowId);
+    public record EvaluateStageRequestBody(int RoundNumber, bool Passed, string? Remarks);
+    public record AssignEvaluatorRequestBody(int RoundNumber, int EvaluatorUserId);
+    public record ScheduleTestRequestBody(string TestMode, string ScheduledDate, string StartTime, string EndTime, string? Passcode);
 }

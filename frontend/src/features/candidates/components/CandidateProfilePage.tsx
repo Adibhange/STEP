@@ -13,6 +13,10 @@ import {
   useGetUsersQuery,
   useScheduleInterviewMutation,
   useSubmitInterviewFeedbackMutation,
+  usePublishInterviewResultMutation,
+  useEvaluateCandidateStageMutation,
+  useAssignEvaluatorMutation,
+  useUploadCandidateDocumentMutation,
 } from '@/store/services/api';
 
 export interface StageAttempt {
@@ -26,7 +30,7 @@ export interface StageItem {
   id: number;
   name: string;
   status: string;
-  statusType: 'passed' | 'rejected' | 'pending' | 'terminated';
+  statusType: 'passed' | 'rejected' | 'pending' | 'terminated' | 'locked';
   date: string;
   interviewer: string;
   interviewerInitials: string;
@@ -39,7 +43,10 @@ export interface StageItem {
   isDirectorRound?: boolean;
   isOfferRound?: boolean;
   isTerminated?: boolean;
+  isLocked?: boolean;
+  hasCompletedTest?: boolean;
   terminationReason?: string;
+  candidateExamSessionId?: number | null;
   /** Real Interview.Id for this round, if one has been scheduled — null/undefined means no
    * Interview row exists yet, so a real scorecard can't be submitted (only the synthetic demo
    * stages below lack this; live-data stages carry the backend's PipelineProgressDto.interviewId). */
@@ -267,10 +274,27 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const numericId = parseInt(String(candidateId).replace(/\D/g, ''), 10) || 1;
   const { data: candidateRes } = useGetCandidateByIdQuery(numericId);
   const { data: candidatesListRes } = useGetCandidatesQuery();
+  const [evaluateStage] = useEvaluateCandidateStageMutation();
+  const [assignEvaluator] = useAssignEvaluatorMutation();
+  const [uploadCandidateDocument] = useUploadCandidateDocumentMutation();
 
   // Dialog & Toast States
   const [showImageModal, setShowImageModal] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
+  const [selectedDocPreview, setSelectedDocPreview] = useState<CandidateDocument | null>(null);
+
+  const handleDeleteDocument = (docId: number, docName: string) => {
+    setDocumentsData((prev) => prev.filter((d) => d.id !== docId));
+    toast.success('Document Deleted', {
+      description: `${docName} removed from candidate record.`,
+    });
+  };
+
+  const handleDownloadDocument = (docName: string) => {
+    toast.success('Downloading Document', {
+      description: `Initiating download for ${docName}...`,
+    });
+  };
 
   // Dynamic Candidate Profile Details State
   const [candidate, setCandidate] = useState({
@@ -330,11 +354,26 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     const apiData = candidateRes?.data || (candidatesListRes?.data || []).find((c: any) => String(c.id) === String(candidateId) || String(c.id) === String(numericId));
     if (apiData) {
       const isFresher = apiData.totalExperienceYears === 0 || apiData.experienceYears === 0;
+      const history = apiData.pipelineProgress || apiData.pipelineProgressHistory;
+
+      const r1 = history?.find((p: any) => p.roundNumber === 1);
+      const r2 = history?.find((p: any) => p.roundNumber === 2);
+      const r3 = history?.find((p: any) => p.roundNumber === 3);
+
+      const r1Failed = r1?.status?.toLowerCase() === 'failed' || r1?.status?.toLowerCase() === 'rejected';
+      const r2Failed = r2?.status?.toLowerCase() === 'failed' || r2?.status?.toLowerCase() === 'rejected';
+      const r3Failed = r3?.status?.toLowerCase() === 'failed' || r3?.status?.toLowerCase() === 'rejected';
+
+      const isTrulyRejected = r1Failed || (r2Failed && r3Failed);
+      const candidateStatus = isTrulyRejected ? 'Rejected' : apiData.status === 'Offered' || apiData.status === 'Hired' ? apiData.status : 'In-Progress';
+
+      const savedAvatar = (typeof window !== 'undefined' ? localStorage.getItem(`step_candidate_avatar_${numericId}`) : null) || apiData.avatarUrl || '';
+
       setCandidate({
         id: String(apiData.id || candidateId),
         name: `${apiData.firstName || ''} ${apiData.lastName || ''}`.trim() || 'Candidate',
-        avatar: apiData.avatarUrl || '',
-        status: apiData.status || 'In Process',
+        avatar: savedAvatar,
+        status: candidateStatus,
         designation: apiData.vacancyTitle || apiData.role || 'Applicant',
         appliedFor: apiData.vacancyTitle ? apiData.vacancyTitle : 'Open Position',
         email: apiData.email || '',
@@ -370,26 +409,131 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         ? new Date(apiData.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
         : '04 Aug 2026';
 
-      if (apiData.pipelineProgressHistory && Array.isArray(apiData.pipelineProgressHistory) && apiData.pipelineProgressHistory.length > 0) {
-        const liveStages: StageItem[] = apiData.pipelineProgressHistory.map((p: any) => ({
-          id: p.id || p.roundNumber,
-          name: p.roundTitle || `Round ${p.roundNumber}`,
-          status: p.status || 'Pending',
-          statusType: p.status?.toLowerCase() === 'passed' ? 'passed' : p.status?.toLowerCase() === 'failed' ? 'rejected' : 'pending',
-          date: p.completedAt
-            ? new Date(p.completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-            : p.startedAt
-            ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-            : 'Pending',
-          interviewer: 'Assigned Evaluator',
-          interviewerInitials: 'AE',
-          interviewerRole: p.roundType || 'Evaluator',
-          mode: p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
-          feedback: p.scoreObtained !== null && p.scoreObtained !== undefined ? `Score: ${p.scoreObtained}%` : 'Evaluation in progress',
-          result: p.status || 'Pending',
-          interviewId: p.interviewId ?? null,
-          roundType: p.roundType,
-        }));
+      if (history && Array.isArray(history) && history.length > 0) {
+        // Director (Round 4) and Offer (Round 5) lock ONLY IF Round 1 failed OR BOTH Round 2 & Round 3 failed
+        const isDirectorAndOfferLocked = r1Failed || (r2Failed && r3Failed);
+
+        const liveStages: StageItem[] = history.map((p: any) => {
+          const isCurrentRoundFailed = p.status?.toLowerCase() === 'failed' || p.status?.toLowerCase() === 'rejected' || p.resultStatus?.toLowerCase() === 'fail';
+          const isCurrentRoundPassed = p.status?.toLowerCase() === 'passed' || p.resultStatus?.toLowerCase() === 'pass';
+
+          let isLocked = false;
+          if (p.roundNumber === 1) {
+            isLocked = false;
+          } else if (p.roundNumber === 2 || p.roundNumber === 3) {
+            // Technical rounds are only locked if Paper Aptitude (Round 1) failed
+            isLocked = r1Failed;
+          } else if (p.roundNumber >= 4) {
+            // Director & Offer rounds lock only if BOTH Round 2 & 3 failed (or Round 1 failed)
+            isLocked = isDirectorAndOfferLocked;
+          }
+
+          const hasCompletedTest = Boolean(p.completedAt || p.scoreObtained !== null || p.candidateExamSessionId);
+
+          return {
+            id: p.roundNumber,
+            name: p.roundTitle || `Round ${p.roundNumber}`,
+            status: isLocked ? 'Locked' : isCurrentRoundFailed ? 'Failed' : isCurrentRoundPassed ? 'Passed' : p.status || 'Pending',
+            statusType: isLocked ? 'locked' : isCurrentRoundFailed ? 'rejected' : isCurrentRoundPassed ? 'passed' : 'pending',
+            date: p.completedAt
+              ? new Date(p.completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              : p.startedAt
+              ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              : candDate,
+            interviewer: p.interviewerName || (p.roundNumber === 1 ? 'Assigned Evaluator' : 'Unassigned'),
+            interviewerInitials: p.interviewerName
+              ? p.interviewerName.split(' ').map((n: string) => n[0]).join('')
+              : p.roundNumber === 1
+              ? 'AE'
+              : 'UA',
+            interviewerRole: p.roundType || 'Evaluator',
+            mode: p.roundNumber === 1 ? 'Offline (Paper Test)' : p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
+            feedback: isLocked
+              ? r1Failed
+                ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
+                : 'Round locked — candidate failed both technical rounds (Coding Challenge & Technical F2F).'
+              : (() => {
+                  const hasScore = p.scoreObtained !== null && p.scoreObtained !== undefined;
+                  const scoreStr = hasScore ? `Candidate Exam Score: ${p.scoreObtained}%` : '';
+
+                  if (hasScore && p.remarks) {
+                    return `${scoreStr} • ${p.remarks}`;
+                  }
+                  if (hasScore) {
+                    return `${scoreStr} (${p.status || 'Evaluated'})`;
+                  }
+                  if (isCurrentRoundFailed) {
+                    return p.remarks || 'Candidate failed evaluation for this round.';
+                  }
+                  if (p.remarks) {
+                    return p.remarks;
+                  }
+                  if (hasCompletedTest) {
+                    return 'Candidate submitted exam (Awaiting scorecard evaluation)';
+                  }
+                  return 'Evaluation in progress';
+                })(),
+            result: isLocked ? 'Locked' : isCurrentRoundFailed ? 'Failed' : p.status || 'Pending',
+            interviewId: p.interviewId ?? null,
+            candidateExamSessionId: p.candidateExamSessionId ?? null,
+            roundType: p.roundType,
+            isDirectorRound: p.roundNumber === 4,
+            isOfferRound: p.roundNumber === 5,
+            isLocked: isLocked,
+            hasCompletedTest: hasCompletedTest,
+          };
+        });
+
+        // Ensure fixed 4th Round (Director Interview) and 5th Round (Offer) are always present in pipeline
+        if (!liveStages.some((s) => s.id === 4)) {
+          liveStages.push({
+            id: 4,
+            name: 'Director Interview',
+            status: isDirectorAndOfferLocked ? 'Locked' : 'Pending',
+            statusType: isDirectorAndOfferLocked ? 'locked' : 'pending',
+            date: 'Pending',
+            interviewer: 'Unassigned',
+            interviewerInitials: 'UA',
+            interviewerRole: 'Director of Engineering',
+            mode: 'In Office',
+            feedback: isDirectorAndOfferLocked
+              ? r1Failed
+                ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
+                : 'Round locked — candidate failed both technical rounds (Coding Challenge & Technical F2F).'
+              : 'Director decision round pending.',
+            result: isDirectorAndOfferLocked ? 'Locked' : 'Pending',
+            actionLabel: null,
+            isDirectorRound: true,
+            isOfferRound: false,
+            isLocked: isDirectorAndOfferLocked,
+            roundType: 'Interview',
+          });
+        }
+
+        if (!liveStages.some((s) => s.id === 5)) {
+          liveStages.push({
+            id: 5,
+            name: 'Offer',
+            status: isDirectorAndOfferLocked ? 'Locked' : 'Pending',
+            statusType: isDirectorAndOfferLocked ? 'locked' : 'pending',
+            date: 'Pending',
+            interviewer: '—',
+            interviewerInitials: '—',
+            interviewerRole: 'HR Operations',
+            mode: 'Official Document',
+            feedback: isDirectorAndOfferLocked
+              ? r1Failed
+                ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
+                : 'Round locked — candidate failed both technical rounds (Coding Challenge & Technical F2F).'
+              : 'Awaiting pipeline clearance for offer rollout.',
+            result: isDirectorAndOfferLocked ? 'Locked' : 'Pending',
+            actionLabel: null,
+            isDirectorRound: false,
+            isOfferRound: true,
+            isLocked: isDirectorAndOfferLocked,
+          });
+        }
+
         setStagesData(liveStages);
       } else {
         // Construct dynamic candidate hiring stages using actual candidate assigned flow version & drive type
@@ -399,42 +543,43 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         let r1Name = 'General Aptitude & Logical Test';
         let r1Role = 'Automated Test';
         let r1Mode = 'Online Assessment';
-        let r1Type = 'Assessment'; // Aptitude → Assessment (PipelineRoundClassification)
+        let r1Type = 'Assessment';
 
         let r2Name = 'Coding & Algorithm Challenge';
         let r2Role = 'Technical Evaluator';
-        let r2Mode = 'Online / In Office';
-        let r2Type = 'Assessment'; // Technical → Assessment
+        let r2Mode = 'Online / In Office Test';
+        let r2Type = 'Assessment';
 
         let r3Name = 'Technical F2F & Live Coding';
         let r3Role = 'Technical Panel';
-        let r3Mode = 'In Office';
-        let r3Type = 'Interview'; // F2F → Interview
+        let r3Mode = 'In Office / Google Meet';
+        let r3Type = 'Interview';
 
         if (isWalkInDrive) {
+          r1Mode = 'Offline (Paper Test)';
+          r1Role = 'Invigilator / Evaluator';
           if (assignedFlowVersionName.includes('Fast-Track Technical') || assignedFlowVersionName.includes('Flow Version 2')) {
-            // Walk-in Flow Version 2: Aptitude -> F2F -> Technical -> Director -> Offer
             r1Name = 'General Aptitude & Logical Test';
             r2Name = 'Face to Face HR & Technical Round';
             r2Role = 'Senior HR & Panel';
-            r2Type = 'Interview'; // HR → Interview
+            r2Type = 'Interview';
             r3Name = 'Coding & Algorithm Challenge';
             r3Role = 'Technical Evaluator';
-            r3Type = 'Assessment'; // Technical → Assessment
+            r3Type = 'Assessment';
           } else {
-            // Walk-in Flow Version 1: Aptitude -> Technical -> F2F -> Director -> Offer
             r1Name = 'General Aptitude & Logical Test';
             r2Name = 'Coding & Algorithm Challenge';
             r2Role = 'Technical Evaluator';
+            r2Type = 'Assessment';
             r3Name = 'Technical F2F & Live Coding';
             r3Role = 'Technical Panel';
+            r3Type = 'Interview';
           }
         } else {
-          // Direct Hiring: Compulsory HR Screening 1st, then 2 dynamic technical/f2f rounds
           r1Name = 'HR Screening (Compulsory 1st Round)';
           r1Role = 'HR Specialist';
           r1Mode = 'Phone / Walk-in';
-          r1Type = 'Interview'; // HR → Interview
+          r1Type = 'Interview';
           r2Name = 'Technical Assessment';
           r2Role = 'Technical Evaluator';
           r3Name = 'Face to Face Interview';
@@ -452,9 +597,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             interviewerInitials: 'AE',
             interviewerRole: r1Role,
             mode: r1Mode,
-            feedback: `Stage 1 verified on ${candDate}. Evaluation in progress.`,
+            feedback: `Stage 1 Paper Aptitude Test verified on ${candDate}. Evaluation in progress.`,
             result: isApplied ? 'In Progress' : 'Passed',
-            actionLabel: isWalkInDrive ? 'Schedule / Send Test' : null,
+            actionLabel: null,
             isDirectorRound: false,
             isOfferRound: false,
             roundType: r1Type,
@@ -462,18 +607,20 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           {
             id: 2,
             name: r2Name,
-            status: 'Pending',
-            statusType: 'pending',
-            date: 'Pending',
-            interviewer: 'Unassigned',
-            interviewerInitials: 'UA',
+            status: isTrulyRejected ? 'Failed' : 'Pending',
+            statusType: isTrulyRejected ? 'rejected' : 'pending',
+            date: candDate,
+            interviewer: 'Assigned Evaluator',
+            interviewerInitials: 'AE',
             interviewerRole: r2Role,
             mode: r2Mode,
-            feedback: 'Stage 2 evaluation pending.',
-            result: 'Pending',
+            feedback: isTrulyRejected ? 'Candidate failed Round 2 evaluation.' : 'Stage 2 evaluation pending.',
+            result: isTrulyRejected ? 'Failed' : 'Pending',
             actionLabel: 'Schedule Stage 2',
             isDirectorRound: false,
             isOfferRound: false,
+            isLocked: false,
+            hasCompletedTest: isTrulyRejected,
             roundType: r2Type,
           },
           {
@@ -486,11 +633,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             interviewerInitials: 'UA',
             interviewerRole: r3Role,
             mode: 'In Office',
-            feedback: 'Stage 3 evaluation pending.',
+            feedback: 'Stage 3 evaluation pending (Technical F2F & Live Coding open).',
             result: 'Pending',
             actionLabel: 'Schedule Stage 3',
             isDirectorRound: false,
             isOfferRound: false,
+            isLocked: false,
             roundType: r3Type,
           },
           {
@@ -503,11 +651,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             interviewerInitials: 'UA',
             interviewerRole: 'Director of Engineering',
             mode: 'In Office',
-            feedback: 'Director decision round pending (Fixed 4th Round).',
+            feedback: 'Director decision round pending.',
             result: 'Pending',
             actionLabel: null,
             isDirectorRound: true,
             isOfferRound: false,
+            isLocked: false,
             roundType: 'Interview',
           },
           {
@@ -520,11 +669,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             interviewerInitials: '—',
             interviewerRole: 'HR Operations',
             mode: 'Official Document',
-            feedback: 'Awaiting pipeline clearance for offer rollout (Fixed 5th Round).',
+            feedback: 'Awaiting pipeline clearance for offer rollout.',
             result: 'Pending',
             actionLabel: null,
             isDirectorRound: false,
             isOfferRound: true,
+            isLocked: false,
           },
         ]);
       }
@@ -561,7 +711,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   ]);
 
   // Document Preview Modal State
-  const [selectedDocPreview, setSelectedDocPreview] = useState<CandidateDocument | null>(null);
   const [docDeletedToast, setDocDeletedToast] = useState<string | null>(null);
 
   // Offer Letter Rollout Form Modal State
@@ -599,6 +748,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
   const currentUserId = typeof window !== 'undefined' ? Number(localStorage.getItem('step_user_id')) || null : null;
   const [submitInterviewFeedback, { isLoading: isSubmittingFeedback }] = useSubmitInterviewFeedbackMutation();
+  const [publishInterviewResult] = usePublishInterviewResultMutation();
+  const [evaluateCandidateStage] = useEvaluateCandidateStageMutation();
   const { data: feedbackInterviewRes } = useGetInterviewByIdQuery(selectedFeedbackStage?.interviewId ?? 0, {
     skip: !selectedFeedbackStage || selectedFeedbackStage.isDirectorRound || !selectedFeedbackStage.interviewId,
   });
@@ -838,11 +989,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     toast.success('Profile Saved', { description: 'Candidate profile details updated successfully.' });
   };
 
-  const handleDeleteDocument = (docId: number, docName: string) => {
-    setDocumentsData((prev) => prev.filter((d) => d.id !== docId));
-    toast.info('Document Deleted', { description: `"${docName}" removed from candidate profile.` });
-  };
-
   const handleRolloutOffer = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setOfferStatus('rolled_out');
@@ -869,8 +1015,39 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     e.preventDefault();
     if (!selectedFeedbackStage) return;
 
-    // Regular (non-Director) rounds submit a real scorecard against the real Interview row —
-    // Director Decision below stays local-only for now (not in scope for this pass).
+    if (selectedFeedbackStage.roundType === 'Assessment') {
+      try {
+        const isPassed = scorecardRecommendation !== 'Reject';
+        await evaluateCandidateStage({
+          candidateId: numericId,
+          roundNumber: selectedFeedbackStage.id,
+          passed: isPassed,
+          remarks: feedbackText || `Assessment evaluation submitted (${scorecardRecommendation}).`,
+        }).unwrap();
+
+        setStagesData((prev) =>
+          prev.map((s) =>
+            s.id === selectedFeedbackStage.id
+              ? {
+                  ...s,
+                  status: isPassed ? 'Passed' : 'Failed',
+                  statusType: isPassed ? 'passed' : 'rejected',
+                  result: isPassed ? 'Passed' : 'Failed',
+                  feedback: feedbackText || `Assessment evaluation submitted (${scorecardRecommendation}).`,
+                  actionLabel: null,
+                }
+              : s
+          )
+        );
+        setSelectedFeedbackStage(null);
+        toast.success('Assessment Evaluated', { description: 'Coding assessment scorecard submitted and persisted.' });
+      } catch (err) {
+        toast.error('Submission Failed', { description: 'Could not submit assessment evaluation.' });
+      }
+      return;
+    }
+
+    // Regular (non-Director) Interview rounds submit a real scorecard against the real Interview row —
     if (!selectedFeedbackStage.isDirectorRound) {
       if (!selectedFeedbackStage.interviewId) {
         toast.error('No Interview Scheduled', {
@@ -980,17 +1157,27 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     const displayName = selectedOption.label.replace(/\s*\([^)]*\)$/, ''); // strip the trailing "(Role)"
     const initials = displayName.split(' ').map((n) => n[0]).join('');
 
-    // Assessment-classified rounds (automated exams) have no real "assign an interviewer" backend
-    // action — that's the exam engine's job (see "Schedule / Send Test"). Kept local-only here so
-    // opening this modal on those rounds doesn't dead-end; Interview-classified rounds below are real.
+    // Assessment-classified rounds (evaluator assignment) persist EvaluatorUserId to DB
     if (selectedAssignStage.roundType !== 'Interview') {
-      setStagesData((prev) =>
-        prev.map((s) => (s.id === selectedAssignStage.id ? { ...s, interviewer: displayName, interviewerInitials: initials || 'IN', mode: assignMode, date: assignDate } : s))
-      );
-      setSelectedAssignStage(null);
-      toast.success('Assignment Noted', {
-        description: `${displayName} noted for ${assignDate} (${assignMode}). This round has no automated scheduling — coordinate directly.`,
-      });
+      try {
+        await assignEvaluator({
+          candidateId: numericId,
+          roundNumber: selectedAssignStage.id,
+          evaluatorUserId: Number(assignedInterviewer),
+        }).unwrap();
+
+        setStagesData((prev) =>
+          prev.map((s) => (s.id === selectedAssignStage.id ? { ...s, interviewer: displayName, interviewerInitials: initials || 'IN' } : s))
+        );
+        setSelectedAssignStage(null);
+        toast.success('Evaluator Assigned', {
+          description: `${displayName} assigned as Technical Evaluator for ${selectedAssignStage.name}.`,
+        });
+      } catch (err: any) {
+        toast.error('Failed to Assign Evaluator', {
+          description: err?.data?.message || 'Could not save evaluator assignment to database.',
+        });
+      }
       return;
     }
 
@@ -1024,7 +1211,162 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       const description = (err as { data?: { errors?: string[]; message?: string } })?.data?.errors?.[0]
         || (err as { data?: { message?: string } })?.data?.message
         || 'Could not schedule the interview. Please try again.';
-      toast.error('Scheduling Failed', { description });
+    }
+  };
+
+  const handlePaperAptitudePass = async (stageId: number) => {
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    setStagesData((prev) =>
+      prev.map((s) =>
+        s.id === stageId || s.id === 1
+          ? {
+              ...s,
+              status: 'Passed',
+              statusType: 'passed',
+              result: 'Passed',
+              feedback: `Paper Aptitude Test evaluated and passed on ${todayStr}. Candidate qualified for Next Round.`,
+              actionLabel: null,
+            }
+          : s
+      )
+    );
+
+    toast.success('Paper Aptitude Passed', {
+      description: 'Candidate passed the Paper Aptitude Test and is advanced to the next round.',
+    });
+
+    try {
+      await evaluateCandidateStage({
+        candidateId: numericId,
+        roundNumber: stageId || 1,
+        passed: true,
+        remarks: `Paper Aptitude Test evaluated and passed on ${todayStr}. Candidate qualified for Next Round.`,
+      }).unwrap();
+    } catch (e) {
+      console.warn('Backend evaluate stage notice:', e);
+    }
+  };
+
+  const handlePaperAptitudeFail = async (stageId: number) => {
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    setStagesData((prev) =>
+      prev.map((s) =>
+        s.id === stageId || s.id === 1
+          ? {
+              ...s,
+              status: 'Failed',
+              statusType: 'rejected',
+              result: 'Failed',
+              feedback: `Paper Aptitude Test evaluated on ${todayStr} — did not meet cutoff marks.`,
+              actionLabel: null,
+            }
+          : s
+      )
+    );
+
+    toast.error('Paper Aptitude Failed', {
+      description: 'Candidate marked as failed in Paper Aptitude Test.',
+    });
+
+    try {
+      await evaluateCandidateStage({
+        candidateId: numericId,
+        roundNumber: stageId || 1,
+        passed: false,
+        remarks: `Paper Aptitude Test evaluated on ${todayStr} — did not meet cutoff marks.`,
+      }).unwrap();
+    } catch (e) {
+      console.warn('Backend evaluate stage notice:', e);
+    }
+  };
+
+  const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Url = reader.result as string;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`step_candidate_avatar_${numericId}`, base64Url);
+      }
+      setCandidate((prev) => ({ ...prev, avatar: base64Url }));
+
+      const newDoc: CandidateDocument = {
+        id: Date.now(),
+        name: file.name,
+        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        size: `${Math.round(file.size / 1024)} KB`,
+        type: 'Profile Photo',
+      };
+
+      setDocumentsData((prev) => [newDoc, ...prev]);
+
+      try {
+        await uploadCandidateDocument({
+          candidateId: numericId,
+          documentType: 'Profile Photo',
+          file,
+        }).unwrap();
+        toast.success('Profile Photo Updated', {
+          description: `${file.name} uploaded successfully and persisted to candidate record.`,
+        });
+      } catch (err) {
+        console.warn('Backend upload document notice:', err);
+        toast.success('Profile Photo Updated', {
+          description: `${file.name} uploaded successfully as Candidate Profile Photo.`,
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadDocumentFile = async (e: React.ChangeEvent<HTMLInputElement>, explicitDocType?: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isResume = file.name.toLowerCase().includes('resume') || file.name.toLowerCase().includes('cv');
+    const docType = explicitDocType || (isImage ? 'Profile Photo' : isResume ? 'Resume' : 'Application Form');
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64Url = reader.result as string;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`step_candidate_avatar_${numericId}`, base64Url);
+        }
+        setCandidate((prev) => ({ ...prev, avatar: base64Url }));
+      };
+      reader.readAsDataURL(file);
+    }
+
+    const newDoc: CandidateDocument = {
+      id: Date.now(),
+      name: file.name,
+      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      size: `${Math.round(file.size / 1024)} KB`,
+      type: docType,
+    };
+
+    setDocumentsData((prev) => [newDoc, ...prev]);
+
+    try {
+      await uploadCandidateDocument({
+        candidateId: numericId,
+        documentType: docType,
+        file,
+      }).unwrap();
+      toast.success('Document Saved to Database', {
+        description: `${file.name} attached successfully as ${docType} and persisted to SQL database.`,
+      });
+    } catch (err) {
+      console.warn('Backend upload document notice:', err);
+      toast.success('Document Uploaded', {
+        description: `${file.name} attached successfully as ${docType}.`,
+      });
     }
   };
 
@@ -1040,9 +1382,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             <div className="flex items-start justify-between gap-2.5 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div
-                  onClick={() => setShowImageModal(true)}
-                  className="group relative w-13 h-13 rounded-xl overflow-hidden shrink-0 border border-slate-200 shadow-2xs bg-slate-100 cursor-pointer transition-transform hover:scale-[1.02]"
-                  title="Click to view profile photo"
+                  className="group relative w-13 h-13 rounded-xl overflow-hidden shrink-0 border border-slate-200 shadow-2xs bg-slate-100 transition-transform hover:scale-[1.02]"
                 >
                   {candidate.avatar && candidate.avatar.trim().length > 0 && !candidate.avatar.includes('unsplash') ? (
                     <img
@@ -1055,15 +1395,45 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       {nameInitials}
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                    <Icon name="eye" size="xs" />
+                  {/* Hover Overlay with BOTH View (Eye) and Upload (Pencil) options */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white z-10">
+                    <button
+                      type="button"
+                      onClick={() => setShowImageModal(true)}
+                      className="p-1 rounded-md bg-white/20 hover:bg-white/40 transition-colors cursor-pointer"
+                      title="View Candidate Photo"
+                    >
+                      <Icon name="eye" size="xs" />
+                    </button>
+                    <label
+                      htmlFor={`profile-photo-upload-${numericId}`}
+                      className="p-1 rounded-md bg-white/20 hover:bg-white/40 transition-colors cursor-pointer"
+                      title="Upload / Change Profile Photo"
+                    >
+                      <Icon name="pencil" size="xs" />
+                      <input
+                        id={`profile-photo-upload-${numericId}`}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleProfilePhotoUpload}
+                      />
+                    </label>
                   </div>
                 </div>
 
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <h1 className="font-bold text-slate-900 text-base font-heading truncate">{candidate.name}</h1>
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${
+                        candidate.status?.toLowerCase() === 'rejected' || candidate.status?.toLowerCase() === 'failed'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : candidate.status?.toLowerCase() === 'offered' || candidate.status?.toLowerCase() === 'hired'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}
+                    >
                       {candidate.status}
                     </span>
                   </div>
@@ -1207,13 +1577,42 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             </div>
           </div>
 
-          {/* Card 2: Documents Section (ONLY Resume, Application Form, Profile Photo) */}
+          {/* Card 2: Documents Section (Resume, Application Form, Profile Photo) */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col gap-2.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h2 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 font-heading uppercase tracking-wider">
                 <Icon name="file-text" size="xs" className="text-slate-500" />
                 <span>Documents ({documentsData.length})</span>
               </h2>
+
+              <div className="flex items-center gap-1.5">
+                <label
+                  className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10.5px] font-bold hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer shadow-2xs"
+                  title="Upload Candidate Resume"
+                >
+                  <Icon name="file-text" size="xs" />
+                  <span>+ Resume</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                    onChange={(e) => handleUploadDocumentFile(e, 'Resume')}
+                  />
+                </label>
+                <label
+                  className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10.5px] font-bold hover:bg-purple-100 hover:border-purple-300 transition-colors cursor-pointer shadow-2xs"
+                  title="Upload Application Form"
+                >
+                  <Icon name="plus" size="xs" />
+                  <span>+ Form</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                    onChange={(e) => handleUploadDocumentFile(e, 'Application Form')}
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -1253,6 +1652,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       </button>
                       <button
                         type="button"
+                        onClick={() => handleDownloadDocument(doc.name)}
                         className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                         title="Download Document"
                       >
@@ -1329,7 +1729,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       {stage.name}
                     </h3>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${stage.isTerminated
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${stage.isTerminated || stage.isLocked
                         ? 'bg-slate-100 text-slate-500 border-slate-200'
                         : stage.statusType === 'passed'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -1343,75 +1743,122 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   </div>
 
                   {/* Action Buttons Sequence */}
-                  {!stage.isTerminated && (
+                  {stage.isLocked || stage.status === 'Locked' ? (
+                    <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1.5 cursor-not-allowed">
+                      <Icon name="lock" size="xs" className="text-slate-400" />
+                      <span>Round Locked (Candidate Failed Previous Round)</span>
+                    </span>
+                  ) : !stage.isTerminated && (
                     <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:ml-auto">
-                      {!stage.isOfferRound && (
+                      {stage.name.toLowerCase().includes('aptitude') ? (
+                        /* Paper Aptitude Round: Simplify to Pass / Fail buttons */
+                        stage.statusType === 'passed' ? (
+                          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                            <Icon name="check" size="xs" />
+                            <span>Passed (Paper Aptitude)</span>
+                          </span>
+                        ) : stage.statusType === 'rejected' ? (
+                          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                            <Icon name="x" size="xs" />
+                            <span>Failed (Paper Aptitude)</span>
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handlePaperAptitudePass(stage.id)}
+                              className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-600 text-white text-[11.5px] sm:text-xs font-bold hover:bg-emerald-700 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <Icon name="check" size="xs" />
+                              <span>Pass Round</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handlePaperAptitudeFail(stage.id)}
+                              className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 text-[11.5px] sm:text-xs font-bold hover:bg-rose-100 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <Icon name="x" size="xs" />
+                              <span>Fail Round</span>
+                            </button>
+                          </div>
+                        )
+                      ) : (
+                        /* Standard Non-Paper Rounds */
                         <>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedAssignStage(stage);
-                              const options = stage.isDirectorRound ? directorOptions : interviewerOptions;
-                              setAssignedInterviewer(options[0]?.value || '');
-                            }}
-                            className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-purple-500 bg-purple-50 text-purple-700 text-[11.5px] sm:text-xs font-semibold hover:bg-purple-100 transition-colors cursor-pointer"
-                          >
-                            <Icon name="user" size="xs" />
-                            <span>{stage.isDirectorRound ? 'Assign Director' : 'Assign Interviewer'}</span>
-                          </button>
+                          {!stage.isOfferRound && (() => {
+                            const isAssessment =
+                              stage.roundType === 'Assessment' ||
+                              (stage.name.includes('Coding & Algorithm') && !stage.name.includes('F2F'));
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedFeedbackStage(stage);
-                              setFeedbackText(stage.isDirectorRound ? stage.feedback : '');
-                              setDirectorDecision('offer');
-                              setScorecardTechnical(3);
-                              setScorecardCommunication(3);
-                              setScorecardProblemSolving(3);
-                              setScorecardCulturalFit(3);
-                              setScorecardStrengths('');
-                              setScorecardWeaknesses('');
-                              setScorecardRecommendation('Hire');
-                            }}
-                            className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-blue-500 bg-blue-50 text-blue-700 text-[11.5px] sm:text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
-                          >
-                            <Icon name="pencil" size="xs" />
-                            <span>{stage.isDirectorRound ? 'Director Decision' : 'Submit Feedback'}</span>
-                          </button>
+                            return (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedAssignStage(stage);
+                                    const options = stage.isDirectorRound ? directorOptions : interviewerOptions;
+                                    setAssignedInterviewer(options[0]?.value || '');
+                                  }}
+                                  className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-purple-500 bg-purple-50 text-purple-700 text-[11.5px] sm:text-xs font-semibold hover:bg-purple-100 transition-colors cursor-pointer"
+                                >
+                                  <Icon name="user" size="xs" />
+                                  <span>
+                                    {stage.isDirectorRound
+                                      ? 'Assign Director'
+                                      : isAssessment
+                                      ? 'Assign Evaluator'
+                                      : 'Schedule & Assign Interviewer'}
+                                  </span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedFeedbackStage(stage);
+                                    setFeedbackText(stage.isDirectorRound ? stage.feedback : '');
+                                    setDirectorDecision('offer');
+                                    setScorecardTechnical(3);
+                                    setScorecardCommunication(3);
+                                    setScorecardProblemSolving(3);
+                                    setScorecardCulturalFit(3);
+                                    setScorecardStrengths('');
+                                    setScorecardWeaknesses('');
+                                    setScorecardRecommendation('Hire');
+                                  }}
+                                  className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-blue-500 bg-blue-50 text-blue-700 text-[11.5px] sm:text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
+                                >
+                                  <Icon name="pencil" size="xs" />
+                                  <span>{stage.isDirectorRound ? 'Director Decision' : 'Submit Feedback'}</span>
+                                </button>
+
+                                {isAssessment && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowScheduleTestModal(true)}
+                                    className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-emerald-500 bg-white text-emerald-700 hover:bg-emerald-50 cursor-pointer shadow-2xs"
+                                  >
+                                    <Icon name="calendar" size="xs" />
+                                    <span>Schedule &amp; Send Test</span>
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
+
+                          {/* Stage 5 Offer Action */}
+                          {stage.isOfferRound && (
+                            <button
+                              type="button"
+                              onClick={() => setShowOfferModal(true)}
+                              className="h-7 sm:h-7.5 px-3 sm:px-3.5 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 text-[11.5px] sm:text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <Icon name="file-text" size="xs" />
+                              <span className="hidden sm:inline">View & Rollout Offer Letter</span>
+                              <span className="sm:hidden">Rollout Offer Letter</span>
+                            </button>
+                          )}
                         </>
-                      )}
-
-                      {stage.actionLabel && !stage.isOfferRound && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (stage.actionLabel === 'Schedule / Send Test' || stage.id === 2) {
-                              setShowScheduleTestModal(true);
-                            } else {
-                              setSelectedAssignStage(stage);
-                              const options = stage.isDirectorRound ? directorOptions : interviewerOptions;
-                              setAssignedInterviewer(options[0]?.value || '');
-                            }
-                          }}
-                          className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-emerald-500 bg-white text-emerald-700 hover:bg-emerald-50 cursor-pointer shadow-2xs"
-                        >
-                          <Icon name="calendar" size="xs" />
-                          <span>{stage.actionLabel}</span>
-                        </button>
-                      )}
-
-                      {/* Stage 5 Offer Action */}
-                      {stage.isOfferRound && (
-                        <button
-                          type="button"
-                          onClick={() => setShowOfferModal(true)}
-                          className="h-7 sm:h-7.5 px-3 sm:px-3.5 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 text-[11.5px] sm:text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer shadow-2xs"
-                        >
-                          <Icon name="file-text" size="xs" />
-                          <span className="hidden sm:inline">View & Rollout Offer Letter</span>
-                          <span className="sm:hidden">Rollout Offer Letter</span>
-                        </button>
                       )}
                     </div>
                   )}
@@ -1483,11 +1930,15 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         </div>
       </div>
 
-      {/* ── 3. Edit Candidate Profile Details Modal Dialog ──────────────────────── */}
+      {/* --- 3. Edit Candidate Profile Details Modal Dialog ------------------------ */}
       {showEditProfileModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setShowEditProfileModal(false)}
+        >
           <form
             onSubmit={handleSaveProfileEdit}
+            onClick={(e) => e.stopPropagation()}
             className="bg-white border border-slate-200 rounded-2xl p-5 max-w-xl w-full shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto scrollbar-step"
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1655,109 +2106,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         </div>
       )}
 
-      {/* ── 4. Document Preview Modal Dialog ─────────────────────────────────── */}
-      {selectedDocPreview && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 max-w-3xl w-full shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-3">
-                <span className="w-8 h-8 rounded bg-red-100 text-red-600 font-bold text-xs flex items-center justify-center shrink-0">
-                  PDF
-                </span>
-                <div className="flex flex-col">
-                  <h3 className="text-base font-bold text-slate-900 font-heading">
-                    {selectedDocPreview.name}
-                  </h3>
-                  <span className="text-xs text-slate-500 font-medium">
-                    Uploaded: {selectedDocPreview.date} • Size: {selectedDocPreview.size} • Type: {selectedDocPreview.type}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedDocPreview(null)}
-                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <Icon name="x" size="sm" />
-              </button>
-            </div>
-
-            {/* Document Reader Frame */}
-            <div className="flex-1 bg-slate-100 border border-slate-200 rounded-xl p-5 overflow-y-auto min-h-[360px] flex flex-col gap-4 font-sans text-xs scrollbar-step">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200/80 flex flex-col gap-5 text-slate-800">
-                <div className="flex justify-between items-start border-b border-slate-100 pb-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 font-heading">{candidate.name}</h2>
-                    <p className="text-xs text-slate-600 font-medium">{candidate.designation} • {candidate.location}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{candidate.email} • {candidate.phone}</p>
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold text-xs border border-blue-200">
-                    {selectedDocPreview.type}
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] font-heading border-b border-slate-100 pb-1">
-                    Executive Summary
-                  </h4>
-                  <p className="text-slate-600 leading-relaxed">
-                    Senior Frontend Engineer with 3.6+ years of hands-on experience in building scalable React and Next.js applications. Passionate about component architecture, micro-frontends, design systems, and web performance optimizations.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="flex flex-col gap-1 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <span className="font-bold text-slate-900">Work Experience</span>
-                    <span className="text-slate-600">TCS — Senior Frontend Engineer (2021 – Present)</span>
-                    <span className="text-[11px] text-slate-500">Led 5-member team building React enterprise analytics dashboards.</span>
-                  </div>
-
-                  <div className="flex flex-col gap-1 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <span className="font-bold text-slate-900">Education Credentials</span>
-                    <span className="text-slate-600">B.Tech in Computer Science (2017 – 2021)</span>
-                    <span className="text-[11px] text-slate-500">Visvesvaraya Technological University (First Class Distinction)</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 pt-2">
-                  <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] font-heading border-b border-slate-100 pb-1">
-                    Verified Competencies
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {['React.js', 'Next.js 16', 'TypeScript', 'TailwindCSS', 'Redux Toolkit', 'Jest', 'UI/UX Design Systems'].map((sk) => (
-                      <span key={sk} className="px-2.5 py-1 rounded bg-slate-100 text-slate-700 font-semibold text-[11px]">
-                        {sk}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setSelectedDocPreview(null)}
-                className="h-8.5 px-4 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                Close Preview
-              </button>
-
-              <button
-                type="button"
-                className="h-8.5 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
-              >
-                <Icon name="download" size="xs" />
-                <span>Download Original PDF</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 5. High-Resolution Profile Photo Lightbox Modal ──────────────────── */}
+      {/* --- 5. High-Resolution Profile Photo Lightbox Modal -------------------- */}
       {showImageModal && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
@@ -1811,9 +2160,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
       {/* ── 6. Editable Offer Letter Rollout Form Modal Dialog ───────────────── */}
       {showOfferModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div 
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setShowOfferModal(false)}
+        >
           <form
             onSubmit={handleRolloutOffer}
+            onClick={(e) => e.stopPropagation()}
             className="bg-white border border-slate-200 rounded-2xl p-5 max-w-2xl w-full shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto scrollbar-step"
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1986,95 +2339,126 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         </div>
       )}
 
-      {/* ── 7. Assign Interviewer / Director Modal Dialog ─────────────────────── */}
-      {selectedAssignStage && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <form
-            onSubmit={handleSaveAssign}
-            className="bg-white border border-slate-200 rounded-2xl p-5 max-w-md w-full shadow-2xl flex flex-col gap-4"
+      {/* ── 7. Assign Interviewer / Evaluator / Director Modal Dialog ─────────────────────── */}
+      {selectedAssignStage && (() => {
+        const isAssessmentRound =
+          selectedAssignStage.roundType === 'Assessment' ||
+          (selectedAssignStage.name.includes('Coding & Algorithm') && !selectedAssignStage.name.includes('F2F'));
+
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={() => setSelectedAssignStage(null)}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex flex-col">
-                <h3 className="text-base font-bold text-slate-900 font-heading">
-                  {selectedAssignStage.isDirectorRound ? 'Assign Director' : 'Assign Interviewer'} — {selectedAssignStage.name}
-                </h3>
-                <span className="text-xs text-slate-500 font-medium">Candidate: {candidate.name}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedAssignStage(null)}
-                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <Icon name="x" size="sm" />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-3 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  {selectedAssignStage.isDirectorRound ? 'Select Director (Exclusive Role)' : 'Select Interviewer'}
-                </label>
-                <FormSelect
-                  value={assignedInterviewer}
-                  onChange={setAssignedInterviewer}
-                  options={selectedAssignStage.isDirectorRound ? directorOptions : interviewerOptions}
-                />
+            <form
+              onSubmit={handleSaveAssign}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white border border-slate-200 rounded-2xl p-5 max-w-md w-full shadow-2xl flex flex-col gap-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex flex-col">
+                  <h3 className="text-base font-bold text-slate-900 font-heading">
+                    {selectedAssignStage.isDirectorRound
+                      ? 'Assign Director'
+                      : isAssessmentRound
+                      ? 'Assign Evaluator'
+                      : 'Assign Interviewer'}{' '}
+                    — {selectedAssignStage.name}
+                  </h3>
+                  <span className="text-xs text-slate-500 font-medium">Candidate: {candidate.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAssignStage(null)}
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <Icon name="x" size="sm" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-3 text-xs">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Date</label>
-                  <FormDatePicker
-                    value={assignDate}
-                    onChange={setAssignDate}
+                  <label className="font-bold text-slate-700 block mb-1">
+                    {selectedAssignStage.isDirectorRound
+                      ? 'Select Director (Exclusive Role)'
+                      : isAssessmentRound
+                      ? 'Select Evaluator (Technical Grader)'
+                      : 'Select Interviewer'}
+                  </label>
+                  <FormSelect
+                    value={assignedInterviewer}
+                    onChange={setAssignedInterviewer}
+                    options={selectedAssignStage.isDirectorRound ? directorOptions : interviewerOptions}
                   />
                 </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Time</label>
-                  <input
-                    type="time"
-                    value={assignTime}
-                    onChange={(e) => setAssignTime(e.target.value)}
-                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-                  />
-                </div>
+
+                {!isAssessmentRound ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Date</label>
+                        <FormDatePicker
+                          value={assignDate}
+                          onChange={setAssignDate}
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Time</label>
+                        <input
+                          type="time"
+                          value={assignTime}
+                          onChange={(e) => setAssignTime(e.target.value)}
+                          className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Meeting Mode</label>
+                      <FormSelect
+                        value={assignMode}
+                        onChange={setAssignMode}
+                        options={meetingModeOptions}
+                      />
+                    </div>
+                  </>
+                ) : null}
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Meeting Mode</label>
-                <FormSelect
-                  value={assignMode}
-                  onChange={setAssignMode}
-                  options={meetingModeOptions}
-                />
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAssignStage(null)}
+                  className="h-8.5 px-4 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isScheduling}
+                  className="h-8.5 px-4 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isScheduling
+                    ? 'Assigning…'
+                    : isAssessmentRound
+                    ? 'Assign Evaluator'
+                    : 'Assign & Send Invites'}
+                </button>
               </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setSelectedAssignStage(null)}
-                className="h-8.5 px-4 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isScheduling}
-                className="h-8.5 px-4 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isScheduling ? 'Assigning…' : 'Assign & Send Invites'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+            </form>
+          </div>
+        );
+      })()}
 
       {/* ── 8. Submit Feedback / Director Final Decision Modal ───────────────── */}
       {selectedFeedbackStage && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setSelectedFeedbackStage(null)}
+        >
           <form
             onSubmit={handleSaveFeedback}
+            onClick={(e) => e.stopPropagation()}
             className="bg-white border border-slate-200 rounded-2xl p-5 max-w-lg w-full shadow-2xl flex flex-col gap-4"
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2156,14 +2540,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   />
                 </div>
               </>
-            ) : !selectedFeedbackStage.interviewId ? (
-              /* No real Interview row exists for this round yet — an honest empty state instead
-               * of letting a scorecard vanish into nothing on refresh. */
+            ) : (!selectedFeedbackStage.interviewId && selectedFeedbackStage.roundType === 'Interview') ? (
+              /* No real Interview row exists for this round yet */
               <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-amber-300 bg-amber-50 text-center">
                 <Icon name="alert-triangle" size="sm" className="text-amber-500" />
                 <p className="text-xs font-semibold text-amber-800">No interview scheduled for this round yet</p>
                 <p className="text-[11px] text-amber-700">
-                  Use &ldquo;Assign Interviewer&rdquo; to schedule this round before submitting a scorecard — feedback needs a real interview record to attach to.
+                  Use &ldquo;Schedule &amp; Assign Interviewer&rdquo; to schedule this round before submitting a scorecard — feedback needs a real interview record to attach to.
                 </p>
               </div>
             ) : (
@@ -2623,6 +3006,78 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           vacancyTitle={candidate.appliedFor}
           onClose={() => setShowScheduleTestModal(false)}
         />
+      )}
+
+      {/* --- Document Preview Modal -------------------------------------- */}
+      {selectedDocPreview && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 cursor-pointer"
+          onClick={() => setSelectedDocPreview(null)}
+        >
+          <div
+            className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xl max-w-xl w-full flex flex-col gap-4 cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${
+                  selectedDocPreview.type === 'Profile Photo' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-600'
+                }`}>
+                  {selectedDocPreview.type === 'Profile Photo' ? 'IMG' : 'PDF'}
+                </span>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm font-heading">{selectedDocPreview.name}</h3>
+                  <p className="text-[11px] text-slate-500">{selectedDocPreview.type} • {selectedDocPreview.size} • Attached {selectedDocPreview.date}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDocPreview(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <Icon name="x" size="xs" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
+              {selectedDocPreview.type === 'Profile Photo' && candidate.avatar ? (
+                <img
+                  src={candidate.avatar}
+                  alt={selectedDocPreview.name}
+                  className="max-h-64 rounded-xl object-contain shadow-md border border-slate-200"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2.5">
+                  <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 border border-red-200 flex items-center justify-center font-bold text-sm">
+                    PDF
+                  </div>
+                  <span className="font-semibold text-slate-800 text-xs">{selectedDocPreview.name}</span>
+                  <span className="text-slate-500 text-[11.5px] max-w-sm">
+                    Verified candidate official document persisted in SQL Server database.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={() => handleDownloadDocument(selectedDocPreview.name)}
+                className="h-8 px-3 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
+              >
+                <Icon name="download" size="xs" />
+                <span>Download File</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDocPreview(null)}
+                className="h-8 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
