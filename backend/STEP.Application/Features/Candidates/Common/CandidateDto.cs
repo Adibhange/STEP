@@ -17,7 +17,8 @@ namespace STEP.Application.Features.Candidates.Common
         DateTime CreatedAt,
         string? AssignedInterviewer = null,
         string? HiringLocation = null,
-        string? TestLocation = null);
+        string? TestLocation = null,
+        bool HasPipelineFlowAssigned = false);
 
     public record CandidateListResultDto(List<CandidateSummaryDto> Items, int TotalCount);
 

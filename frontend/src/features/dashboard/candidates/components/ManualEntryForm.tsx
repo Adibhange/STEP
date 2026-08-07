@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Button, Icon, CustomSelect, type SelectOption } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
-import { useRegisterCandidateMutation } from '@/store/services/api';
+import { useRegisterCandidateMutation, useGetVacanciesQuery, useGetCandidatesQuery } from '@/store/services/api';
 import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
 
 interface ManualEntryFormProps {
@@ -270,9 +270,6 @@ const VERIFIED_BY_OPTIONS: SelectOption[] = [
   { value: 'Department Head', label: 'Department Head' },
 ];
 
-const EXISTING_EMAILS = ['rahul.sharma1@example.com', 'priya.patel2@example.com'];
-const EXISTING_PHONES = ['9876543210', '9812345678'];
-
 export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   onSuccess,
   onCancel,
@@ -289,6 +286,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   const [dob, setDob] = useState('');
 
   const [candidateType, setCandidateType] = useState<'experienced' | 'fresher'>('experienced');
+  const [vacancyId, setVacancyId] = useState<number | null>(null);
   const [role, setRole] = useState('');
   const [experience, setExperience] = useState('');
   const [company, setCompany] = useState('');
@@ -315,10 +313,47 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
-  const isDuplicateEmail = email.trim() !== '' && (EXISTING_EMAILS.includes(email.trim().toLowerCase()) || email.includes('example.com'));
-  const isDuplicatePhone = phone.trim() !== '' && EXISTING_PHONES.includes(phone.trim());
-
   const [registerCandidateApi, { isLoading: isSubmitting }] = useRegisterCandidateMutation();
+
+  // Real, open vacancies to apply against — replaces the previous hardcoded `vacancyId: 7`,
+  // which silently attached every manually-entered candidate to the same vacancy regardless of
+  // what was actually selected on this form.
+  const { data: vacanciesRes } = useGetVacanciesQuery({ pageSize: 200, status: 'Open' });
+  const vacancyOptions: SelectOption[] = (vacanciesRes?.data || []).map((v: any) => ({
+    value: String(v.id),
+    label: `${v.title} (${v.vacancyCode})`,
+  }));
+
+  // Debounce email/phone before hitting the backend duplicate-check query, so we're not firing a
+  // request on every keystroke.
+  const [debouncedEmail, setDebouncedEmail] = useState('');
+  const [debouncedPhone, setDebouncedPhone] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedEmail(email.trim()), 450);
+    return () => clearTimeout(t);
+  }, [email]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedPhone(phone.trim()), 450);
+    return () => clearTimeout(t);
+  }, [phone]);
+
+  const { data: emailCheckRes } = useGetCandidatesQuery(
+    { search: debouncedEmail, pageSize: 5 },
+    { skip: debouncedEmail.length < 5 }
+  );
+  const { data: phoneCheckRes } = useGetCandidatesQuery(
+    { search: debouncedPhone, pageSize: 5 },
+    { skip: debouncedPhone.length < 10 }
+  );
+
+  const isDuplicateEmail = useMemo(
+    () => Boolean(debouncedEmail) && (emailCheckRes?.data || []).some((c: any) => (c.email || '').toLowerCase() === debouncedEmail.toLowerCase()),
+    [emailCheckRes, debouncedEmail]
+  );
+  const isDuplicatePhone = useMemo(
+    () => Boolean(debouncedPhone) && (phoneCheckRes?.data || []).some((c: any) => (c.phone || '') === debouncedPhone),
+    [phoneCheckRes, debouncedPhone]
+  );
 
   // Step Toast Validation
   const validateStep = (currentStep: number): boolean => {
@@ -350,6 +385,10 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     }
 
     if (currentStep === 2) {
+      if (!vacancyId) {
+        toast.error('Vacancy Required', { description: 'Please select which open vacancy this candidate is applying for.' });
+        return false;
+      }
       if (!role) {
         toast.error('Applied Role Required', { description: 'Please select candidate applied role.' });
         return false;
@@ -388,6 +427,10 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) {
       return;
     }
+    if (!vacancyId) {
+      toast.error('Vacancy Required', { description: 'Please select which open vacancy this candidate is applying for.' });
+      return;
+    }
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
@@ -396,34 +439,31 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
-        phone: phone.trim() || '9876543210',
-        vacancyId: 7,
+        phone: phone.trim(),
+        vacancyId,
         registrationChannel: source || 'Portal',
-        totalExperienceYears: candidateType === 'fresher' ? 0 : (parseFloat(experience) || 3),
-        currentLocation: hiringLocation || 'Mumbai',
-        highestQualification: qualification || 'B.Tech / B.E.',
+        totalExperienceYears: candidateType === 'fresher' ? 0 : (parseFloat(experience) || 0),
+        currentLocation: hiringLocation || undefined,
+        highestQualification: qualification || undefined,
       }).unwrap();
 
       const created = result?.data;
       const newCand: Partial<DashboardCandidate> = {
-        id: created?.id || Date.now(),
+        id: created?.id,
         name: fullName,
-        code: created?.candidateCode || `CND-${Math.floor(100000 + Math.random() * 900000)}`,
+        code: created?.candidateCode,
         email: email.trim(),
-        mobile: phone.trim() || '9876543210',
+        mobile: phone.trim(),
         role: role || 'Software Engineer',
-        experience: candidateType === 'fresher' ? 'Fresher' : (experience || '2.8 Years'),
-        experienceYears: candidateType === 'fresher' ? 0 : parseFloat(experience) || 3,
+        experience: candidateType === 'fresher' ? 'Fresher' : (experience || undefined),
+        experienceYears: candidateType === 'fresher' ? 0 : parseFloat(experience) || 0,
         source: (source as any) || 'WalkIn',
         stage: 'Screening',
-        currentRound: 'Screening',
-        assignedInterviewer: 'Aditya Bhange',
+        currentRound: 'Registered',
         status: 'Screening',
-        hiringLocation: hiringLocation || 'Mumbai',
-        testLocation: 'Mumbai HQ',
+        hiringLocation: hiringLocation || undefined,
         appliedDate: new Date().toISOString().split('T')[0],
-        riskScore: 10,
-        city: hiringLocation || 'Mumbai',
+        city: hiringLocation || undefined,
       };
 
       toast.success('Candidate Added to SQL Database', {
@@ -432,33 +472,12 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
       onSuccess(newCand, addAnother);
     } catch (err: any) {
-      console.warn('API candidate creation error, executing UI fallback:', err);
-      const newCand: Partial<DashboardCandidate> = {
-        id: Date.now(),
-        name: fullName,
-        code: `CND-${Math.floor(100000 + Math.random() * 900000)}`,
-        email: email.trim(),
-        mobile: phone.trim() || '9876543210',
-        role: role || 'Software Engineer',
-        experience: candidateType === 'fresher' ? 'Fresher' : (experience || '2.8 Years'),
-        experienceYears: candidateType === 'fresher' ? 0 : parseFloat(experience) || 3,
-        source: (source as any) || 'WalkIn',
-        stage: 'Screening',
-        currentRound: 'Screening',
-        assignedInterviewer: 'Aditya Bhange',
-        status: 'Screening',
-        hiringLocation: hiringLocation || 'Mumbai',
-        testLocation: 'Mumbai HQ',
-        appliedDate: new Date().toISOString().split('T')[0],
-        riskScore: 10,
-        city: hiringLocation || 'Mumbai',
-      };
-
-      toast.success('Candidate Added Successfully', {
-        description: `${fullName} added to recruitment workflow.`,
-      });
-
-      onSuccess(newCand, addAnother);
+      const description =
+        (Array.isArray(err?.data?.errors) && err.data.errors.length > 0 ? err.data.errors.join(' ') : null) ||
+        err?.data?.message ||
+        'Could not save this candidate. Please check the details and try again.';
+      toast.error('Candidate Registration Failed', { description });
+      console.error('[RegisterCandidate] API error:', err);
     }
   };
 
@@ -581,6 +600,19 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
   const renderStep2 = () => (
     <div className="space-y-3.5 animate-fadeIn">
+      <div>
+        <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
+          Applying For (Open Vacancy) <span className="text-rose-500">*</span>
+        </label>
+        <CustomSelect
+          placeholder={vacancyOptions.length === 0 ? 'No open vacancies found...' : 'Select the vacancy...'}
+          value={vacancyId ? String(vacancyId) : ''}
+          options={vacancyOptions}
+          onChange={(val) => setVacancyId(val ? Number(val) : null)}
+          widthClass="w-full"
+        />
+      </div>
+
       <div>
         <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
           Candidate Background Type <span className="text-rose-500">*</span>

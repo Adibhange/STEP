@@ -742,7 +742,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [scorecardCulturalFit, setScorecardCulturalFit] = useState(3);
   const [scorecardStrengths, setScorecardStrengths] = useState('');
   const [scorecardWeaknesses, setScorecardWeaknesses] = useState('');
-  const [scorecardRecommendation, setScorecardRecommendation] = useState<'Hire' | 'Reject' | 'OnHold'>('Hire');
+  const [scorecardRecommendation, setScorecardRecommendation] = useState<'Pass' | 'Fail' | 'Hire' | 'Reject' | 'OnHold'>('Pass');
 
   const currentUserId = typeof window !== 'undefined' ? Number(localStorage.getItem('step_user_id')) || null : null;
   const [submitInterviewFeedback, { isLoading: isSubmittingFeedback }] = useSubmitInterviewFeedbackMutation();
@@ -1103,7 +1103,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
     if (selectedFeedbackStage.roundType === 'Assessment') {
       try {
-        const isPassed = scorecardRecommendation !== 'Reject';
+        const isPassed = scorecardRecommendation === 'Pass' || scorecardRecommendation === 'Hire';
         await evaluateCandidateStage({
           candidateId: numericId,
           roundNumber: selectedFeedbackStage.id,
@@ -1143,6 +1143,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       }
 
       try {
+        const mappedRecommendation: 'Hire' | 'Reject' | 'OnHold' =
+          scorecardRecommendation === 'Fail' || scorecardRecommendation === 'Reject'
+            ? 'Reject'
+            : scorecardRecommendation === 'OnHold'
+              ? 'OnHold'
+              : 'Hire';
+
         await submitInterviewFeedback({
           interviewId: selectedFeedbackStage.interviewId,
           technicalRating: scorecardTechnical,
@@ -1151,8 +1158,15 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           culturalFitRating: scorecardCulturalFit,
           strengths: scorecardStrengths || undefined,
           weaknesses: scorecardWeaknesses || undefined,
-          recommendation: scorecardRecommendation,
+          recommendation: mappedRecommendation,
           comments: feedbackText || undefined,
+        }).unwrap();
+
+        const isPassed = mappedRecommendation === 'Hire';
+        await publishInterviewResult({
+          id: selectedFeedbackStage.interviewId,
+          passed: isPassed,
+          remarks: feedbackText || `Scorecard submitted (${mappedRecommendation}).`,
         }).unwrap();
 
         setStagesData((prev) =>
@@ -1255,10 +1269,34 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     }
 
     try {
+      let isoScheduledAt: string;
+      try {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(assignDate)) {
+          const timePart = assignTime.length === 5 ? `${assignTime}:00` : '11:30:00';
+          isoScheduledAt = new Date(`${assignDate}T${timePart}`).toISOString();
+        } else {
+          const parsedDateObj = new Date(assignDate);
+          if (assignTime) {
+            const timeParts = assignTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+            if (timeParts) {
+              let hours = parseInt(timeParts[1], 10);
+              const minutes = parseInt(timeParts[2], 10);
+              const ampm = timeParts[3]?.toUpperCase();
+              if (ampm === 'PM' && hours < 12) hours += 12;
+              if (ampm === 'AM' && hours === 12) hours = 0;
+              parsedDateObj.setHours(hours, minutes, 0, 0);
+            }
+          }
+          isoScheduledAt = isNaN(parsedDateObj.getTime()) ? new Date().toISOString() : parsedDateObj.toISOString();
+        }
+      } catch {
+        isoScheduledAt = new Date().toISOString();
+      }
+
       const result = await scheduleInterview({
         candidateId: numericId,
         interviewerUserId: Number(assignedInterviewer),
-        scheduledAt: new Date(`${assignDate}T${assignTime}`).toISOString(),
+        scheduledAt: isoScheduledAt,
         durationMinutes: 60,
         mode: MEETING_MODE_TO_BACKEND[assignMode] || 'Onsite',
       }).unwrap();
@@ -1284,6 +1322,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       const description = (err as { data?: { errors?: string[]; message?: string } })?.data?.errors?.[0]
         || (err as { data?: { message?: string } })?.data?.message
         || 'Could not schedule the interview. Please try again.';
+      toast.error('Schedule Failed', { description });
     }
   };
 
@@ -2630,13 +2669,11 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   </div>
                 )}
 
-                {/* Real panelist scorecard — mirrors SubmitInterviewFeedbackCommand exactly */}
+                {/* Scorecard Ratings — Technical & Problem Solving */}
                 <div className="grid grid-cols-2 gap-3">
                   {([
                     ['Technical', scorecardTechnical, setScorecardTechnical],
-                    ['Communication', scorecardCommunication, setScorecardCommunication],
                     ['Problem Solving', scorecardProblemSolving, setScorecardProblemSolving],
-                    ['Cultural Fit', scorecardCulturalFit, setScorecardCulturalFit],
                   ] as const).map(([label, value, setValue]) => (
                     <div key={label} className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-slate-700">{label} Rating</label>
@@ -2660,40 +2697,30 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700">Recommendation</label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <label className="text-xs font-bold text-slate-700">Recommendation Result</label>
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => setScorecardRecommendation('Hire')}
-                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${scorecardRecommendation === 'Hire'
+                      onClick={() => setScorecardRecommendation('Pass')}
+                      className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${scorecardRecommendation === 'Pass' || scorecardRecommendation === 'Hire'
                         ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs'
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                         }`}
                     >
                       <Icon name="check-circle" size="xs" />
-                      <span>Hire</span>
+                      <span>Pass</span>
                     </button>
+
                     <button
                       type="button"
-                      onClick={() => setScorecardRecommendation('Reject')}
-                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${scorecardRecommendation === 'Reject'
+                      onClick={() => setScorecardRecommendation('Fail')}
+                      className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${scorecardRecommendation === 'Fail' || scorecardRecommendation === 'Reject'
                         ? 'bg-rose-500 text-white border-rose-600 shadow-2xs'
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                         }`}
                     >
                       <Icon name="x-circle" size="xs" />
-                      <span>Reject</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setScorecardRecommendation('OnHold')}
-                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${scorecardRecommendation === 'OnHold'
-                        ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                    >
-                      <Icon name="pause-circle" size="xs" />
-                      <span>On Hold</span>
+                      <span>Fail</span>
                     </button>
                   </div>
                 </div>

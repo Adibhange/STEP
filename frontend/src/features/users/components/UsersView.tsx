@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Icon } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { type UserItem, type UserRole, type UserStatus } from '@/features/users/types/user.types';
-import { useGetUsersQuery, useCreateUserMutation, useGetMasterDataByCategoryQuery } from '@/store/services/api';
+import { useGetUsersQuery, useCreateUserMutation, useUpdateUserMutation, useGetMasterDataByCategoryQuery } from '@/store/services/api';
 import { useAppDispatch, notifySuccess, notifyError } from '@/store';
 
 // Role & Department ID Mappings matching ASP.NET Core DB Seeds
@@ -32,6 +32,7 @@ export const UsersView: React.FC = () => {
   const { data: apiUsersResponse, isLoading } = useGetUsersQuery();
   const { data: deptMasterRes } = useGetMasterDataByCategoryQuery('departments');
   const [createUserApi] = useCreateUserMutation();
+  const [updateUserApi] = useUpdateUserMutation();
 
   const departmentOptions = (deptMasterRes?.data || []).map((d) => d.name);
 
@@ -157,14 +158,65 @@ export const UsersView: React.FC = () => {
     }
   };
 
-  const handleSaveEdit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  // Shared error formatter: backend returns { success: false, message: string, errors: string[] }
+  const describeApiError = (err: any): string =>
+    (Array.isArray(err?.data?.errors) && err.data.errors.length > 0 ? err.data.errors.join(' ') : null) ||
+    err?.data?.message ||
+    (err?.status === 403 ? 'Access denied: You do not have permission to manage users.' : null) ||
+    (err?.status === 401 ? 'Session expired. Please log in again.' : null) ||
+    `Request failed (HTTP ${err?.status ?? 'unknown'}). Check console for details.`;
+
+  const handleSaveEdit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingUser || !formFirstName.trim() || !formLastName.trim() || !formEmail.trim()) return;
-    setEditingUser(null);
+
+    try {
+      await updateUserApi({
+        id: Number(editingUser.id),
+        firstName: formFirstName.trim(),
+        lastName: formLastName.trim(),
+        email: formEmail.trim(),
+        roleId: ROLE_ID_MAP[formRole] || 4,
+        departmentId: resolveDeptId(formDept),
+        isActive: formStatus === 'Active',
+      }).unwrap();
+
+      dispatch(
+        notifySuccess({
+          title: 'User Updated',
+          description: `Successfully updated ${formFirstName} ${formLastName}'s details.`,
+        })
+      );
+      setEditingUser(null);
+    } catch (err: any) {
+      dispatch(notifyError({ title: 'User Update Failed', description: describeApiError(err) }));
+      console.error('[UpdateUser] API error:', err);
+    }
   };
 
-  const handleToggleStatus = (userId: string) => {
-    // Handled via backend update API
+  const handleToggleStatus = async (user: UserItem) => {
+    const nextStatus: UserStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+    try {
+      await updateUserApi({
+        id: Number(user.id),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        roleId: ROLE_ID_MAP[user.role] || 4,
+        departmentId: resolveDeptId(user.department),
+        isActive: nextStatus === 'Active',
+      }).unwrap();
+
+      dispatch(
+        notifySuccess({
+          title: `User ${nextStatus === 'Active' ? 'Activated' : 'Deactivated'}`,
+          description: `${user.name} is now ${nextStatus.toLowerCase()}.`,
+        })
+      );
+    } catch (err: any) {
+      dispatch(notifyError({ title: 'Status Update Failed', description: describeApiError(err) }));
+      console.error('[ToggleUserStatus] API error:', err);
+    }
   };
 
   return (
@@ -327,7 +379,7 @@ export const UsersView: React.FC = () => {
                     <td className="py-3 px-4 whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => handleToggleStatus(u.id)}
+                        onClick={() => handleToggleStatus(u)}
                         className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border cursor-pointer transition-all active:scale-95 ${
                           u.status === 'Active'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'

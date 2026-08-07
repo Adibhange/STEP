@@ -1,76 +1,23 @@
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * STEP Enterprise Platform — Core Structural Tokens
- * ═══════════════════════════════════════════════════════════════════════════
- *
- * Responsibility: Non-color, non-geometry structural tokens.
- *
- * CONTENTS
- * ─────────
- * 1. Z-Index Scale        — layering order (never hardcode z-index)
- * 2. Opacity Scale        — standard opacity steps
- * 3. Transition Shorthand — component dimension tokens (forwarded from spacing)
- *
- * OUT OF SCOPE (owned by dedicated files)
- * ─────────────────────────────────────────
- * Border radius   → radius.css
- * Shadows & blur  → elevation.css
- * Color tokens    → colors.css
- * Spacing scale   → spacing.css
- * Typography      → typography.css
- * Motion          → motion.css
- * ═══════════════════════════════════════════════════════════════════════════
- */
-
 :root {
 
-  /* ─────────────────────────────────────────────────────────────────────────
-     1. Z-INDEX SCALE
-     Defines the complete layering order for the application.
-     Never hardcode a z-index value — always reference this scale.
-
-     Base       (0)  — static page content
-     Dropdown   (10) — menus, autocomplete lists
-     Sticky     (20) — sticky table headers, pinned rows
-     Header     (30) — app top navigation bar
-     Drawer     (40) — side drawers, side sheets
-     Modal      (50) — dialogs, alerts
-     Toast      (60) — notification toasts
-     Popover    (70) — rich popovers, date pickers
-     Tooltip    (80) — simple hover tooltips
-     Command    (90) — command palette (highest user-facing layer)
-  ───────────────────────────────────────────────────────────────────────── */
-
-  --z-base:      0;
-  --z-dropdown:  10;
-  --z-sticky:    20;
-  --z-header:    30;
-  --z-drawer:    40;
-  --z-modal:     50;
-  --z-toast:     60;
-  --z-popover:   70;
-  --z-tooltip:   80;
-  --z-command:   90;
+   --z-base: 0;
+   --z-dropdown: 10;
+   --z-sticky: 20;
+   --z-header: 30;
+   --z-drawer: 40;
+   --z-modal: 50;
+   --z-toast: 60;
+   --z-popover: 70;
+   --z-tooltip: 80;
+   --z-command: 90;
 
 
-  /* ─────────────────────────────────────────────────────────────────────────
-     2. OPACITY SCALE
-     Standard opacity steps for consistent hover/active/disabled communication.
+   --opacity-disabled: 0.38;
 
-     Use these for opacity: property — NOT for rgba() fill colors.
-     For rgba() colors, use the color tokens from colors.css.
-  ───────────────────────────────────────────────────────────────────────── */
+   --opacity-muted: 0.55;
 
-  /** disabled — non-interactive elements (buttons, inputs, rows) */
-  --opacity-disabled: 0.38;
+   --opacity-hover: 0.80;
 
-  /** muted — de-emphasised secondary content */
-  --opacity-muted:    0.55;
-
-  /** hover — subtle lightening on hover (apply to icon-only buttons) */
-  --opacity-hover:    0.80;
-
-  /** overlay — backdrop scrims */
-  --opacity-overlay:  0.65;
+   --opacity-overlay: 0.65;
 
 }

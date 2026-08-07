@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.Users.Commands.CreateUser;
+using STEP.Application.Features.Users.Commands.UpdateUser;
 using STEP.Application.Features.Users.Queries.GetUsers;
 
 namespace STEP.Api.Controllers.v1
@@ -24,6 +25,15 @@ namespace STEP.Api.Controllers.v1
         {
             var user = await mediator.Send(command);
             return Ok(ApiResponse<object>.Ok(user, "User created successfully"));
+        }
+
+        [HttpPut("{id:int}")]
+        [Authorize(Policy = "User.Manage")]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequestBody body)
+        {
+            var user = await mediator.Send(new UpdateUserCommand(
+                id, body.FirstName, body.LastName, body.Email, body.RoleId, body.DepartmentId, body.IsActive));
+            return Ok(ApiResponse<object>.Ok(user, "User updated successfully"));
         }
 
         [HttpPost("change-password")]
@@ -47,4 +57,5 @@ namespace STEP.Api.Controllers.v1
 
     public record ChangePasswordRequestBody(string CurrentPassword, string NewPassword);
     public record ChangePinRequestBody(string CurrentPin, string NewPin);
+    public record UpdateUserRequestBody(string FirstName, string LastName, string Email, int RoleId, int? DepartmentId, bool IsActive);
 }

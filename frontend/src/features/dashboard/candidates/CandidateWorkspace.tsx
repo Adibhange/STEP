@@ -7,7 +7,7 @@ import { FilterBar } from "../shared/FilterBar";
 import { TablePagination } from "../shared/TablePagination";
 import { CandidateTable } from "./CandidateTable";
 import { AddCandidateDialog } from "./AddCandidateDialog";
-import { CANDIDATE_FILTERS } from "../config/candidateFilters";
+import { CANDIDATE_FILTERS, type FilterDef } from "../config/candidateFilters";
 import { useGetCandidatesQuery } from "@/store/services/api";
 import type { ActiveFilter } from "../shared/FilterBar";
 import type { DashboardCandidate } from "@/features/dashboard/types/dashboard.types";
@@ -74,12 +74,77 @@ export const CandidateWorkspace: React.FC = () => {
     setCurrentPage(1);
   }, []);
 
+  // Dynamic filter configuration derived from actual DB candidate records
+  const dynamicFilters = useMemo<FilterDef[]>(() => {
+    const rolesSet = new Set<string>();
+    const stagesSet = new Set<string>();
+    const hiringLocsSet = new Set<string>();
+    const testLocsSet = new Set<string>();
+    const statusesSet = new Set<string>();
+
+    apiCandidates.forEach((c) => {
+      if (c.role) rolesSet.add(c.role.trim());
+      if (c.stage) stagesSet.add(c.stage.trim());
+      if (c.hiringLocation) hiringLocsSet.add(c.hiringLocation.trim());
+      if (c.testLocation) testLocsSet.add(c.testLocation.trim());
+      if (c.status) statusesSet.add(c.status.trim());
+    });
+
+    // Populate standard options if dataset is sparse
+    ['Applied', 'In-Progress', 'Offered', 'On Hold', 'Rejected', 'Hired'].forEach((s) => statusesSet.add(s));
+    ['Registered', 'Screening', 'Assessment', 'Interview', 'HR Round', 'Director Round'].forEach((st) => stagesSet.add(st));
+
+    return [
+      {
+        id: 'role',
+        label: 'Role',
+        placeholder: 'All Roles',
+        type: 'select',
+        options: Array.from(rolesSet).sort().map((r) => ({ value: r, label: r })),
+      },
+      {
+        id: 'stage',
+        label: 'Stage',
+        placeholder: 'All Stages',
+        type: 'select',
+        options: Array.from(stagesSet).sort().map((s) => ({ value: s, label: s })),
+      },
+      {
+        id: 'hiringLocation',
+        label: 'Hiring Location',
+        placeholder: 'All Cities',
+        type: 'select',
+        options: Array.from(hiringLocsSet).sort().map((l) => ({ value: l, label: l })),
+      },
+      {
+        id: 'testLocation',
+        label: 'Test Location',
+        placeholder: 'All Centers',
+        type: 'select',
+        options: Array.from(testLocsSet).sort().map((l) => ({ value: l, label: l })),
+      },
+      {
+        id: 'status',
+        label: 'Status',
+        placeholder: 'All Statuses',
+        type: 'select',
+        options: Array.from(statusesSet).sort().map((st) => ({ value: st, label: st })),
+      },
+      {
+        id: 'appliedDate',
+        label: 'Applied Date',
+        placeholder: 'Any Date',
+        type: 'date-range',
+      },
+    ];
+  }, [apiCandidates]);
+
   // Client-side filtering over database response
   const filteredCandidates = useMemo<DashboardCandidate[]>(() => {
     let result = apiCandidates;
 
     if (search.trim()) {
-      const q = search.toLowerCase();
+      const q = search.toLowerCase().trim();
       result = result.filter(
         (c) =>
           c.name.toLowerCase().includes(q) ||
@@ -90,23 +155,24 @@ export const CandidateWorkspace: React.FC = () => {
     }
 
     if (activeFilters.role) {
-      result = result.filter((c) => c.role === activeFilters.role);
+      const targetRole = activeFilters.role.toLowerCase().trim();
+      result = result.filter((c) => (c.role || '').toLowerCase().trim() === targetRole);
     }
     if (activeFilters.stage) {
-      result = result.filter((c) => c.stage === activeFilters.stage);
+      const targetStage = activeFilters.stage.toLowerCase().trim();
+      result = result.filter((c) => (c.stage || '').toLowerCase().trim() === targetStage);
     }
     if (activeFilters.hiringLocation) {
-      result = result.filter(
-        (c) => c.hiringLocation === activeFilters.hiringLocation,
-      );
+      const targetHiringLoc = activeFilters.hiringLocation.toLowerCase().trim();
+      result = result.filter((c) => (c.hiringLocation || '').toLowerCase().trim() === targetHiringLoc);
     }
     if (activeFilters.testLocation) {
-      result = result.filter(
-        (c) => c.testLocation === activeFilters.testLocation,
-      );
+      const targetTestLoc = activeFilters.testLocation.toLowerCase().trim();
+      result = result.filter((c) => (c.testLocation || '').toLowerCase().trim() === targetTestLoc);
     }
     if (activeFilters.status) {
-      result = result.filter((c) => c.status === activeFilters.status);
+      const targetStatus = activeFilters.status.toLowerCase().trim();
+      result = result.filter((c) => (c.status || '').toLowerCase().trim() === targetStatus);
     }
     if (activeFilters.appliedDate) {
       result = result.filter((c) => c.appliedDate >= activeFilters.appliedDate);
@@ -152,7 +218,7 @@ export const CandidateWorkspace: React.FC = () => {
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-[var(--surface-1)] to-transparent z-10" />
           <div className="overflow-x-auto scrollbar-none flex items-center gap-2 px-1 relative z-20">
             <FilterBar
-              filters={CANDIDATE_FILTERS}
+              filters={dynamicFilters}
               activeFilters={activeFilters}
               onFilterChange={handleFilterChange}
               onReset={handleFilterReset}
@@ -247,7 +313,7 @@ export const CandidateWorkspace: React.FC = () => {
       <div className="md:hidden border-b border-[var(--border-default)] bg-[var(--surface-1)]">
         <div className="overflow-x-auto scrollbar-none flex items-center gap-2 px-4 py-2.5">
           <FilterBar
-            filters={CANDIDATE_FILTERS}
+            filters={dynamicFilters}
             activeFilters={activeFilters}
             onFilterChange={handleFilterChange}
             onReset={handleFilterReset}

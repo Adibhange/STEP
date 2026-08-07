@@ -1,17 +1,21 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CandidateBulkItem } from '../types/vacancy.types';
-import { useGetCandidatesQuery } from '@/store/services/api';
+import { useGetCandidatesQuery, useGetVacancyByIdQuery, useAssignPipelineFlowMutation } from '@/store/services/api';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { TablePagination } from '@/features/dashboard/shared/TablePagination';
-import { INITIAL_FLOW_VERSIONS } from './PipelineFlowVersions';
 
 interface CandidateBulkFlowAssignmentProps {
   vacancyId?: string | number;
   vacancyTitle?: string;
+}
+
+interface FlowOption {
+  id: number;
+  versionName: string;
 }
 
 export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentProps> = ({
@@ -20,18 +24,21 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
 }) => {
   const numVacId = vacancyId ? parseInt(String(vacancyId).replace(/\D/g, ''), 10) : undefined;
   const { data: candidatesRes, isLoading } = useGetCandidatesQuery(numVacId ? { vacancyId: numVacId } : undefined);
+  const { data: vacancyRes } = useGetVacancyByIdQuery(numVacId!, { skip: !numVacId });
+  const [assignPipelineFlow, { isLoading: isAssigning }] = useAssignPipelineFlowMutation();
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isBulkRunning, setIsBulkRunning] = useState(false);
 
-  // Dynamic flow version names created in earlier steps
-  const flowVersionNames = useMemo(() => {
-    return INITIAL_FLOW_VERSIONS.map((fv) => fv.versionName);
-  }, []);
-
-  // State to hold permanent flow version per candidate ID
-  const [flowAssignments, setFlowAssignments] = useState<Record<string, string>>({});
+  // Real, saved pipeline flow versions for this vacancy — no fallback placeholders. Bulk
+  // assignment is unavailable until at least one flow has actually been configured.
+  const flowOptions: FlowOption[] = useMemo(
+    () => (vacancyRes?.data?.pipelineFlows || []).map((f: any) => ({ id: f.id, versionName: f.versionName })),
+    [vacancyRes]
+  );
 
   const rawCandidates = useMemo(() => {
     let list = candidatesRes?.data || [];
@@ -43,44 +50,19 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
     return list;
   }, [candidatesRes, vacancyId, numVacId]);
 
-  // Initialize/sync permanent flow assignments when candidates load
-  useEffect(() => {
-    if (rawCandidates.length > 0 && typeof window !== 'undefined') {
-      setFlowAssignments((prev) => {
-        const next = { ...prev };
-        rawCandidates.forEach((c: any, idx: number) => {
-          const cid = String(c.id || idx + 1);
-          // Read permanent assignment from localStorage if exists
-          const saved = localStorage.getItem(`step_candidate_flow_${cid}`);
-          if (saved) {
-            next[cid] = saved;
-          } else if (!next[cid]) {
-            // Default 50/50 split assignment
-            const defaultFlow = idx % 2 === 0 ? flowVersionNames[0] : (flowVersionNames[1] || flowVersionNames[0]);
-            next[cid] = defaultFlow;
-            localStorage.setItem(`step_candidate_flow_${cid}`, defaultFlow);
-          }
-        });
-        return next;
-      });
-    }
-  }, [rawCandidates, flowVersionNames]);
-
-  const candidates: CandidateBulkItem[] = useMemo(() => {
-    return rawCandidates.map((c: any, index: number) => {
-      const cid = String(c.id || index + 1);
-      return {
-        id: cid,
-        code: c.candidateCode || `CND-2026-${cid}`,
-        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Candidate',
-        email: c.email || '',
-        phone: c.phone || '',
-        appliedDate: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
-        flowVersion: flowAssignments[cid] || flowVersionNames[0],
-        status: 'Assigned',
-      };
-    });
-  }, [rawCandidates, flowAssignments, flowVersionNames]);
+  const candidates: (CandidateBulkItem & { hasPipelineFlowAssigned: boolean })[] = useMemo(() => {
+    return rawCandidates.map((c: any) => ({
+      id: String(c.id),
+      code: c.candidateCode || `CND-${c.id}`,
+      name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Candidate',
+      email: c.email || '',
+      phone: c.phone || '',
+      appliedDate: c.createdAt ? new Date(c.createdAt).toISOString().split('T')[0] : '',
+      flowVersion: '',
+      status: c.hasPipelineFlowAssigned ? 'Assigned' : 'Pending',
+      hasPipelineFlowAssigned: Boolean(c.hasPipelineFlowAssigned),
+    }));
+  }, [rawCandidates]);
 
   const filtered = useMemo(() => {
     return candidates.filter(
@@ -97,53 +79,52 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
     return filtered.slice(start, start + pageSize);
   }, [filtered, currentPage, pageSize]);
 
-  // 1. Apply Permanent 50/50 Equal Split Strategy
-  const handleApply5050Split = () => {
-    if (candidates.length === 0) return;
-    const next: Record<string, string> = {};
-    candidates.forEach((c, idx) => {
-      const targetFlow = idx % 2 === 0 ? flowVersionNames[0] : (flowVersionNames[1] || flowVersionNames[0]);
-      next[c.id] = targetFlow;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`step_candidate_flow_${c.id}`, targetFlow);
-      }
-    });
-    setFlowAssignments(next);
-    toast.success('50/50 Equal Split Applied Permanently!', {
-      description: `Distributed ${candidates.length} candidates evenly between ${flowVersionNames[0]} and ${flowVersionNames[1] || flowVersionNames[0]}.`,
-    });
-  };
+  const unassignedCandidates = useMemo(() => candidates.filter((c) => !c.hasPipelineFlowAssigned), [candidates]);
 
-  // 2. Apply Permanent Random / Shuffle Split Strategy
-  const handleApplyRandomShuffle = () => {
-    if (candidates.length === 0) return;
-    const next: Record<string, string> = {};
-    const maxIdx = Math.min(2, flowVersionNames.length);
-    candidates.forEach((c) => {
-      const randomIdx = Math.floor(Math.random() * maxIdx);
-      const targetFlow = flowVersionNames[randomIdx] || flowVersionNames[0];
-      next[c.id] = targetFlow;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`step_candidate_flow_${c.id}`, targetFlow);
+  const persistAssignments = async (plan: { candidateId: number; vacancyPipelineFlowId: number }[], label: string) => {
+    if (plan.length === 0) return;
+    setIsBulkRunning(true);
+    let succeeded = 0;
+    let failed = 0;
+    for (const item of plan) {
+      try {
+        await assignPipelineFlow(item).unwrap();
+        succeeded++;
+      } catch {
+        failed++;
       }
-    });
-    setFlowAssignments(next);
-    toast.success('Random Pipeline Shuffle Applied Permanently!', {
-      description: `Shuffled pipeline flow assignments randomly across all ${candidates.length} candidates.`,
-    });
-  };
-
-  const handleSingleCandidateFlowChange = (candidateId: string, newVersion: string) => {
-    setFlowAssignments((prev) => ({
-      ...prev,
-      [candidateId]: newVersion,
-    }));
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`step_candidate_flow_${candidateId}`, newVersion);
     }
-    toast.success('Candidate Permanent Flow Version Updated', {
-      description: `Flow set to "${newVersion}".`,
-    });
+    setIsBulkRunning(false);
+    if (failed === 0) {
+      toast.success(`${label} Applied`, { description: `${succeeded} candidate(s) assigned to their pipeline flow.` });
+    } else {
+      toast.error(`${label} Partially Applied`, { description: `${succeeded} succeeded, ${failed} failed (likely already assigned).` });
+    }
+  };
+
+  // 1. Apply 50/50 Equal Split Strategy across all currently unassigned candidates
+  const handleApply5050Split = () => {
+    if (unassignedCandidates.length === 0 || flowOptions.length === 0) return;
+    const plan = unassignedCandidates.map((c, idx) => ({
+      candidateId: Number(c.id),
+      vacancyPipelineFlowId: flowOptions[idx % Math.min(2, flowOptions.length)].id,
+    }));
+    persistAssignments(plan, '50/50 Split');
+  };
+
+  // 2. Apply Random Shuffle Strategy across all currently unassigned candidates
+  const handleApplyRandomShuffle = () => {
+    if (unassignedCandidates.length === 0 || flowOptions.length === 0) return;
+    const maxIdx = Math.min(2, flowOptions.length);
+    const plan = unassignedCandidates.map((c) => ({
+      candidateId: Number(c.id),
+      vacancyPipelineFlowId: flowOptions[Math.floor(Math.random() * maxIdx)].id,
+    }));
+    persistAssignments(plan, 'Random Shuffle');
+  };
+
+  const handleSingleCandidateFlowChange = (candidateId: string, flowId: number) => {
+    persistAssignments([{ candidateId: Number(candidateId), vacancyPipelineFlowId: flowId }], 'Pipeline Flow Assignment');
   };
 
   const handleSelectAllOnPage = (checked: boolean) => {
@@ -156,9 +137,17 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
   };
 
   const isAllPageSelected = paginatedCandidates.length > 0 && paginatedCandidates.every((c) => selectedIds.includes(c.id));
+  const busy = isAssigning || isBulkRunning;
 
   return (
     <div className="flex flex-col gap-4">
+      {flowOptions.length === 0 && (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-[12px] text-amber-700 font-semibold flex items-center gap-2">
+          <Icon name="alert-triangle" size="xs" />
+          <span>No pipeline flow version has been configured for this vacancy yet — add one in the Flow Versions tab before assigning candidates.</span>
+        </div>
+      )}
+
       {/* Single-Line Compact Header Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--surface-1)] py-2.5 px-4 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-2xs">
         <div className="flex items-center gap-2 shrink-0">
@@ -166,7 +155,7 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
             Bulk Candidate Pipeline Flow Assignment
           </h3>
           <span className="text-[10.5px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-            {candidates.length} Walk-in Candidates
+            {candidates.length} Candidates &middot; {unassignedCandidates.length} Unassigned
           </span>
         </div>
 
@@ -175,7 +164,8 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
           <button
             type="button"
             onClick={handleApply5050Split}
-            className="h-8 px-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[11.5px] font-bold shadow-xs hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+            disabled={busy || unassignedCandidates.length === 0 || flowOptions.length === 0}
+            className="h-8 px-3 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[11.5px] font-bold shadow-xs hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon name="grid" size="xs" />
             <span>50 / 50 Split</span>
@@ -184,7 +174,8 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
           <button
             type="button"
             onClick={handleApplyRandomShuffle}
-            className="h-8 px-3 rounded-full bg-[var(--surface-2)] text-[var(--text-primary)] border border-[var(--border-default)] text-[11.5px] font-bold shadow-2xs hover:bg-[var(--surface-hover)] transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+            disabled={busy || unassignedCandidates.length === 0 || flowOptions.length === 0}
+            className="h-8 px-3 rounded-full bg-[var(--surface-2)] text-[var(--text-primary)] border border-[var(--border-default)] text-[11.5px] font-bold shadow-2xs hover:bg-[var(--surface-hover)] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon name="arrow-up-down" size="xs" className="text-indigo-600" />
             <span>Randomize Split</span>
@@ -222,7 +213,7 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
               </th>
               <th className="py-3 px-4">Candidate Code & Name</th>
               <th className="py-3 px-4">Email / Phone</th>
-              <th className="py-3 px-4">Assigned Pipeline Version</th>
+              <th className="py-3 px-4">Pipeline Flow Version</th>
               <th className="py-3 px-4">Status</th>
             </tr>
           </thead>
@@ -270,15 +261,30 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <CustomSelect
-                        value={c.flowVersion}
-                        onChange={(newVersion) => handleSingleCandidateFlowChange(c.id, newVersion)}
-                        options={flowVersionNames.map((fv) => ({ value: fv, label: fv }))}
-                        widthClass="w-72"
-                      />
+                      {c.hasPipelineFlowAssigned ? (
+                        <span className="text-[11px] font-mono font-semibold text-[var(--text-tertiary)]">
+                          Locked — already started
+                        </span>
+                      ) : flowOptions.length === 0 ? (
+                        <span className="text-[11px] font-mono text-[var(--text-tertiary)]">No flow configured</span>
+                      ) : (
+                        <CustomSelect
+                          placeholder="Assign a flow…"
+                          value=""
+                          onChange={(val) => val && handleSingleCandidateFlowChange(c.id, Number(val))}
+                          options={flowOptions.map((fv) => ({ value: String(fv.id), label: fv.versionName }))}
+                          widthClass="w-72"
+                        />
+                      )}
                     </td>
                     <td className="py-3 px-4 font-mono">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                          c.hasPipelineFlowAssigned
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                      >
                         {c.status}
                       </span>
                     </td>

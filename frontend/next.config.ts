@@ -1,9 +1,24 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Lean, self-contained build output for Docker — copies only the files a production
-  // `node server.js` run actually needs, instead of the whole node_modules tree.
-  output: 'standalone',
+  output: "standalone",
+  trailingSlash: true,
+  async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!backendUrl) {
+      return [];
+    }
+
+    const cleanUrl = backendUrl.replace(/\/+$/, '');
+    const baseDomain = cleanUrl.replace(/\/api\/.*$/i, '');
+
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${baseDomain}/api/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.Vacancies.Commands.AssignQuestionPaperToRound;
 using STEP.Application.Features.Vacancies.Commands.CreateVacancy;
+using STEP.Application.Features.Vacancies.Commands.CreateVacancyPipelineFlow;
+using STEP.Application.Features.Vacancies.Commands.DeleteVacancyPipelineFlow;
 using STEP.Application.Features.Vacancies.Queries.GetVacancies;
 using STEP.Application.Features.Vacancies.Queries.GetVacancyById;
 
@@ -47,13 +49,30 @@ namespace STEP.Api.Controllers.v1
             return Ok(ApiResponse<object>.Ok(vacancy, "Vacancy updated successfully"));
         }
 
+        [HttpPost("{vacancyId:int}/pipeline-flows")]
+        [Authorize(Policy = "Vacancy.Create")]
+        public async Task<IActionResult> CreatePipelineFlow(int vacancyId, [FromBody] CreatePipelineFlowRequestBody body)
+        {
+            var flow = await mediator.Send(new CreateVacancyPipelineFlowCommand(
+                vacancyId, body.VersionName, body.Description, body.IsDefault, body.Rounds));
+            return Ok(ApiResponse<object>.Ok(flow, "Pipeline flow created successfully"));
+        }
+
         [HttpPut("{vacancyId:int}/pipeline-flows/{flowId:int}")]
         [Authorize(Policy = "Vacancy.Create")]
         public async Task<IActionResult> UpdatePipelineFlow(int vacancyId, int flowId, [FromBody] UpdatePipelineFlowRequestBody body)
         {
             var flow = await mediator.Send(new STEP.Application.Features.Vacancies.Commands.UpdateVacancyPipelineFlow.UpdateVacancyPipelineFlowCommand(
-                vacancyId, flowId, body.VersionName, body.Description, body.Rounds));
+                vacancyId, flowId, body.VersionName, body.Description, body.IsDefault, body.Rounds));
             return Ok(ApiResponse<object>.Ok(flow, "Pipeline flow updated successfully"));
+        }
+
+        [HttpDelete("{vacancyId:int}/pipeline-flows/{flowId:int}")]
+        [Authorize(Policy = "Vacancy.Create")]
+        public async Task<IActionResult> DeletePipelineFlow(int vacancyId, int flowId)
+        {
+            await mediator.Send(new DeleteVacancyPipelineFlowCommand(vacancyId, flowId));
+            return Ok(ApiResponse<object>.Ok(new { vacancyId, flowId }, "Pipeline flow deleted successfully"));
         }
 
         [HttpPost("pipeline-rounds/{roundId:int}/question-paper")]
@@ -70,6 +89,9 @@ namespace STEP.Api.Controllers.v1
         string Title, string Status, string? JobDescription,
         decimal MinExperienceYears, decimal MaxExperienceYears);
     public record UpdatePipelineFlowRequestBody(
-        string VersionName, string? Description,
+        string VersionName, string? Description, bool IsDefault,
         List<STEP.Application.Features.Vacancies.Commands.UpdateVacancyPipelineFlow.UpdateRoundInput> Rounds);
+    public record CreatePipelineFlowRequestBody(
+        string VersionName, string? Description, bool IsDefault,
+        List<STEP.Application.Features.Vacancies.Commands.CreateVacancyPipelineFlow.CreateRoundInput> Rounds);
 }

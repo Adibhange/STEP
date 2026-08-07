@@ -18,6 +18,7 @@ namespace STEP.Application.Features.Vacancies.Commands.UpdateVacancyPipelineFlow
         int FlowId,
         string VersionName,
         string? Description,
+        bool IsDefault,
         List<UpdateRoundInput> Rounds
     ) : IRequest<PipelineFlowDto>;
 
@@ -33,6 +34,19 @@ namespace STEP.Application.Features.Vacancies.Commands.UpdateVacancyPipelineFlow
 
             flow.VersionName = request.VersionName;
             flow.Description = request.Description;
+
+            if (request.IsDefault && !flow.IsDefault)
+            {
+                // Only one flow per vacancy can be the walk-in default at a time.
+                var siblingDefaults = await db.VacancyPipelineFlows
+                    .Where(f => f.VacancyId == request.VacancyId && f.Id != flow.Id && f.IsDefault)
+                    .ToListAsync(cancellationToken);
+                foreach (var sibling in siblingDefaults)
+                {
+                    sibling.IsDefault = false;
+                }
+            }
+            flow.IsDefault = request.IsDefault;
 
             // Remove rounds no longer present in request
             var inputRoundIds = request.Rounds.Where(r => r.Id.HasValue).Select(r => r.Id!.Value).ToHashSet();

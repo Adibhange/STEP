@@ -111,7 +111,8 @@
       "Bash(curl -s -o /tmp/offer_test.pdf -w 'HTTP %{http_code}, size=%{size_download} bytes\\\\n' http://localhost:5125/api/v1/offers/2/download -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
       "Bash(rm -rf \"c:\\\\Users\\\\Aditya.Bhange\\\\STEP\\\\backend\\\\STEP.Api\\\\App_Data\\\\uploads\\\\offers\\\\17\" *)",
       "Bash(echo \"TSC_EXIT:$?\")",
-      "Bash(xargs grep -ln \"Report\")"
+      "Bash(xargs grep -ln \"Report\")",
+      "Bash(tasklist //FI \"PID eq 9700\")"
     ],
     "additionalDirectories": [
       "\\tmp"

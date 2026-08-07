@@ -117,7 +117,8 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
 
                 items.Add(new CandidateSummaryDto(
                     c.Id, c.CandidateCode, c.FirstName, c.LastName, c.Email, c.Phone,
-                    c.VacancyId, c.Vacancy?.Title ?? "Position", c.CurrentStage ?? "Screening", effectiveStatus, c.CreatedAt, assignedInterviewer, hiringLocation, testLocation));
+                    c.VacancyId, c.Vacancy?.Title ?? "Position", c.CurrentStage ?? "Screening", effectiveStatus, c.CreatedAt,
+                    assignedInterviewer, hiringLocation, testLocation, c.PipelineProgressHistory.Count > 0));
             }
 
             return new CandidateListResultDto(items, totalCount);

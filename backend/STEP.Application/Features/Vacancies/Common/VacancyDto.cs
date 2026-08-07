@@ -5,7 +5,7 @@ namespace STEP.Application.Features.Vacancies.Common
 {
     public record PipelineRoundDto(int Id, int RoundOrder, string Name, string RoundType, decimal CutoffPercent);
 
-    public record PipelineFlowDto(int Id, string VersionName, string? Description, bool IsDefault, List<PipelineRoundDto> Rounds);
+    public record PipelineFlowDto(int Id, string VersionName, string? Description, bool IsDefault, List<PipelineRoundDto> Rounds, int AssignedCandidateCount = 0);
 
     public record AssessmentSectionDto(int Id, int SectionOrder, string SectionTitle, int TotalQuestions, int TimeLimitMinutes, decimal MarksPerQuestion, decimal TotalMarks);
 

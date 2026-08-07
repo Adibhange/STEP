@@ -285,9 +285,8 @@ export interface UserItem {
 }
 
 export const getApiBaseUrl = (): string => {
-  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5125/api/v1';
-  const cleanUrl = envUrl.replace(/\/+$/, '');
-  return cleanUrl.endsWith('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+  return envUrl.replace(/\/+$/, '');
 };
 
 const rawBaseQuery = fetchBaseQuery({
@@ -432,6 +431,14 @@ export const stepApi = createApi({
       }),
       invalidatesTags: ['Users'],
     }),
+    updateUser: builder.mutation<ApiEnvelope<UserItem>, { id: number; firstName: string; lastName: string; email: string; roleId: number; departmentId?: number; isActive: boolean }>({
+      query: ({ id, ...body }) => ({
+        url: `/users/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Users'],
+    }),
 
     // --- Vacancies Endpoints ---
     getVacancies: builder.query<ApiEnvelope<any[]>, { pageIndex?: number; pageSize?: number; search?: string; status?: string } | void>({
@@ -461,11 +468,26 @@ export const stepApi = createApi({
       }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Vacancies', id }, 'Vacancies'],
     }),
+    createPipelineFlow: builder.mutation<ApiEnvelope<any>, { vacancyId: number; data: Record<string, any> }>({
+      query: ({ vacancyId, data }) => ({
+        url: `/vacancies/${vacancyId}/pipeline-flows`,
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { vacancyId }) => [{ type: 'Vacancies', id: vacancyId }, 'Vacancies'],
+    }),
     updatePipelineFlow: builder.mutation<ApiEnvelope<any>, { vacancyId: number; flowId: number; data: Record<string, any> }>({
       query: ({ vacancyId, flowId, data }) => ({
         url: `/vacancies/${vacancyId}/pipeline-flows/${flowId}`,
         method: 'PUT',
         body: data,
+      }),
+      invalidatesTags: (result, error, { vacancyId }) => [{ type: 'Vacancies', id: vacancyId }, 'Vacancies'],
+    }),
+    deletePipelineFlow: builder.mutation<ApiEnvelope<any>, { vacancyId: number; flowId: number }>({
+      query: ({ vacancyId, flowId }) => ({
+        url: `/vacancies/${vacancyId}/pipeline-flows/${flowId}`,
+        method: 'DELETE',
       }),
       invalidatesTags: (result, error, { vacancyId }) => [{ type: 'Vacancies', id: vacancyId }, 'Vacancies'],
     }),
@@ -780,6 +802,7 @@ export const {
   useDeleteMasterDataMutation,
   useGetUsersQuery,
   useCreateUserMutation,
+  useUpdateUserMutation,
   useGetVacanciesQuery,
   useGetVacancyByIdQuery,
   useCreateVacancyMutation,
@@ -822,6 +845,8 @@ export const {
   useChangePasswordMutation,
   useChangePinMutation,
   useUpdateVacancyMutation,
+  useCreatePipelineFlowMutation,
   useUpdatePipelineFlowMutation,
+  useDeletePipelineFlowMutation,
   useGetRecruitmentFunnelQuery,
 } = stepApi;
