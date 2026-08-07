@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
 using STEP.Application.Features.Candidates.Common;
@@ -27,6 +28,25 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
             if (!isOpen)
             {
                 throw new ValidationException([new FluentValidation.Results.ValidationFailure("Code", message ?? "This drive is not open for registration.")]);
+            }
+
+            // Hard block: same person (by email or phone) can't reapply for the same role within
+            // the cooldown window — mirrors CheckQRRegistrationEligibilityQuery, which is what the
+            // form calls to warn about this *before* the candidate gets this far. Enforced here too
+            // because the client-side check alone can't be trusted on an anonymous public endpoint.
+            var emailLower = request.Email.Trim().ToLower();
+            var phone = request.Phone.Trim();
+            var lastApplication = await db.Candidates
+                .Where(c => c.VacancyId == qrCode.VacancyId && (c.Email.ToLower() == emailLower || c.Phone == phone))
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => (DateTime?)c.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var eligibility = CandidateReapplicationPolicy.Evaluate(lastApplication);
+            if (!eligibility.CanApply)
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(request.Email),
+                    $"You already applied for this role on {eligibility.LastAppliedAt:dd MMM yyyy}. You can re-apply for the same role after {eligibility.EligibleFrom:dd MMM yyyy} ({CandidateReapplicationPolicy.CooldownDays}-day cooldown).")]);
             }
 
             var nextSequence = await db.Candidates.IgnoreQueryFilters().CountAsync(cancellationToken) + 1001;

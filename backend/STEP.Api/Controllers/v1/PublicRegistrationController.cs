@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.QR.Commands.RecordQRScan;
 using STEP.Application.Features.QR.Commands.RegisterCandidateViaQR;
+using STEP.Application.Features.QR.Queries.CheckQRRegistrationEligibility;
 
 namespace STEP.Api.Controllers.v1
 {
@@ -18,6 +19,13 @@ namespace STEP.Api.Controllers.v1
         {
             var result = await mediator.Send(new RecordQRScanCommand(code, HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString()));
             return Ok(ApiResponse<object>.Ok(result, "Scan recorded"));
+        }
+
+        [HttpGet("{code}/eligibility")]
+        public async Task<IActionResult> CheckEligibility(string code, [FromQuery] string? email, [FromQuery] string? phone)
+        {
+            var result = await mediator.Send(new CheckQRRegistrationEligibilityQuery(code, email, phone));
+            return Ok(ApiResponse<object>.Ok(result, "Eligibility checked"));
         }
 
         [HttpPost]

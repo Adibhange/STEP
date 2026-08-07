@@ -259,6 +259,12 @@ export interface QRScanResultData {
   message: string | null;
 }
 
+export interface QRRegistrationEligibilityData {
+  canApply: boolean;
+  eligibleFrom: string | null;
+  lastAppliedAt: string | null;
+}
+
 export interface RegisterCandidateViaQRRequest {
   code: string;
   firstName: string;
@@ -765,6 +771,12 @@ export const stepApi = createApi({
     recordQRScan: builder.query<ApiEnvelope<QRScanResultData>, string>({
       query: (code) => `/publicregistration/${code}`,
     }),
+    checkQRRegistrationEligibility: builder.query<ApiEnvelope<QRRegistrationEligibilityData>, { code: string; email?: string; phone?: string }>({
+      query: ({ code, email, phone }) => ({
+        url: `/publicregistration/${code}/eligibility`,
+        params: { email, phone },
+      }),
+    }),
     registerCandidateViaQR: builder.mutation<ApiEnvelope<any>, RegisterCandidateViaQRRequest>({
       query: (data) => ({
         url: '/publicregistration',
@@ -837,6 +849,7 @@ export const {
   useGetQRCodeAnalyticsQuery,
   useGetQRCodeByVacancyQuery,
   useRecordQRScanQuery,
+  useCheckQRRegistrationEligibilityQuery,
   useRegisterCandidateViaQRMutation,
   useEvaluateCandidateStageMutation,
   useScheduleCandidateTestMutation,

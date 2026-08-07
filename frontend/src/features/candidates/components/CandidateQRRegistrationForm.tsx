@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@/design-system';
 import { Select } from '@/design-system/components/select';
-import { useRegisterCandidateViaQRMutation } from '@/store/services/api';
+import { useRegisterCandidateViaQRMutation, useCheckQRRegistrationEligibilityQuery } from '@/store/services/api';
 
 const QUALIFICATION_OPTIONS = [
   { value: 'B.Tech / B.E.', label: 'B.Tech / B.E.' },
@@ -64,6 +64,30 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [registeredCandidate, setRegisteredCandidate] = useState<any>(null);
 
+  // Live "already applied for this role?" check — debounced so it's not firing on every
+  // keystroke. The same 90-day cooldown is enforced server-side on submit regardless (see
+  // RegisterCandidateViaQRCommandHandler); this is just an early, friendlier warning.
+  const [debouncedEmail, setDebouncedEmail] = useState('');
+  const [debouncedPhone, setDebouncedPhone] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedEmail(email.trim()), 450);
+    return () => clearTimeout(t);
+  }, [email]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedPhone(phone.trim()), 450);
+    return () => clearTimeout(t);
+  }, [phone]);
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(debouncedEmail);
+  const phoneValid = /^[0-9]{10}$/.test(debouncedPhone);
+  const { data: eligibilityRes } = useCheckQRRegistrationEligibilityQuery(
+    { code: driveInfo.code, email: emailValid ? debouncedEmail : undefined, phone: phoneValid ? debouncedPhone : undefined },
+    { skip: !driveInfo.code || (!emailValid && !phoneValid) }
+  );
+  const eligibility = eligibilityRes?.data;
+  const isBlockedByCooldown = eligibility?.canApply === false;
+  const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+
   // Validate Step 1
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
@@ -88,6 +112,13 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
+
+    if (isBlockedByCooldown) {
+      setSubmitError(
+        `You already applied for this role on ${formatDate(eligibility!.lastAppliedAt)}. You can re-apply after ${formatDate(eligibility!.eligibleFrom)}.`
+      );
+      return;
+    }
 
     const newErrors: Record<string, string> = {};
     if (!isFresher) {
@@ -337,6 +368,16 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
               )}
             </div>
 
+            {isBlockedByCooldown && (
+              <div className="p-3 rounded-[var(--radius-xl)] bg-[var(--status-danger-bg)] border border-[var(--status-danger-border)] text-[var(--status-danger-text)] text-xs flex items-start gap-2">
+                <Icon name="alert-triangle" size="xs" className="shrink-0 mt-0.5" />
+                <span>
+                  You already applied for this role on {formatDate(eligibility!.lastAppliedAt)}. You can re-apply for the same role
+                  after {formatDate(eligibility!.eligibleFrom)} (90-day cooldown).
+                </span>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">
                 Current Location / City
@@ -352,12 +393,13 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
 
             <button
               type="button"
+              disabled={isBlockedByCooldown}
               onClick={() => {
-                if (validateStep1()) {
+                if (validateStep1() && !isBlockedByCooldown) {
                   setCurrentStep(2);
                 }
               }}
-              className="w-full h-11 rounded-[var(--radius-xl)] text-xs font-bold bg-gradient-to-r from-[var(--accent-indigo)] to-[var(--accent-violet)] text-[var(--text-on-accent)] shadow-md hover:from-[var(--accent-indigo-hover)] hover:to-[var(--accent-violet-hover)] transition-all cursor-pointer flex items-center justify-center gap-2 mt-4"
+              className="w-full h-11 rounded-[var(--radius-xl)] text-xs font-bold bg-gradient-to-r from-[var(--accent-indigo)] to-[var(--accent-violet)] text-[var(--text-on-accent)] shadow-md hover:from-[var(--accent-indigo-hover)] hover:to-[var(--accent-violet-hover)] transition-all cursor-pointer flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>Next Step: Profile Details</span>
               <Icon name="chevron-right" size="xs" />
@@ -505,7 +547,7 @@ export const CandidateQRRegistrationForm: React.FC<CandidateQRRegistrationFormPr
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isBlockedByCooldown}
                 className="flex-1 h-11 rounded-[var(--radius-xl)] text-xs font-bold bg-gradient-to-r from-[var(--accent-indigo)] to-[var(--accent-violet)] text-[var(--text-on-accent)] shadow-md hover:from-[var(--accent-indigo-hover)] hover:to-[var(--accent-violet-hover)] transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoading ? (
