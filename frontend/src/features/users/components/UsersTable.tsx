@@ -1,0 +1,110 @@
+'use client';
+
+import React from 'react';
+import { Icon } from '@/design-system';
+import { type UserItem } from '../types/user.types';
+
+interface UsersTableProps {
+  users: UserItem[];
+  isLoading?: boolean;
+  onEditUser: (user: UserItem) => void;
+}
+
+export const UsersTable: React.FC<UsersTableProps> = ({ users, isLoading, onEditUser }) => {
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] shadow-2xs">
+        <Icon name="spinner" size="lg" className="animate-spin text-[var(--accent-indigo)] mx-auto mb-2" />
+        <p className="text-xs text-[var(--text-tertiary)] font-medium">Loading user directory...</p>
+      </div>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <div className="p-12 text-center bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] shadow-2xs">
+        <div className="w-12 h-12 rounded-full bg-[var(--surface-2)] text-[var(--text-tertiary)] flex items-center justify-center mx-auto mb-3 border border-[var(--border-default)]">
+          <Icon name="users" size="lg" />
+        </div>
+        <h3 className="text-sm font-bold text-[var(--text-primary)] font-heading">No users found</h3>
+        <p className="text-xs text-[var(--text-tertiary)] mt-1 max-w-sm mx-auto">
+          No team members match your current filter parameters or search terms.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] shadow-2xs overflow-hidden">
+      <div className="overflow-x-auto scrollbar-thin">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr className="bg-[var(--surface-2)] border-b border-[var(--border-default)] text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
+              <th className="py-3 px-4">Employee</th>
+              <th className="py-3 px-4">Role</th>
+              <th className="py-3 px-4">Department</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border-default)] text-[var(--text-primary)] font-medium">
+            {users.map((user) => (
+              <tr key={user.id} className="hover:bg-[var(--surface-hover)] transition-colors">
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-[var(--text-primary)]">{user.name}</div>
+                      <div className="text-[11px] text-[var(--text-tertiary)] flex items-center gap-1.5 mt-0.5">
+                        <span>{user.email}</span>
+                        <span>•</span>
+                        <span className="font-mono text-[10.5px] font-semibold text-[var(--text-secondary)]">{user.empId}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-3 px-4">
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                    user.role === 'Director'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : user.role === 'HR'
+                      ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                      : (user.role as string) === 'Administrator' || user.role === 'SuperAdmin'
+                      ? 'bg-purple-50 text-purple-800 border-purple-200'
+                      : 'bg-blue-50 text-blue-800 border-blue-200'
+                  }`}>
+                    <Icon name={user.role === 'Director' ? 'shield' : 'user'} size="xs" />
+                    <span>{user.role}</span>
+                  </span>
+                </td>
+                <td className="py-3 px-4 text-[var(--text-secondary)] font-semibold">{user.department}</td>
+                <td className="py-3 px-4">
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                    user.status === 'Active'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                    <span>{user.status}</span>
+                  </span>
+                </td>
+                <td className="py-3 px-4 text-right">
+                  <button
+                    type="button"
+                    onClick={() => onEditUser(user)}
+                    className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:bg-[var(--surface-2)] rounded-lg transition-colors cursor-pointer"
+                    title="Edit User Credentials & Access"
+                  >
+                    <Icon name="edit" size="xs" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};

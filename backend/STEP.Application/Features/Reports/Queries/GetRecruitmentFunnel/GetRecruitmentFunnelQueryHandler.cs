@@ -28,15 +28,16 @@ namespace STEP.Application.Features.Reports.Queries.GetRecruitmentFunnel
 
             foreach (var c in candidates)
             {
-                var r1 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
-                var r2 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 2);
-                var r3 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 3);
+                var history = c.PipelineProgressHistory.OrderBy(p => p.RoundNumber).ToList();
+                var r1 = history.FirstOrDefault(p => p.RoundNumber == 1);
+                var r2 = history.FirstOrDefault(p => p.RoundNumber == 2);
+                var r3 = history.FirstOrDefault(p => p.RoundNumber == 3);
 
-                var r1Failed = r1?.Status?.ToLower() == "failed" || r1?.Status?.ToLower() == "rejected";
-                var r2Failed = r2?.Status?.ToLower() == "failed" || r2?.Status?.ToLower() == "rejected";
-                var r3Failed = r3?.Status?.ToLower() == "failed" || r3?.Status?.ToLower() == "rejected";
+                var r1Failed = r1?.Status?.Equals("failed", StringComparison.OrdinalIgnoreCase) == true || r1?.Status?.Equals("rejected", StringComparison.OrdinalIgnoreCase) == true;
+                var r2Failed = r2?.Status?.Equals("failed", StringComparison.OrdinalIgnoreCase) == true || r2?.Status?.Equals("rejected", StringComparison.OrdinalIgnoreCase) == true;
+                var r3Failed = r3?.Status?.Equals("failed", StringComparison.OrdinalIgnoreCase) == true || r3?.Status?.Equals("rejected", StringComparison.OrdinalIgnoreCase) == true;
 
-                bool isTrulyRejected = r1Failed || (r2Failed && r3Failed);
+                bool isTrulyRejected = c.Status?.Equals("rejected", StringComparison.OrdinalIgnoreCase) == true || r1Failed || (r2Failed && r3Failed);
 
                 if (isTrulyRejected)
                 {

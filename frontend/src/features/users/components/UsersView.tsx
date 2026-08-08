@@ -7,6 +7,8 @@ import { type UserItem, type UserRole, type UserStatus } from '@/features/users/
 import { useGetUsersQuery, useCreateUserMutation, useUpdateUserMutation, useGetMasterDataByCategoryQuery } from '@/store/services/api';
 import { useAppDispatch, notifySuccess, notifyError } from '@/store';
 
+import { UsersTable } from './UsersTable';
+
 // Role & Department ID Mappings matching ASP.NET Core DB Seeds
 const ROLE_ID_MAP: Record<string, number> = {
   Administrator: 1,
@@ -302,122 +304,7 @@ export const UsersView: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] overflow-hidden shadow-2xs w-full">
-        <div className="overflow-x-auto scrollbar-step w-full">
-          <table className="w-full text-left border-collapse min-w-[680px]">
-            <colgroup>
-              <col style={{ width: '28%', minWidth: '180px' }} />
-              <col style={{ width: '15%', minWidth: '100px' }} />
-              <col style={{ width: '15%', minWidth: '100px' }} />
-              <col style={{ width: '22%', minWidth: '140px' }} />
-              <col style={{ width: '12%', minWidth: '90px' }} />
-              <col style={{ width: '8%', minWidth: '70px' }} />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider font-mono whitespace-nowrap">
-                <th className="py-2.5 px-4">User</th>
-                <th className="py-2.5 px-4">Employee ID</th>
-                <th className="py-2.5 px-4">Role</th>
-                <th className="py-2.5 px-4">Department</th>
-                <th className="py-2.5 px-4">Status</th>
-                <th className="py-2.5 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-soft)] text-[12.5px]">
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-[var(--text-tertiary)]">
-                    No users found matching search & filter criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-[var(--surface-hover)] transition-colors">
-                    {/* User Info */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <span className="w-8.5 h-8.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-extrabold text-[11px] flex items-center justify-center border border-[var(--accent-indigo)]/30 shrink-0">
-                          {u.firstName[0]}
-                          {u.lastName[0]}
-                        </span>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-[var(--text-primary)] truncate">{u.name}</span>
-                          <span className="text-[11px] text-[var(--text-tertiary)] truncate">{u.email}</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Employee ID */}
-                    <td className="py-3 px-4 whitespace-nowrap font-mono text-[11.5px] font-extrabold text-[var(--text-secondary)]">
-                      <span className="bg-[var(--surface-2)] border border-[var(--border-default)] px-2 py-0.5 rounded">
-                        {u.empId}
-                      </span>
-                    </td>
-
-                    {/* Role (Pill Shape) */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border font-sans ${
-                        u.role === 'Director'
-                          ? 'bg-purple-50 text-purple-700 border-purple-200'
-                          : u.role === 'HR'
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                          : 'bg-sky-50 text-sky-700 border-sky-200'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                          u.role === 'Director' ? 'bg-purple-500' : u.role === 'HR' ? 'bg-indigo-500' : 'bg-sky-500'
-                        }`} />
-                        <span>{u.role}</span>
-                      </span>
-                    </td>
-
-                    {/* Department */}
-                    <td className="py-3 px-4 whitespace-nowrap font-semibold text-[var(--text-secondary)]">
-                      {u.department}
-                    </td>
-
-                    {/* Status Toggle Badge (Active = Green, Inactive = Red/Danger) */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(u)}
-                        className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border cursor-pointer transition-all active:scale-95 ${
-                          u.status === 'Active'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}
-                        title="Click to toggle active/inactive status"
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                        <span>{u.status}</span>
-                      </button>
-                    </td>
-
-                    {/* Row Actions — Single Edit Pencil Icon */}
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(u)}
-                          className="p-1.5 rounded hover:bg-[var(--surface-3)] text-[var(--text-secondary)] hover:text-[var(--accent-indigo)] transition-colors cursor-pointer"
-                          title="Edit user details & permissions"
-                        >
-                          <Icon name="pencil" size="xs" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer Stats */}
-        <div className="px-4 py-2.5 border-t border-[var(--border-default)] bg-[var(--surface-2)] flex flex-col sm:flex-row gap-1 items-start sm:items-center justify-between text-[11.5px] text-[var(--text-tertiary)] font-medium">
-          <span>Showing {filteredUsers.length} of {displayUsers.length} users</span>
-          <span className="font-mono text-[10.5px]">STEP Role-Based Access Control v1.0</span>
-        </div>
-      </div>
+      <UsersTable users={filteredUsers} isLoading={isLoading} onEditUser={handleOpenEdit} />
 
       {/* Add User Modal Dialog */}
       {isAddOpen && (

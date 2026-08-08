@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CodeEditorIDE } from './CodeEditorIDE';
+import { ExamSubmissionModal } from './ExamSubmissionModal';
 import {
   useStartExamSessionMutation,
   useResumeExamSessionQuery,
