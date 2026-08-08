@@ -9,6 +9,8 @@ import { CandidateTable } from "./CandidateTable";
 import { AddCandidateDialog } from "./AddCandidateDialog";
 import { CANDIDATE_FILTERS, type FilterDef } from "../config/candidateFilters";
 import { useGetCandidatesQuery } from "@/store/services/api";
+import { toast } from "@/design-system/feedback/toast";
+import { exportCandidatesToExcel } from "./utils/candidateExcelExporter";
 import type { ActiveFilter } from "../shared/FilterBar";
 import type { DashboardCandidate } from "@/features/dashboard/types/dashboard.types";
 
@@ -277,6 +279,19 @@ export const CandidateWorkspace: React.FC = () => {
 
           <button
             type="button"
+            onClick={async () => {
+              try {
+                const listToExport = (apiCandidatesResponse?.data || filteredCandidates || []);
+                await exportCandidatesToExcel(listToExport);
+                toast.success("Candidates Exported", {
+                  description: `Successfully generated Excel workbook for ${listToExport.length} candidate(s).`,
+                });
+              } catch (err: any) {
+                toast.error("Export Failed", {
+                  description: err?.message || "Failed to generate Excel export.",
+                });
+              }
+            }}
             className="h-8 w-8 sm:w-auto px-0 sm:px-3 flex items-center justify-center gap-2 rounded-full border border-[var(--border-default)]
               text-[12px] font-semibold text-[var(--text-primary)] bg-[var(--surface-1)]
               hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] hover:-translate-y-[1px] hover:shadow-xs active:scale-[0.98]

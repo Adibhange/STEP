@@ -51,7 +51,7 @@ namespace STEP.Api.Controllers.v1
             var userId = CurrentUserId ?? throw new UnauthorizedAccessException("Unable to resolve the current user.");
             await mediator.Send(new STEP.Application.Features.Users.Commands.ChangeUserPin.ChangeUserPinCommand(
                 userId, body.CurrentPin, body.NewPin));
-            return Ok(ApiResponse<object>.Ok(true, "4-Digit PIN changed successfully"));
+            return Ok(ApiResponse<object>.Ok(true, "6-Digit PIN changed successfully"));
         }
     }
 

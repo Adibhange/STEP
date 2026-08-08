@@ -25,7 +25,7 @@ namespace STEP.Application.Features.Users.Commands.ChangeUserPin
 
             if (!string.IsNullOrEmpty(user.PinHash) && !hasher.Verify(request.CurrentPin, user.PinHash))
             {
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CurrentPin", "Incorrect current 4-digit PIN.")]);
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CurrentPin", "Incorrect current 6-digit PIN.")]);
             }
 
             user.PinHash = hasher.Hash(request.NewPin);

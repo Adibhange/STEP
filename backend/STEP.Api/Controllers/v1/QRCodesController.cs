@@ -31,7 +31,11 @@ namespace STEP.Api.Controllers.v1
         public async Task<IActionResult> GetByVacancy(int vacancyId)
         {
             var qrCode = await mediator.Send(new GetQRCodeByVacancyQuery(vacancyId));
-            return Ok(ApiResponse<object>.Ok(qrCode, qrCode == null ? "No QR code generated for this vacancy yet" : "QR code retrieved successfully"));
+            if (qrCode == null)
+            {
+                return Ok(ApiResponse<object?>.Ok(null, "No QR code generated for this vacancy yet"));
+            }
+            return Ok(ApiResponse<object?>.Ok(qrCode, "QR code retrieved successfully"));
         }
     }
 }

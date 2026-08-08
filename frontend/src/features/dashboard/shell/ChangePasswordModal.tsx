@@ -61,6 +61,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     if (isDirector) {
       if (!currentPin) { setError('Please enter your current PIN.'); return; }
       if (!newPin) { setError('Please enter a new PIN.'); return; }
+      if (newPin.length !== 6 || !/^\d{6}$/.test(newPin)) { setError('New PIN must be exactly 6 digits.'); return; }
       if (newPin !== confirmPin) { setError('New PIN and confirm PIN do not match.'); return; }
     } else {
       if (!currentPassword) { setError('Please enter your current password.'); return; }

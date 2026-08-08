@@ -345,28 +345,32 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
           endTime,
           passcode: testMode === 'From Home' ? passcode : undefined,
         }).unwrap();
+
+        toast.success(`Test Scheduled Successfully (${testMode})`, {
+          description: `Invitation sent to ${candidateEmail}. Valid on ${scheduledDate} (${timeSlotStr}).`,
+        });
+
+        if (onScheduled) {
+          onScheduled({
+            testMode,
+            paperTitle: linkedPaperTitle,
+            scheduledDate,
+            timeSlot: timeSlotStr,
+            accessCode,
+            passcode: testMode === 'From Home' ? passcode : 'N/A (Direct Link)',
+            directUrl: finalUrl,
+          });
+        }
+
+        onClose();
       } catch (err: any) {
+        const errMsg = err?.data?.message || (Array.isArray(err?.data?.errors) ? err.data.errors.join(' ') : null) || 'Failed to schedule test on backend. Please check details and try again.';
         console.error('Failed to schedule test on backend:', err);
+        toast.error('Scheduling Failed', { description: errMsg });
       }
+    } else {
+      toast.error('Invalid Candidate', { description: 'Candidate ID is missing or invalid.' });
     }
-
-    toast.success(`Test Scheduled Successfully (${testMode})`, {
-      description: `Invitation sent to ${candidateEmail}. Valid on ${scheduledDate} (${timeSlotStr}).`,
-    });
-
-    if (onScheduled) {
-      onScheduled({
-        testMode,
-        paperTitle: linkedPaperTitle,
-        scheduledDate,
-        timeSlot: timeSlotStr,
-        accessCode,
-        passcode: testMode === 'From Home' ? passcode : 'N/A (Direct Link)',
-        directUrl: finalUrl,
-      });
-    }
-
-    onClose();
   };
 
   return (

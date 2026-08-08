@@ -105,6 +105,8 @@ export function buildCreateVacancyCommand(vacancyData: CreateVacancyVacancyData)
     marksPerQuestion: section.marksPerQuestion,
   }));
 
+  const defaultClosingDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
   return {
     title: vacancyData.title,
     masterRoleId: vacancyData.roleId,
@@ -117,8 +119,7 @@ export function buildCreateVacancyCommand(vacancyData: CreateVacancyVacancyData)
     minExperienceYears,
     maxExperienceYears,
     jobDescription: vacancyData.jobDescription,
-    // No UI field collects a real closing date yet — kept as a placeholder until one exists.
-    closingDate: vacancyData.closingDate || '2026-08-30',
+    closingDate: vacancyData.closingDate || defaultClosingDate,
     walkinDriveDate: driveType === 'Walk-in' ? vacancyData.walkInDrive?.date : undefined,
     assignedRecruiterId: vacancyData.assignedRecruiterId,
     hiringManagerId: vacancyData.hiringManagerId,

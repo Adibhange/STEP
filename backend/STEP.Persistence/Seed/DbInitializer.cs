@@ -115,9 +115,9 @@ namespace STEP.Persistence.Seed
                 ";
                 await db.Database.ExecuteSqlRawAsync(addMissingColumnsSql);
             }
-            catch
+            catch (Exception ex)
             {
-                // Non-blocking schema initialization catch
+                Console.WriteLine($"[DbInitializer] Error initializing database seed/schema: {ex.Message}");
             }
         }
     }
