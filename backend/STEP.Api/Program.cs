@@ -118,17 +118,30 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Report.View", policy => policy.RequireClaim("permission", "Report.View"));
 });
 
-// 5. CORS Policy for Next.js Frontend
-var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001")
-    .Split(',', StringSplitOptions.RemoveEmptyEntries);
+// 5. Dynamic CORS Policy Driven by Environment Variable (ALLOWED_ORIGINS)
+var allowedOriginsEnv = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") 
+    ?? builder.Configuration["ALLOWED_ORIGINS"];
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", p => p
-        .WithOrigins(allowedOrigins)
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowCredentials());
+    options.AddPolicy("AllowAll", p =>
+    {
+        if (!string.IsNullOrWhiteSpace(allowedOriginsEnv))
+        {
+            var origins = allowedOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            p.WithOrigins(origins)
+             .AllowAnyMethod()
+             .AllowAnyHeader()
+             .AllowCredentials();
+        }
+        else
+        {
+            p.SetIsOriginAllowed(_ => true)
+             .AllowAnyMethod()
+             .AllowAnyHeader()
+             .AllowCredentials();
+        }
+    });
 });
 
 // 6. Controllers & Swagger Configuration
@@ -141,6 +154,8 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "Production ASP.NET Core 10 Clean Architecture API for STEP Enterprise ATS"
     });
+    c.CustomSchemaIds(type => type.FullName?.Replace("+", ".") ?? type.Name);
+    c.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
 
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -206,15 +221,13 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// 8. HTTP Request Pipeline
-if (app.Environment.IsDevelopment())
+// 8. HTTP Request Pipeline (Enable Swagger in all environments)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "STEP Enterprise ATS API v1");
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "STEP Enterprise ATS API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors("AllowAll");

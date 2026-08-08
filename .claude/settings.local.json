@@ -112,7 +112,25 @@
       "Bash(rm -rf \"c:\\\\Users\\\\Aditya.Bhange\\\\STEP\\\\backend\\\\STEP.Api\\\\App_Data\\\\uploads\\\\offers\\\\17\" *)",
       "Bash(echo \"TSC_EXIT:$?\")",
       "Bash(xargs grep -ln \"Report\")",
-      "Bash(tasklist //FI \"PID eq 9700\")"
+      "Bash(tasklist //FI \"PID eq 9700\")",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(curl -s -m 3 http://localhost:5125/swagger/v1/swagger.json -o /dev/null -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(taskkill //F //PID 20232)",
+      "Bash(tasklist //FI \"IMAGENAME eq dotnet.exe\")",
+      "Bash(curl -s -m 3 http://localhost:5125/api/v1/vacancies/10 -H \"Authorization: Bearer $\\(cat /tmp/token.txt\\)\" -w \"\\\\nHTTP %{http_code}\\\\n\")",
+      "Bash(dotnet run *)",
+      "Bash(echo \"launched with pid $!\")",
+      "Bash(curl -s -X PUT http://localhost:5125/api/v1/vacancies/10/pipeline-flows/10 -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -s 'http://localhost:5125/api/v1/candidates?vacancyId=10&pageSize=50' -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s http://localhost:5125/api/v1/candidates?pageSize=200 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -X POST http://localhost:5125/api/v1/candidates/110/assign-pipeline-flow -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"vacancyPipelineFlowId\": 10}')",
+      "Bash(curl -s -X POST http://localhost:5125/api/v1/candidates/110/evaluate-stage -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"roundNumber\": 1, \"passed\": true, \"remarks\": \"repro test - round1 pass\"}')",
+      "Bash(curl -s -X POST http://localhost:5125/api/v1/candidates/110/evaluate-stage -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"roundNumber\": 2, \"passed\": true, \"remarks\": \"repro test - round2 pass\"}')",
+      "Bash(tasklist //FI \"IMAGENAME eq STEP.Api.exe\")",
+      "Bash(taskkill //F //PID 20496)",
+      "Bash(where.exe sqlcmd *)",
+      "Bash('/c/Program Files/Microsoft SQL Server/Client SDK/ODBC/170/Tools/Binn/sqlcmd' -S 192.168.2.5 -d InterviewTestPortal -U aditya.bhange -P pune@123 -C -Q ' *)",
+      "Bash(grep -E '[0-9]$')"
     ],
     "additionalDirectories": [
       "\\tmp"

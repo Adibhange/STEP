@@ -22,7 +22,16 @@ namespace STEP.Application.Features.QR.Commands.GenerateQRCode
             var vacancy = await db.Vacancies.FirstOrDefaultAsync(v => v.Id == request.VacancyId, cancellationToken)
                 ?? throw new NotFoundException(nameof(VacancyEntity), request.VacancyId);
 
-            var frontendUrl = (configuration["FRONTEND_URL"] ?? "https://step.sthapatya.in").TrimEnd('/');
+            // No hardcoded fallback domain here — a silently-wrong guess would bake an unreachable
+            // (or someone else's) URL into every QR code candidates scan. Must be configured in the
+            // backend .env; see FRONTEND_URL in .env.example.
+            var frontendUrlRaw = configuration["FRONTEND_URL"];
+            if (string.IsNullOrWhiteSpace(frontendUrlRaw))
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(request.VenueName),
+                    "'FRONTEND_URL' is not configured on the server. Set it in the backend .env (the public URL candidates' QR scans should open) before generating QR codes.")]);
+            }
+            var frontendUrl = frontendUrlRaw.TrimEnd('/');
             var code = $"WD-{Convert.ToHexString(RandomNumberGenerator.GetBytes(4))}";
             var registrationUrl = $"{frontendUrl}/apply/{code}";
 

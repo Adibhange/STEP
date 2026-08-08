@@ -19,6 +19,7 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-STEP.Enterprise}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-STEP.Users}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:7001}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:7001}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
     restart: unless-stopped
 

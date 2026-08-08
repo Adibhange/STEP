@@ -18,7 +18,7 @@ namespace STEP.Application.Features.Auth.DirectorPin
         public async Task<AuthResultDto> Handle(DirectorPinLoginCommand request, CancellationToken cancellationToken)
         {
             var directors = await db.Users
-                .Include(u => u.Role).ThenInclude(r => r.RolePermissions).ThenInclude(rp => rp.Permission)
+                .Include(u => u.Role)
                 .Where(u => u.Role.Name == "Director" && u.IsActive && u.PinHash != null)
                 .ToListAsync(cancellationToken);
 
@@ -31,7 +31,11 @@ namespace STEP.Application.Features.Auth.DirectorPin
 
             user.LastLoginAt = DateTime.UtcNow;
 
-            var permissionCodes = user.Role.RolePermissions.Select(rp => rp.Permission.Code).Distinct().ToList();
+            var permissionCodes = await db.RolePermissions
+                .Where(rp => rp.RoleId == user.RoleId)
+                .Select(rp => rp.Permission.Code)
+                .Distinct()
+                .ToListAsync(cancellationToken);
             var tokens = jwt.GenerateTokens(user, user.Role.Name, permissionCodes);
 
             db.UserRefreshTokens.Add(new UserRefreshToken

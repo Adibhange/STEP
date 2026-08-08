@@ -82,6 +82,7 @@ namespace STEP.Application.Features.Vacancies.Commands.UpdateVacancyPipelineFlow
                     });
                 }
             }
+            STEP.Application.Common.PipelineFlowRoundDefaults.EnsureEndsWithDirectorRound(flow.Rounds);
 
             await db.SaveChangesAsync(cancellationToken);
 

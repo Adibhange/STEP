@@ -21,8 +21,19 @@ namespace STEP.Application.Features.Auth.Login
         public async Task<AuthResultDto> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             var user = await db.Users
-                .Include(u => u.Role).ThenInclude(r => r.RolePermissions).ThenInclude(rp => rp.Permission)
+                .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower(), cancellationToken);
+
+            if (user != null && !user.IsActive)
+            {
+                throw new AuthenticationFailedException("This account has been deactivated. Contact your administrator.");
+            }
+
+            if (user != null && user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
+            {
+                var remainingMinutes = Math.Max(1, (int)Math.Ceiling((user.LockoutEnd.Value - DateTime.UtcNow).TotalMinutes));
+                throw new AuthenticationFailedException($"Account is locked due to 5 failed login attempts. Please try again in {remainingMinutes} minute{(remainingMinutes > 1 ? "s" : "")}.");
+            }
 
             if (user == null || !hasher.Verify(request.Password, user.PasswordHash))
             {
@@ -39,21 +50,15 @@ namespace STEP.Application.Features.Auth.Login
                 throw new AuthenticationFailedException("Invalid email or password.");
             }
 
-            if (!user.IsActive)
-            {
-                throw new AuthenticationFailedException("This account has been deactivated. Contact your administrator.");
-            }
-
-            if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
-            {
-                throw new AuthenticationFailedException($"Account locked until {user.LockoutEnd.Value:u} due to repeated failed sign-in attempts.");
-            }
-
             user.AccessFailedCount = 0;
             user.LockoutEnd = null;
             user.LastLoginAt = DateTime.UtcNow;
 
-            var permissionCodes = user.Role.RolePermissions.Select(rp => rp.Permission.Code).Distinct().ToList();
+            var permissionCodes = await db.RolePermissions
+                .Where(rp => rp.RoleId == user.RoleId)
+                .Select(rp => rp.Permission.Code)
+                .Distinct()
+                .ToListAsync(cancellationToken);
             var tokens = jwt.GenerateTokens(user, user.Role.Name, permissionCodes);
 
             db.UserRefreshTokens.Add(new UserRefreshToken

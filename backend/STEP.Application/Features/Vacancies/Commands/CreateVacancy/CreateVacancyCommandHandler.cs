@@ -85,6 +85,7 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
                         CutoffPercent = round.CutoffPercent,
                     });
                 }
+                STEP.Application.Common.PipelineFlowRoundDefaults.EnsureEndsWithDirectorRound(flowEntity.Rounds);
 
                 vacancy.PipelineFlows.Add(flowEntity);
             }

@@ -51,6 +51,7 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancyPipelineFlow
                     CutoffPercent = round.CutoffPercent,
                 });
             }
+            STEP.Application.Common.PipelineFlowRoundDefaults.EnsureEndsWithDirectorRound(flow.Rounds);
 
             db.VacancyPipelineFlows.Add(flow);
             await db.SaveChangesAsync(cancellationToken);

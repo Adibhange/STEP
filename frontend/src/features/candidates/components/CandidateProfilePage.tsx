@@ -786,15 +786,18 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
   const directorOptions = useMemo(
     () => (usersRes?.data || [])
-      .filter((u) => u.role === 'Director')
-      .map((u) => ({ value: String(u.id), label: `${u.firstName} ${u.lastName} (Director)` })),
+      .filter((u) => (u.role || '').toLowerCase() === 'director')
+      .map((u) => ({ value: String(u.id), label: `${u.firstName || ''} ${u.lastName || ''}`.trim() + ` (Director)` })),
     [usersRes]
   );
 
   const interviewerOptions = useMemo(
     () => (usersRes?.data || [])
-      .filter((u) => u.role === 'Interviewer' || u.role === 'HR')
-      .map((u) => ({ value: String(u.id), label: `${u.firstName} ${u.lastName} (${u.role})` })),
+      .filter((u) => {
+        const r = (u.role || '').toLowerCase();
+        return r === 'interviewer' || r === 'hr' || r === 'director';
+      })
+      .map((u) => ({ value: String(u.id), label: `${u.firstName || ''} ${u.lastName || ''}`.trim() + ` (${u.role})` })),
     [usersRes]
   );
 
@@ -805,89 +808,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   ];
 
   // Main Dynamic Recruitment Stages Stack
-  const [stagesData, setStagesData] = useState<StageItem[]>([
-    {
-      id: 1,
-      name: 'HR Screening',
-      status: 'Passed',
-      statusType: 'passed',
-      date: '13 May 2025',
-      interviewer: 'Rahul Patel',
-      interviewerInitials: 'RP',
-      interviewerRole: 'HR Lead',
-      mode: 'Phone Screening',
-      feedback: 'Good communication. Profile matches basic requirements.',
-      result: 'Passed',
-      actionLabel: null,
-      isDirectorRound: false,
-      isOfferRound: false,
-    },
-    {
-      id: 2,
-      name: 'Technical Assessment',
-      status: 'Passed',
-      statusType: 'passed',
-      date: '15 May 2025',
-      interviewer: 'System Evaluator',
-      interviewerInitials: 'AI',
-      interviewerRole: 'Automated Test',
-      mode: 'From Home',
-      feedback: 'Scored 92/100 in React & JS assessment.',
-      result: 'Passed',
-      actionLabel: 'Schedule / Send Test',
-      attempts: [{ attempt: 1, date: '15 May 2025', score: '92/100', result: 'Passed' }],
-      isDirectorRound: false,
-      isOfferRound: false,
-    },
-    {
-      id: 3,
-      name: 'Face to Face Interview',
-      status: 'Passed',
-      statusType: 'passed',
-      date: '18 May 2025',
-      interviewer: 'Sneha Kulkarni',
-      interviewerInitials: 'SK',
-      interviewerRole: 'Technical Lead',
-      mode: 'In Office',
-      feedback: 'Strong in React fundamentals and problem solving.',
-      result: 'Passed',
-      actionLabel: 'Schedule Interview',
-      isDirectorRound: false,
-      isOfferRound: false,
-    },
-    {
-      id: 4,
-      name: 'Director Interview',
-      status: 'Passed',
-      statusType: 'passed',
-      date: '21 May 2025',
-      interviewer: 'Rajesh Sharma',
-      interviewerInitials: 'RS',
-      interviewerRole: 'Director of Engineering',
-      mode: 'Google Meet',
-      feedback: 'Strong leadership potential and technical architecture skills. Recommended for offer.',
-      result: 'Offered',
-      actionLabel: null,
-      isDirectorRound: true,
-      isOfferRound: false,
-    },
-    {
-      id: 5,
-      name: 'Offer',
-      status: 'Pending',
-      statusType: 'pending',
-      date: 'Pending',
-      interviewer: '—',
-      interviewerInitials: '—',
-      interviewerRole: 'HR Operations',
-      mode: 'Official Document',
-      feedback: 'Awaiting director decision clearance for offer letter rollout.',
-      result: 'Pending',
-      actionLabel: null,
-      isDirectorRound: false,
-      isOfferRound: true,
-    },
-  ]);
+  const [stagesData, setStagesData] = useState<StageItem[]>([]);
 
   const handleShare = () => {
     if (typeof window !== 'undefined' && navigator.clipboard) {
@@ -1306,18 +1227,18 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           s.id === selectedAssignStage.id
             ? {
               ...s,
-              interviewer: result.data.interviewerName || displayName,
+              interviewer: displayName || (selectedAssignStage.isDirectorRound ? 'Director' : 'Interviewer'),
               interviewerInitials: initials || 'IN',
               mode: assignMode,
               date: assignDate,
-              interviewId: result.data.id,
+              interviewId: result.data?.id || s.interviewId,
             }
             : s
         )
       );
 
       setSelectedAssignStage(null);
-      toast.success('Interview Scheduled', { description: `${result.data.interviewerName} assigned for ${assignDate} (${assignMode}) — persisted.` });
+      toast.success('Interview Scheduled', { description: `${displayName} assigned for ${assignDate} (${assignMode}) — persisted.` });
     } catch (err) {
       const description = (err as { data?: { errors?: string[]; message?: string } })?.data?.errors?.[0]
         || (err as { data?: { message?: string } })?.data?.message
@@ -2576,7 +2497,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   {selectedFeedbackStage.isDirectorRound ? 'Director Final Decision' : 'Submit Feedback'} — {selectedFeedbackStage.name}
                 </h3>
                 <span className="text-xs text-slate-500 font-medium">
-                  Candidate: {candidate.name} • {selectedFeedbackStage.isDirectorRound ? 'Director' : 'Interviewer'}: {selectedFeedbackStage.interviewer}
+                  Candidate: {candidate.name} • {selectedFeedbackStage.isDirectorRound ? 'Director' : 'Interviewer'}: {selectedFeedbackStage.interviewer || 'Unassigned'}
                 </span>
               </div>
               <button
@@ -2636,14 +2557,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-700">Remarks & Detailed Rationale</label>
                     <span className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-rose-600' : 'text-slate-400'}`}>
-                      {feedbackText.length} / 500 characters
+                      {feedbackText.length} / 50 characters
                     </span>
                   </div>
                   <textarea
                     value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
+                    onChange={(e) => setFeedbackText(e.target.value.slice(0, 50))}
                     rows={4}
-                    maxLength={500}
+                    maxLength={50}
                     placeholder="Enter evaluation notes, technical observations, and final recommendations..."
                     className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
                   />

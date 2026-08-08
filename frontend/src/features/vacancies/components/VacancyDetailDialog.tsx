@@ -44,7 +44,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
 
   // Real QR code + its real scan/registration analytics, if one has been generated for this
   // walk-in vacancy yet.
-  const { data: qrCodeRes, isLoading: isQrLoading } = useGetQRCodeByVacancyQuery(vacancyIdNum, { skip: !vacancyIdNum || isDirectHiring });
+  const { data: qrCodeRes, isLoading: isQrLoading, refetch: refetchQrCode } = useGetQRCodeByVacancyQuery(vacancyIdNum, { skip: !vacancyIdNum || isDirectHiring });
   const qrCode = qrCodeRes?.data;
   const { data: qrAnalyticsRes } = useGetQRCodeAnalyticsQuery(qrCode?.id ?? 0, { skip: !qrCode });
   const qrAnalytics = qrAnalyticsRes?.data;
@@ -78,6 +78,10 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
         venueName: genVenueName.trim(),
         driveDate: genDriveDate,
       }).unwrap();
+      // Belt-and-suspenders: generateQRCode's invalidatesTags: ['QRCodes'] should already trigger
+      // this, but explicitly refetching guarantees the card flips to the QR view the moment
+      // generation succeeds, rather than depending on cache-invalidation timing.
+      await refetchQrCode();
       toast.success('QR Code Generated', { description: `Walk-in registration QR code created for "${genVenueName.trim()}".` });
       setIsGenerateQrOpen(false);
       setGenVenueName('');

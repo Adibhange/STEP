@@ -4,10 +4,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   trailingSlash: true,
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!backendUrl) {
-      return [];
-    }
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://stepapi.scipl.info.in/api/v1';
 
     const cleanUrl = backendUrl.replace(/\/+$/, '');
     const baseDomain = cleanUrl.replace(/\/api\/.*$/i, '');
