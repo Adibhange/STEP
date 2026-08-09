@@ -153,8 +153,8 @@ const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComp
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', margin: '10px 0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(4px, 2.5vw, 12px)', margin: '10px 0', width: '100%', maxWidth: '100%' }}>
         {digits.map((digit, idx) => {
           const isFilled = Boolean(digit);
           return (
@@ -171,11 +171,13 @@ const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComp
               onPaste={handlePaste}
               aria-label={`PIN Digit ${idx + 1}`}
               style={{
-                width: '52px',
-                height: '58px',
+                width: 'clamp(36px, 11vw, 52px)',
+                height: 'clamp(44px, 13vw, 58px)',
+                flexShrink: 1,
+                minWidth: '32px',
                 textAlign: 'center',
                 fontFamily: 'var(--font-mono, monospace)',
-                fontSize: '24px',
+                fontSize: 'clamp(18px, 5vw, 24px)',
                 fontWeight: 800,
                 color: '#0f172a',
                 background: isFilled ? 'rgba(99,102,241,0.03)' : '#ffffff',
@@ -184,6 +186,7 @@ const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComp
                 boxShadow: error ? '0 0 0 4px rgba(220,38,38,0.15)' : '0 2px 6px rgba(15,23,42,0.04)',
                 outline: 'none',
                 transition: 'all 150ms ease',
+                boxSizing: 'border-box',
               }}
             />
           );
@@ -328,14 +331,15 @@ export const LoginForm: React.FC = () => {
 
   const faceBase: React.CSSProperties = {
     width: '100%',
+    boxSizing: 'border-box',
     background: '#ffffff',
     border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: '24px',
     boxShadow: '0 4px 20px -2px rgba(15,23,42,0.05), 0 1px 3px rgba(15,23,42,0.03)',
-    padding: '48px 52px 44px',
+    padding: 'clamp(24px, 5vw, 44px) clamp(16px, 5vw, 48px)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '32px',
+    gap: '28px',
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
   };
@@ -418,7 +422,7 @@ export const LoginForm: React.FC = () => {
             role="main"
           >
             <header style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingBottom: '16px', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'linear-gradient(135deg,#4f46e5 0%,#6366f1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 900, color: '#ffffff', boxShadow: '0 2px 8px rgba(99,102,241,0.25)' }}>S</span>
                   <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.04em', lineHeight: 1 }}>STEP</span>
@@ -487,7 +491,7 @@ export const LoginForm: React.FC = () => {
             role="main"
           >
             <header style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingBottom: '16px', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'linear-gradient(135deg,#4f46e5 0%,#6366f1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 900, color: '#ffffff', boxShadow: '0 2px 8px rgba(99,102,241,0.25)' }}>S</span>
                   <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.04em', lineHeight: 1 }}>STEP</span>
