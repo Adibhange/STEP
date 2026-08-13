@@ -60,7 +60,7 @@ const StepLoginFieldHero: React.FC<StepLoginFieldHeroProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-      <label htmlFor={id} style={{ fontSize: '13.5px', fontWeight: 600, color: 'rgba(15,23,42,0.85)', letterSpacing: '0.01em' }}>
+      <label htmlFor={id} style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>
         {label}
       </label>
       <div
@@ -68,13 +68,13 @@ const StepLoginFieldHero: React.FC<StepLoginFieldHeroProps> = ({
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
-          background: '#ffffff',
-          border: `1.5px solid ${error ? '#dc2626' : focused ? '#6366f1' : 'rgba(15,23,42,0.12)'}`,
+          background: 'var(--input-bg)',
+          border: `1.5px solid ${error ? 'var(--status-danger)' : focused ? 'var(--accent-indigo)' : 'var(--border-default)'}`,
           borderRadius: '12px',
           boxShadow: error
-            ? '0 0 0 4px rgba(220,38,38,0.15)'
+            ? '0 0 0 4px var(--status-danger-bg)'
             : focused
-            ? '0 0 0 4px rgba(99,102,241,0.18)'
+            ? '0 0 0 4px var(--accent-indigo-dim)'
             : 'none',
           transform: focused && !error ? 'translateY(-1px)' : 'none',
           transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
@@ -105,7 +105,7 @@ const StepLoginFieldHero: React.FC<StepLoginFieldHeroProps> = ({
             fontFamily: 'inherit',
             fontSize: '15px',
             fontWeight: 400,
-            color: '#0f172a',
+            color: 'var(--text-primary)',
           }}
         />
         {suffix}
@@ -179,11 +179,11 @@ const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComp
                 fontFamily: 'var(--font-mono, monospace)',
                 fontSize: 'clamp(18px, 5vw, 24px)',
                 fontWeight: 800,
-                color: '#0f172a',
-                background: isFilled ? 'rgba(99,102,241,0.03)' : '#ffffff',
-                border: `1.5px solid ${error ? '#dc2626' : isFilled ? 'rgba(99,102,241,0.5)' : 'rgba(15,23,42,0.14)'}`,
-                borderRadius: '12px',
-                boxShadow: error ? '0 0 0 4px rgba(220,38,38,0.15)' : '0 2px 6px rgba(15,23,42,0.04)',
+                color: 'var(--text-primary)',
+                background: isFilled ? 'var(--surface-3)' : 'var(--input-bg)',
+                border: `1.5px solid ${error ? 'var(--status-danger)' : isFilled ? 'var(--accent-indigo)' : 'var(--border-default)'}`,
+                borderRadius: '14px',
+                boxShadow: error ? '0 0 0 4px var(--status-danger-bg)' : isFilled ? '0 0 0 3px var(--accent-indigo-dim)' : 'var(--shadow-sm)',
                 outline: 'none',
                 transition: 'all 150ms ease',
                 boxSizing: 'border-box',
@@ -332,10 +332,10 @@ export const LoginForm: React.FC = () => {
   const faceBase: React.CSSProperties = {
     width: '100%',
     boxSizing: 'border-box',
-    background: '#ffffff',
-    border: '1px solid rgba(15,23,42,0.08)',
+    background: 'var(--surface-1)',
+    border: '1px solid var(--border-default)',
     borderRadius: '24px',
-    boxShadow: '0 4px 20px -2px rgba(15,23,42,0.05), 0 1px 3px rgba(15,23,42,0.03)',
+    boxShadow: 'var(--shadow-xl)',
     padding: 'clamp(24px, 5vw, 44px) clamp(16px, 5vw, 48px)',
     display: 'flex',
     flexDirection: 'column',
@@ -422,16 +422,16 @@ export const LoginForm: React.FC = () => {
             role="main"
           >
             <header style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingBottom: '16px', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingBottom: '16px', borderBottom: '1px solid var(--border-soft)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'linear-gradient(135deg,#4f46e5 0%,#6366f1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 900, color: '#ffffff', boxShadow: '0 2px 8px rgba(99,102,241,0.25)' }}>S</span>
-                  <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.04em', lineHeight: 1 }}>STEP</span>
+                  <span style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>STEP</span>
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(15,23,42,0.45)', background: 'rgba(15,23,42,0.04)', padding: '4px 10px', borderRadius: '9999px', letterSpacing: '0.04em' }}>Sthapatya Talent Excellence Platform</span>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', background: 'var(--surface-2)', padding: '4px 10px', borderRadius: '9999px', letterSpacing: '0.04em' }}>Sthapatya Talent Excellence Platform</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.035em', lineHeight: 1.15, margin: 0 }}>Welcome back.</h1>
-                <p style={{ fontSize: '15.5px', fontWeight: 400, color: 'rgba(15,23,42,0.62)', lineHeight: 1.45, margin: 0 }}>Sign in to continue to your workspace.</p>
+                <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.035em', lineHeight: 1.15, margin: 0 }}>Welcome back.</h1>
+                <p style={{ fontSize: '15.5px', fontWeight: 400, color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>Sign in to continue to your workspace.</p>
               </div>
             </header>
 
@@ -491,16 +491,16 @@ export const LoginForm: React.FC = () => {
             role="main"
           >
             <header style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingBottom: '16px', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingBottom: '16px', borderBottom: '1px solid var(--border-soft)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'linear-gradient(135deg,#4f46e5 0%,#6366f1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 900, color: '#ffffff', boxShadow: '0 2px 8px rgba(99,102,241,0.25)' }}>S</span>
-                  <span style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.04em', lineHeight: 1 }}>STEP</span>
+                  <span style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>STEP</span>
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(15,23,42,0.45)', background: 'rgba(15,23,42,0.04)', padding: '4px 10px', borderRadius: '9999px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Director Mode</span>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', background: 'var(--surface-2)', padding: '4px 10px', borderRadius: '9999px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Director Mode</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.035em', lineHeight: 1.15, margin: 0 }}>Director access.</h1>
-                <p style={{ fontSize: '15.5px', color: 'rgba(15,23,42,0.62)', lineHeight: 1.45, margin: 0 }}>Enter your 6-digit security PIN to continue.</p>
+                <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.035em', lineHeight: 1.15, margin: 0 }}>Director access.</h1>
+                <p style={{ fontSize: '15.5px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>Enter your 6-digit security PIN to continue.</p>
               </div>
             </header>
 

@@ -1098,7 +1098,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           <button
             type="button"
             onClick={handleNextStep}
-            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2.5 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full"
+            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white shadow-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer select-none w-full"
           >
             <span>Next Step</span>
             <Icon name="chevron-right" size="xs" />
@@ -1117,7 +1117,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           <button
             type="button"
             onClick={() => handleSave(false)}
-            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2.5 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full"
+            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white shadow-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer select-none w-full"
           >
             <Icon name="check" size="xs" />
             <span>Save Candidate</span>
@@ -1134,18 +1134,18 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       <div className="max-h-[55vh] sm:max-h-[60vh] px-4 sm:px-8 pt-4 sm:pt-5 pb-5 sm:pb-6 space-y-4 sm:space-y-5 overflow-y-auto scrollbar-none">
 
         {/* Progress Segments Bar (5 Steps) */}
-        <div className="space-y-2.5 p-4 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/50 via-purple-50/30 to-indigo-50/50 shadow-xs">
+        <div className="space-y-2.5 p-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] shadow-xs">
           <div className="flex items-center justify-between text-[13px] font-bold">
             <span className="text-[var(--text-primary)] font-heading flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
+              <span className="w-6 h-6 rounded-full bg-[var(--accent-indigo)] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
                 {step}
               </span>
               <span>Step {step} of 5:</span>
-              <span className="font-extrabold text-indigo-600">
+              <span className="font-extrabold text-[var(--accent-indigo)]">
                 {STEPS[step - 1].title}
               </span>
             </span>
-            <span className="text-xs font-sans font-bold tracking-tight text-purple-600">
+            <span className="text-xs font-mono font-bold tracking-tight text-[var(--text-secondary)]">
               {step * 20}% Complete
             </span>
           </div>
@@ -1156,7 +1156,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                 key={i}
                 className={`rounded-full transition-all duration-300 ${
                   i <= step
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 shadow-2xs'
+                    ? 'bg-[var(--accent-indigo)] shadow-2xs'
                     : 'bg-[var(--border-default)]'
                 }`}
               />

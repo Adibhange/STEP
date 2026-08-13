@@ -16,6 +16,9 @@
 @import '../styles/utilities.css';
 @import '../styles/scrollbar.css';
 @import '../styles/toast.css';
+@import '../styles/dark-mode.css';
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
 
 /* ── Page-specific styles ────────────────────────────────────────────────── */
 /* login.css removed — styles are now inline in login-form.tsx */

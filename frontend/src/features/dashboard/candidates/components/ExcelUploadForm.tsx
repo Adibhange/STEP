@@ -105,7 +105,7 @@ export const ExcelUploadForm: React.FC<ExcelUploadFormProps> = ({ onSuccess }) =
                       <td className="p-2 text-[var(--text-secondary)] font-mono text-[11px] truncate max-w-[140px]">{r.email}</td>
                       <td className="p-2 text-[var(--text-secondary)]">{r.role}</td>
                       <td className="p-2">
-                        <span className="text-[10.5px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <span className="text-[10.5px] font-bold text-[var(--status-success-text)] bg-[var(--status-success-bg)] px-2 py-0.5 rounded-full border border-[var(--status-success-border)]">
                           {r.status}
                         </span>
                       </td>
@@ -123,7 +123,7 @@ export const ExcelUploadForm: React.FC<ExcelUploadFormProps> = ({ onSuccess }) =
               disabled={isProcessing}
               onClick={handleImport}
               type="button"
-              className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 border-none shadow-md hover:from-indigo-700 hover:to-purple-700"
+              className="w-full sm:w-auto bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white border-none shadow-xs"
             >
               {isProcessing ? (
                 <>

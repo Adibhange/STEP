@@ -79,7 +79,7 @@ export const AssessmentsView: React.FC = () => {
           <h3 className="text-base font-extrabold text-(--text-primary) font-heading">
             Completed Candidate Assessment Submissions
           </h3>
-          <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
             {submissions.length} Evaluated
           </span>
         </div>
@@ -89,15 +89,15 @@ export const AssessmentsView: React.FC = () => {
             <thead>
               <tr className="bg-(--surface-2) border-b border-(--border-default) text-(--text-tertiary) font-mono font-bold uppercase text-[10.5px]">
                 <th className="py-3 px-4">Candidate</th>
-                <th className="py-3 px-4">Vacancy & Paper Title</th>
+                <th className="py-3 px-4">Vacancy & Paper</th>
                 <th className="py-3 px-4">Test Mode</th>
                 <th className="py-3 px-4">Attempts</th>
-                <th className="py-3 px-4">Score / Status</th>
-                <th className="py-3 px-4">Proctoring Log</th>
-                <th className="py-3 px-4 text-right">Action</th>
+                <th className="py-3 px-4">Latest Result</th>
+                <th className="py-3 px-4">Date Completed</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-(--border-default) font-medium text-(--text-primary)">
+            <tbody className="divide-y divide-(--border-default) text-(--text-secondary)">
               {isLoading && (
                 <tr>
                   <td
@@ -137,10 +137,10 @@ export const AssessmentsView: React.FC = () => {
                   >
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col">
-                        <span className="font-bold text-(--text-primary) font-heading">
+                        <span className="font-bold text-(--text-primary)">
                           {row.candidateName}
                         </span>
-                        <span className="text-[10.5px] font-mono text-(--text-tertiary)">
+                        <span className="text-[11px] text-(--text-tertiary) font-mono">
                           {row.candidateCode}
                         </span>
                       </div>
@@ -157,7 +157,7 @@ export const AssessmentsView: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4 font-mono">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10.5px] font-bold ${row.testMode === "In Office" ? "bg-indigo-50 text-indigo-700 border border-indigo-200" : "bg-sky-50 text-sky-700 border border-sky-200"}`}
+                        className={`px-2 py-0.5 rounded text-[10.5px] font-bold ${row.testMode === "In Office" ? "bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30" : "bg-[var(--accent-cyan-dim)] text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30"}`}
                       >
                         {row.testMode}
                       </span>
@@ -167,18 +167,18 @@ export const AssessmentsView: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2 font-mono">
-                        <span className="font-extrabold text-emerald-600">
+                        <span className="font-extrabold text-[var(--status-success)]">
                           {row.latestScore}
                         </span>
                         <span
-                          className={`px-2 py-0.2 rounded text-[10px] font-bold ${row.status === "Passed" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${row.status === "Passed" ? "bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]" : "bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)]"}`}
                         >
                           {row.status}
                         </span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-[11px]">
-                      <span className="text-emerald-600">
+                      <span>
                         {row.proctoringWarnings} Tab Switch Warning
                       </span>
                     </td>

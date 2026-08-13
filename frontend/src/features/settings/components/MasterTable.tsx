@@ -183,12 +183,12 @@ export const MasterTable: React.FC<MasterTableProps> = ({
           onClick={() => onToggleStatus?.(r.id)}
           className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border cursor-pointer transition-all active:scale-95 ${
             r.status === 'Active'
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : 'bg-rose-50 text-rose-700 border-rose-200'
+              ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]'
+              : 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border-[var(--status-danger-border)]'
           }`}
           title="Click to toggle status"
         >
-          <span className={`w-1.5 h-1.5 rounded-full ${r.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${r.status === 'Active' ? 'bg-[var(--status-success)]' : 'bg-[var(--status-danger)]'}`} />
           <span>{r.status}</span>
         </button>
       ),

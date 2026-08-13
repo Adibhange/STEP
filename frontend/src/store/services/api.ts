@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
+import { mockDbService } from '@/mock-data';
 
 export interface ApiEnvelope<T> {
   success: boolean;
@@ -295,6 +296,14 @@ export const getApiBaseUrl = (): string => {
   return envUrl.replace(/\/+$/, '');
 };
 
+export const isMockDataEnabled = (): boolean => {
+  if (typeof window !== 'undefined') {
+    const override = localStorage.getItem('step_use_mock_data');
+    if (override !== null) return override === 'true';
+  }
+  return process.env.NEXT_PUBLIC_USE_MOCK_DATA !== 'false';
+};
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: getApiBaseUrl(),
   prepareHeaders: (headers) => {
@@ -311,7 +320,28 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   api,
   extraOptions
 ) => {
+  // If Mock DB is enabled, dispatch directly to local mock DB
+  if (isMockDataEnabled()) {
+    const reqObj = typeof args === 'string' ? { url: args } : args;
+    const mockRes = await mockDbService.handleRequest(reqObj);
+    if (mockRes.error) {
+      return { error: mockRes.error as FetchBaseQueryError };
+    }
+    return { data: mockRes.data };
+  }
+
   let result = await rawBaseQuery(args, api, extraOptions);
+
+  // If real backend is unreachable (network error or timeout), gracefully fallback to Mock DB
+  if (result.error && (result.error.status === 'FETCH_ERROR' || result.error.status === 'TIMEOUT_ERROR')) {
+    console.warn('[STEP API] Backend unreachable, falling back to Local Mock Database.');
+    const reqObj = typeof args === 'string' ? { url: args } : args;
+    const mockRes = await mockDbService.handleRequest(reqObj);
+    if (mockRes.error) {
+      return { error: mockRes.error as FetchBaseQueryError };
+    }
+    return { data: mockRes.data };
+  }
 
   if (result.error && result.error.status === 401) {
     const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('step_refresh_token') : null;

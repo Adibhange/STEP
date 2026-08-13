@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
+import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { QuestionPaper, PaperStatus } from '../types/question-paper.types';
 import { QuestionPaperViewDialog } from './QuestionPaperViewDialog';
 import { useGetVacanciesQuery, useGetQuestionPapersQuery } from '@/store/services/api';
@@ -9,13 +10,13 @@ import { useGetVacanciesQuery, useGetQuestionPapersQuery } from '@/store/service
 const PAGE_SIZE = 20;
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'Frontend Engineering': 'text-sky-700 bg-sky-50',
-  'Backend Engineering': 'text-indigo-700 bg-indigo-50',
-  'Quality Assurance': 'text-emerald-700 bg-emerald-50',
-  Aptitude: 'text-amber-700 bg-amber-50',
-  Engineering: 'text-purple-700 bg-purple-50',
-  DevOps: 'text-rose-700 bg-rose-50',
-  'Product Management': 'text-teal-700 bg-teal-50',
+  'Frontend Engineering': 'text-[var(--accent-cyan)] bg-[var(--accent-cyan-dim)] border border-[var(--accent-cyan)]/30',
+  'Backend Engineering': 'text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30',
+  'Quality Assurance': 'text-[var(--status-success-text)] bg-[var(--status-success-bg)] border border-[var(--status-success-border)]',
+  Aptitude: 'text-[var(--status-warning-text)] bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)]',
+  Engineering: 'text-[var(--accent-violet)] bg-[var(--accent-violet-dim)] border border-[var(--accent-violet)]/30',
+  DevOps: 'text-[var(--status-danger-text)] bg-[var(--status-danger-bg)] border border-[var(--status-danger-border)]',
+  'Product Management': 'text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30',
 };
 
 export const QuestionPapersView: React.FC = () => {
@@ -145,7 +146,7 @@ export const QuestionPapersView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
             {filtered.length} Total Papers
           </span>
         </div>
@@ -168,19 +169,15 @@ export const QuestionPapersView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <span className="text-[11.5px] font-semibold text-[var(--text-tertiary)] uppercase font-mono mr-1">Category:</span>
-            <select
+            <CustomSelect
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="h-8 px-2.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] text-[11.5px] font-bold text-[var(--text-primary)] outline-none"
-            >
-              {allCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setCategoryFilter(val || 'All Categories')}
+              options={allCategories.map((cat) => ({ value: cat, label: cat }))}
+              placeholder="All Categories"
+              widthClass="w-48"
+            />
           </div>
 
           <div className="flex items-center gap-1 border-l border-[var(--border-default)] pl-3">
@@ -231,7 +228,7 @@ export const QuestionPapersView: React.FC = () => {
       {!isLoading && !isError && filtered.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {paginated.map((paper) => {
-            const catColor = CATEGORY_COLORS[paper.category] || 'text-indigo-700 bg-indigo-50';
+            const catColor = CATEGORY_COLORS[paper.category] || 'text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30';
             return (
               <div
                 key={paper.id}

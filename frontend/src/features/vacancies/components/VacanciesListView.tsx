@@ -223,7 +223,7 @@ export const VacanciesListView: React.FC = () => {
                 onClick={() => setDriveFilter(d.id)}
                 className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all cursor-pointer border ${
                   driveFilter === d.id
-                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/40 shadow-2xs'
                     : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-transparent hover:bg-[var(--surface-hover)]'
                 }`}
               >
@@ -298,8 +298,8 @@ export const VacanciesListView: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <span className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 border ${
                       isDirect
-                        ? 'bg-purple-50 text-purple-700 border-purple-200'
-                        : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/20'
+                        ? 'bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border-[var(--accent-violet)]/30'
+                        : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
                     }`}>
                       <Icon name={isDirect ? 'users' : 'briefcase'} size="md" />
                     </span>
@@ -310,10 +310,10 @@ export const VacanciesListView: React.FC = () => {
                         </h3>
                         <span className="font-mono text-[11px] text-[var(--text-tertiary)]">({v.code})</span>
 
-                        <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full border font-mono ${
+                        <span className={`text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border font-mono ${
                           isDirect
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                            ? 'bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border-[var(--accent-violet)]/30'
+                            : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
                         }`}>
                           {driveType}
                         </span>

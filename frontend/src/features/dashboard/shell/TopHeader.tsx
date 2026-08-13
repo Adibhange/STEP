@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, Badge } from '@/design-system';
 import type { QuickNotification, CurrentUser } from '@/features/dashboard/types/dashboard.types';
 import { useIdleTimerContext } from '@/hooks/useIdleTimer';
+import { useTheme, type Theme } from '@/providers/theme-provider';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface TopHeaderProps {
@@ -20,6 +21,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
   const pathname = usePathname();
 
   const { isIdle, formattedTime, resetTimer } = useIdleTimerContext();
+  const { theme, toggleTheme, setThemeWithTransition } = useTheme();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -181,6 +183,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           </button>
         )}
 
+        {/* Theme Toggle Trigger with Top-Right to Bottom-Left Circular Expansion */}
+        <button
+          type="button"
+          id="theme-toggle-trigger"
+          className="w-8.5 h-8.5 flex items-center justify-center rounded-full text-[var(--text-secondary)]
+            hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] hover:scale-[1.04] active:scale-95 transition-all duration-150 focus-ring-step cursor-pointer"
+          onClick={(e) => toggleTheme(e)}
+          aria-label={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} theme`}
+          title={`Current theme: ${theme}. Click to toggle.`}
+        >
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size="sm" />
+        </button>
+
         {/* Notification Bell Trigger */}
         <div className="relative" ref={notifRef}>
           <button
@@ -322,6 +337,29 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
 
                 {/* Actions */}
                 <div className="p-1.5 space-y-0.5 text-xs font-medium">
+                  {/* Theme Selector */}
+                  <div className="px-3 py-1.5 flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                      Theme
+                    </span>
+                    <div className="flex items-center gap-1 bg-[var(--surface-3)] p-0.5 rounded-lg border border-[var(--border-default)]">
+                      {(['light', 'dark', 'system'] as Theme[]).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={(e) => setThemeWithTransition(t, e)}
+                          className={`px-2 py-1 rounded-md text-[11px] font-semibold capitalize transition-all cursor-pointer ${
+                            theme === t
+                              ? 'bg-[var(--surface-1)] text-[var(--accent-indigo)] shadow-xs font-bold'
+                              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => {

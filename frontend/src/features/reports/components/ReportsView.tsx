@@ -66,7 +66,7 @@ export const ReportsView: React.FC = () => {
           {activeTab === 'recruitment' && (
             <>
               <StatsCard title="Total Applications" count={f?.totalApplications ?? 0} subtitle="Database total candidates" icon="users" colorToken="--accent-indigo" bgToken="--accent-indigo-dim" />
-              <StatsCard title="Assessments Passed" count={f?.assessmentPassed ?? 0} subtitle="Proctored test cleared" icon="check-circle" colorToken="--accent-emerald" bgToken="--accent-emerald-dim" />
+              <StatsCard title="Assessments Passed" count={f?.assessmentPassed ?? 0} subtitle="Proctored test cleared" icon="check-circle" colorToken="--accent-green" bgToken="--accent-green-dim" />
               <StatsCard title="Interviews Cleared" count={f?.interviewCleared ?? 0} subtitle="Technical & Director rounds" icon="mic" colorToken="--accent-cyan" bgToken="--accent-cyan-dim" />
               <StatsCard title="Offers Issued" count={f?.offersIssued ?? 0} subtitle="Generated offer letters" icon="send" colorToken="--accent-violet" bgToken="--accent-violet-dim" />
             </>
@@ -76,26 +76,26 @@ export const ReportsView: React.FC = () => {
             <>
               <StatsCard title="Open Vacancies" count={f?.openVacancies ?? 0} subtitle="Active recruitment campaigns" icon="briefcase" colorToken="--accent-indigo" bgToken="--accent-indigo-dim" />
               <StatsCard title="Total Applications" count={f?.totalApplications ?? 0} subtitle="Across active openings" icon="building" colorToken="--accent-cyan" bgToken="--accent-cyan-dim" />
-              <StatsCard title="On Hold Count" count={f?.onHoldCount ?? 0} subtitle="Pending decision" icon="file-text" colorToken="--accent-amber" bgToken="--accent-amber-dim" />
-              <StatsCard title="Joined Candidates" count={f?.joinedCount ?? 0} subtitle="Hired & onboarded" icon="check-circle" colorToken="--accent-emerald" bgToken="--accent-emerald-dim" />
+              <StatsCard title="On Hold Count" count={f?.onHoldCount ?? 0} subtitle="Pending decision" icon="file-text" colorToken="--accent-orange" bgToken="--accent-orange-dim" />
+              <StatsCard title="Joined Candidates" count={f?.joinedCount ?? 0} subtitle="Hired & onboarded" icon="check-circle" colorToken="--accent-green" bgToken="--accent-green-dim" />
             </>
           )}
 
           {activeTab === 'candidates' && (
             <>
               <StatsCard title="Total Candidates" count={f?.totalApplications ?? 0} subtitle="Database total candidates" icon="users" colorToken="--accent-indigo" bgToken="--accent-indigo-dim" />
-              <StatsCard title="Screened & Passed" count={f?.assessmentPassed ?? 0} subtitle="Evaluation passed" icon="check-circle" colorToken="--accent-emerald" bgToken="--accent-emerald-dim" />
+              <StatsCard title="Screened & Passed" count={f?.assessmentPassed ?? 0} subtitle="Evaluation passed" icon="check-circle" colorToken="--accent-green" bgToken="--accent-green-dim" />
               <StatsCard title="Interview Cleared" count={f?.interviewCleared ?? 0} subtitle="Active round evaluations" icon="calendar" colorToken="--accent-violet" bgToken="--accent-violet-dim" />
-              <StatsCard title="Rejected Count" count={f?.rejectedCount ?? 0} subtitle="Archived candidates" icon="x-circle" colorToken="--status-danger" bgToken="--accent-rose-dim" />
+              <StatsCard title="Rejected Count" count={f?.rejectedCount ?? 0} subtitle="Archived candidates" icon="x-circle" colorToken="--status-danger" bgToken="--accent-red-dim" />
             </>
           )}
 
           {activeTab === 'walkin' && (
             <>
               <StatsCard title="Walk-In Registered" count={f?.totalApplications ?? 0} subtitle="QR & on-site forms" icon="grid" colorToken="--accent-indigo" bgToken="--accent-indigo-dim" />
-              <StatsCard title="Assessments Passed" count={f?.assessmentPassed ?? 0} subtitle="Completed initial round" icon="users" colorToken="--accent-emerald" bgToken="--accent-emerald-dim" />
+              <StatsCard title="Assessments Passed" count={f?.assessmentPassed ?? 0} subtitle="Completed initial round" icon="users" colorToken="--accent-green" bgToken="--accent-green-dim" />
               <StatsCard title="Interviews Cleared" count={f?.interviewCleared ?? 0} subtitle="Cleared F2F interview" icon="trending-up" colorToken="--accent-cyan" bgToken="--accent-cyan-dim" />
-              <StatsCard title="Hired & Joined" count={f?.joinedCount ?? 0} subtitle="Successful onboardings" icon="check-circle" colorToken="--accent-emerald" bgToken="--accent-emerald-dim" />
+              <StatsCard title="Hired & Joined" count={f?.joinedCount ?? 0} subtitle="Successful onboardings" icon="check-circle" colorToken="--accent-green" bgToken="--accent-green-dim" />
             </>
           )}
 
@@ -104,7 +104,7 @@ export const ReportsView: React.FC = () => {
               <StatsCard title="Assessments Passed" count={f?.assessmentPassed ?? 0} subtitle="Proctored online tests" icon="clipboard-check" colorToken="--accent-indigo" bgToken="--accent-indigo-dim" />
               <StatsCard title="Interviews Cleared" count={f?.interviewCleared ?? 0} subtitle="Passed evaluation" icon="bar-chart-2" colorToken="--accent-cyan" bgToken="--accent-cyan-dim" />
               <StatsCard title="Offers Issued" count={f?.offersIssued ?? 0} subtitle="Issued offer letters" icon="calendar" colorToken="--accent-violet" bgToken="--accent-violet-dim" />
-              <StatsCard title="Joined Candidates" count={f?.joinedCount ?? 0} subtitle="Joined organization" icon="check-circle" colorToken="--accent-emerald" bgToken="--accent-emerald-dim" />
+              <StatsCard title="Joined Candidates" count={f?.joinedCount ?? 0} subtitle="Joined organization" icon="check-circle" colorToken="--accent-green" bgToken="--accent-green-dim" />
             </>
           )}
         </div>

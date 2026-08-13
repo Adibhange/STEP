@@ -1404,7 +1404,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[#f8fafc] min-h-screen text-[13px] font-sans relative">
+    <div className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[var(--canvas)] min-h-screen text-[13px] font-sans relative">
       {/* ── Main 2-Column Section ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
         {/* LEFT COLUMN (4 cols / ~30%): Candidate Profile Overview & Documents */}
@@ -1457,24 +1457,24 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <h1 className="font-bold text-slate-900 text-base font-heading truncate">{candidate.name}</h1>
+                    <h1 className="font-bold text-[var(--text-primary)] text-base font-heading truncate">{candidate.name}</h1>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${candidate.status?.toLowerCase() === 'rejected' || candidate.status?.toLowerCase() === 'failed'
-                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        ? 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border-[var(--status-danger-border)]'
                         : candidate.status?.toLowerCase() === 'offered' || candidate.status?.toLowerCase() === 'hired'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                          ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]'
+                          : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
                         }`}
                     >
                       {candidate.status}
                     </span>
                   </div>
-                  <span className="text-xs text-slate-600 font-medium truncate mt-0.5">{candidate.designation}</span>
+                  <span className="text-xs text-[var(--text-secondary)] font-medium truncate mt-0.5">{candidate.designation}</span>
                   <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border border-[var(--accent-violet)]/30">
                       {candidate.candidateType}
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--surface-3)] text-[var(--text-secondary)] border border-[var(--border-default)]">
                       {candidate.employmentType}
                     </span>
                   </div>
@@ -1485,7 +1485,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 <button
                   type="button"
                   onClick={handleOpenEditProfile}
-                  className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                   title="Edit Profile Details"
                 >
                   <Icon name="pencil" size="xs" />
@@ -1493,36 +1493,36 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="h-7 px-2.5 inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer shadow-2xs transition-colors"
+                  className="h-7 px-2.5 inline-flex items-center gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)] text-xs font-semibold hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] cursor-pointer shadow-2xs transition-colors"
                   title="Share Candidate Link"
                 >
-                  <Icon name="external-link" size="xs" className="text-slate-500" />
+                  <Icon name="external-link" size="xs" className="text-[var(--text-tertiary)]" />
                   <span>Share</span>
                 </button>
               </div>
             </div>
 
             {/* Applied Role Highlight Box */}
-            <div className="flex items-center justify-between bg-blue-50/80 border border-blue-100 rounded-lg px-3 py-2">
-              <span className="text-blue-600 font-semibold text-xs flex items-center gap-1.5">
+            <div className="flex items-center justify-between bg-[var(--surface-2)] border border-[var(--border-default)] rounded-lg px-3 py-2">
+              <span className="text-[var(--accent-indigo)] font-semibold text-xs flex items-center gap-1.5">
                 <Icon name="briefcase" size="xs" />
                 Applied Position:
               </span>
-              <span className="font-bold text-blue-900 text-xs truncate">{candidate.appliedFor}</span>
+              <span className="font-bold text-[var(--text-primary)] text-xs truncate">{candidate.appliedFor}</span>
             </div>
 
             {/* Permanent Assigned Pipeline Flow Box */}
-            <div className="flex flex-col gap-1 bg-indigo-50/90 border border-indigo-200 rounded-lg p-3">
+            <div className="flex flex-col gap-1 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-lg p-3">
               <div className="flex items-center justify-between">
-                <span className="text-indigo-800 font-bold text-[11px] uppercase font-mono flex items-center gap-1.5">
+                <span className="text-[var(--accent-indigo)] font-bold text-[11px] uppercase font-mono flex items-center gap-1.5">
                   <Icon name="grid" size="xs" />
                   Assigned Pipeline Flow:
                 </span>
-                <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
+                <span className="text-[10px] font-mono font-bold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-2 py-0.5 rounded-full border border-[var(--accent-indigo)]/30">
                   🔒 Permanent Walk-in Flow
                 </span>
               </div>
-              <span className="font-extrabold text-indigo-950 text-xs font-heading">
+              <span className="font-extrabold text-[var(--text-primary)] text-xs font-heading">
                 {assignedFlowVersionName}
               </span>
             </div>
@@ -1530,96 +1530,130 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             {/* Key-Value Details Grid */}
             <div className="grid grid-cols-2 gap-x-3.5 gap-y-3 text-xs">
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Email Address</span>
-                <span className="font-semibold text-slate-900 truncate">{candidate.email}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Email Address</span>
+                <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.email}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Phone Number</span>
-                <span className="font-semibold text-slate-900">{candidate.phone}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Phone Number</span>
+                <span className="font-semibold text-[var(--text-primary)]">{candidate.phone}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Gender & DOB</span>
-                <span className="font-semibold text-slate-900">{candidate.gender} • {candidate.dob}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Gender & DOB</span>
+                <span className="font-semibold text-[var(--text-primary)]">{candidate.gender} • {candidate.dob}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Location</span>
-                <span className="font-semibold text-slate-900 truncate">{candidate.location}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Location</span>
+                <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.location}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Current Company</span>
-                <span className="font-semibold text-slate-900 truncate">{candidate.currentCompany}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Current Company</span>
+                <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.currentCompany}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Designation</span>
-                <span className="font-semibold text-slate-900 truncate">{candidate.currentDesignation}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Designation</span>
+                <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.currentDesignation}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Current CTC</span>
-                <span className="font-semibold text-slate-900">{candidate.currentCtc}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Current CTC</span>
+                <span className="font-semibold text-[var(--text-primary)]">{candidate.currentCtc}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Expected CTC</span>
-                <span className="font-semibold text-slate-900">{candidate.expectedCtc}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Expected CTC</span>
+                <span className="font-semibold text-[var(--text-primary)]">{candidate.expectedCtc}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Total Experience</span>
-                <span className="font-semibold text-slate-900">{candidate.experience}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Total Experience</span>
+                <span className="font-semibold text-[var(--text-primary)]">{candidate.experience}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Notice Period</span>
-                <span className="font-semibold text-slate-900">{candidate.noticePeriod}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Notice Period</span>
+                <span className="font-semibold text-[var(--text-primary)]">{candidate.noticePeriod}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Application Source</span>
-                <span className="font-semibold text-blue-700">{candidate.source}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Application Source</span>
+                <span className="font-semibold text-[var(--accent-indigo)]">{candidate.source}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
-                <span className="text-slate-500 font-medium text-[11px]">Academic Score</span>
-                <span className="font-semibold text-emerald-700">{candidate.percentage} ({candidate.passingYear})</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Academic Score</span>
+                <span className="font-semibold text-[var(--text-primary)]">
+                  {candidate.percentage || 'N/A'}{' '}
+                  {candidate.passingYear ? (
+                    <span className="text-[var(--text-tertiary)] font-normal text-xs">({candidate.passingYear})</span>
+                  ) : null}
+                </span>
               </div>
 
-              <div className="col-span-2 flex flex-col gap-0.5 border-t border-slate-100 pt-2">
-                <span className="text-slate-500 font-medium text-[11px]">Education Credentials & College</span>
-                <span className="font-semibold text-slate-900 text-xs truncate">{candidate.education} — {candidate.college}</span>
+              <div className="col-span-2 flex flex-col gap-0.5 border-t border-[var(--border-soft)] pt-2">
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Education Credentials & College</span>
+                <span className="font-semibold text-[var(--text-primary)] text-xs truncate">{candidate.education} — {candidate.college}</span>
               </div>
 
               {/* Reference & Verification Details Subsection */}
-              <div className="col-span-2 bg-slate-50 border border-slate-200/80 rounded-lg p-2.5 flex flex-col gap-1 mt-0.5">
-                <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1 font-heading">
-                  <Icon name="users" size="xs" />
-                  Reference: {candidate.refType}
-                </span>
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  <span className="text-slate-700 font-medium">Referrer: <strong className="text-slate-900">{candidate.refName}</strong> ({candidate.refEmployeeId})</span>
-                  <span className="text-slate-700 font-medium text-right">Mobile: <strong className="text-slate-900">{candidate.refMobile}</strong></span>
-                  <span className="text-emerald-700 font-semibold col-span-2">Verified By: {candidate.refVerifiedBy}</span>
+              <div className="col-span-2 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-lg p-2.5 flex flex-col gap-1 mt-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-[var(--accent-indigo)] uppercase tracking-wider flex items-center gap-1 font-heading">
+                    <Icon name="users" size="xs" />
+                    Reference: {candidate.refType || (candidate.refName ? 'Employee Referral' : 'None')}
+                  </span>
+                  {!candidate.refName && (
+                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-tertiary)] border border-[var(--border-default)]">
+                      Direct Application
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-1 text-xs pt-0.5">
+                  <span className="text-[var(--text-secondary)] font-medium">
+                    Referrer:{' '}
+                    <strong className="text-[var(--text-primary)]">
+                      {candidate.refName || 'No Reference Provided'}
+                    </strong>
+                    {candidate.refEmployeeId ? ` (${candidate.refEmployeeId})` : ''}
+                  </span>
+                  <span className="text-[var(--text-secondary)] font-medium text-right">
+                    Mobile:{' '}
+                    <strong className="text-[var(--text-primary)]">
+                      {candidate.refMobile || '—'}
+                    </strong>
+                  </span>
+                  <span className="text-xs col-span-2 pt-0.5">
+                    {candidate.refVerifiedBy ? (
+                      <span className="text-[var(--status-success)] font-semibold">
+                        Verified By: {candidate.refVerifiedBy}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--text-tertiary)] font-normal text-[11px]">
+                        Verification: {candidate.refName ? 'Pending Verification' : 'Not Required'}
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Card 2: Documents Section (Resume, Application Form, Profile Photo) */}
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col gap-2.5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h2 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 font-heading uppercase tracking-wider">
-                <Icon name="file-text" size="xs" className="text-slate-500" />
+          <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl p-4 shadow-2xs flex flex-col gap-2.5">
+            <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-2">
+              <h2 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5 font-heading uppercase tracking-wider">
+                <Icon name="file-text" size="xs" className="text-[var(--text-tertiary)]" />
                 <span>Documents ({documentsData.length})</span>
               </h2>
 
               <div className="flex items-center gap-1.5">
                 <label
-                  className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10.5px] font-bold hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer shadow-2xs"
+                  className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 text-[10.5px] font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
                   title="Upload Candidate Resume"
                 >
                   <Icon name="file-text" size="xs" />
@@ -1632,7 +1666,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   />
                 </label>
                 <label
-                  className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[10.5px] font-bold hover:bg-purple-100 hover:border-purple-300 transition-colors cursor-pointer shadow-2xs"
+                  className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border border-[var(--accent-violet)]/30 text-[10.5px] font-bold hover:bg-[var(--accent-violet)] hover:text-white transition-colors cursor-pointer shadow-2xs"
                   title="Upload Application Form"
                 >
                   <Icon name="plus" size="xs" />
@@ -1649,25 +1683,25 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
             <div className="flex flex-col gap-2">
               {documentsData.length === 0 ? (
-                <div className="p-2.5 text-center text-slate-400 text-xs bg-slate-50 rounded-lg">
+                <div className="p-2.5 text-center text-[var(--text-tertiary)] text-xs bg-[var(--surface-2)] rounded-lg">
                   No documents attached.
                 </div>
               ) : (
                 documentsData.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between p-2 rounded-lg border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition-colors"
+                    className="flex items-center justify-between p-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] transition-colors"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <span className={`w-6.5 h-6.5 rounded-md font-bold text-[10px] flex items-center justify-center shrink-0 ${doc.type === 'Profile Photo' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-600'
+                      <span className={`w-6.5 h-6.5 rounded-md font-bold text-[10px] flex items-center justify-center shrink-0 ${doc.type === 'Profile Photo' ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)]' : 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)]'
                         }`}>
                         {doc.type === 'Profile Photo' ? 'IMG' : 'PDF'}
                       </span>
                       <div className="flex flex-col min-w-0">
-                        <span className="font-semibold text-slate-800 text-xs truncate" title={doc.name}>
+                        <span className="font-semibold text-[var(--text-primary)] text-xs truncate" title={doc.name}>
                           {doc.name}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-mono">
+                        <span className="text-[11px] text-[var(--text-secondary)] font-mono">
                           {doc.type} • {doc.size}
                         </span>
                       </div>
@@ -1677,7 +1711,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       <button
                         type="button"
                         onClick={() => setSelectedDocPreview(doc)}
-                        className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--accent-indigo)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                         title="View & Preview Document"
                       >
                         <Icon name="eye" size="xs" />
@@ -1685,7 +1719,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDownloadDocument(doc.name, doc.id)}
-                        className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                         title="Download Document"
                       >
                         <Icon name="download" size="xs" />
@@ -1693,7 +1727,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteDocument(doc.id, doc.name)}
-                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--status-danger)] hover:bg-[var(--status-danger-bg)] transition-colors cursor-pointer"
                         title="Delete Document"
                       >
                         <Icon name="trash" size="xs" />
@@ -1708,9 +1742,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
         {/* RIGHT COLUMN (8 cols / ~70%): Hiring Stage Progress Cards */}
         <div className="lg:col-span-8 flex flex-col gap-4">
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 font-heading flex items-center gap-2">
-              <Icon name="list" size="xs" className="text-blue-600" />
+          <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl p-4 shadow-2xs flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-sm sm:text-base font-bold text-[var(--text-primary)] font-heading flex items-center gap-2">
+              <Icon name="list" size="xs" className="text-[var(--accent-indigo)]" />
               <span>Recruitment Stages & Hiring Flow</span>
             </h2>
 
@@ -1718,246 +1752,291 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             <button
               type="button"
               onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation`)}
-              className="h-8 px-2.5 sm:px-3 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs cursor-pointer w-full sm:w-auto justify-center sm:justify-start"
+              className="h-8 px-2.5 sm:px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors shadow-2xs cursor-pointer w-full sm:w-auto justify-center sm:justify-start"
             >
               <Icon name="external-link" size="xs" />
-              <span className="hidden sm:inline">View Candidate Assignment Details for Evaluation</span>
-              <span className="sm:hidden">View Assignment Details</span>
+              <span className="hidden sm:inline">Evaluation Workspace</span>
+              <span className="sm:hidden">Evaluation</span>
             </button>
           </div>
+          <div className="relative pl-7 sm:pl-9 flex flex-col gap-4.5">
+            {stagesData.map((stage, index) => {
+              const isLast = index === stagesData.length - 1;
+              const isPassed = stage.statusType === 'passed';
+              const isRejected = stage.statusType === 'rejected';
+              const isInProgress = stage.status === 'In-Progress';
 
-          {/* STAGE CARDS STACK (Standard 4-Column Grid Layout) */}
-          <div className="flex flex-col gap-4">
-            {stagesData.map((stage) => (
-              <div
-                key={stage.id}
-                className={`bg-white border rounded-xl p-4.5 shadow-2xs flex flex-col gap-3.5 transition-all ${stage.isTerminated
-                  ? 'border-slate-200 border-l-4 border-l-slate-300 opacity-60 bg-slate-50/60'
-                  : stage.statusType === 'passed'
-                    ? 'border-slate-200 border-l-4 border-l-emerald-500'
-                    : stage.statusType === 'rejected'
-                      ? 'border-slate-200 border-l-4 border-l-rose-500'
-                      : 'border-slate-200 border-l-4 border-l-amber-400'
-                  }`}
-              >
-                <div className="flex items-center justify-between flex-wrap gap-2.5">
-                  <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-                    <span
-                      className={`w-5.5 h-5.5 rounded-full text-white font-bold text-xs flex items-center justify-center shrink-0 ${stage.isTerminated
-                        ? 'bg-slate-300 text-slate-600'
-                        : stage.statusType === 'passed'
-                          ? 'bg-emerald-500'
-                          : stage.statusType === 'rejected'
-                            ? 'bg-rose-500'
-                            : 'bg-amber-400'
-                        }`}
-                    >
-                      {stage.id}
-                    </span>
-                    <h3
-                      className={`text-sm sm:text-base font-bold font-heading ${stage.isTerminated ? 'text-slate-400 line-through' : 'text-slate-900'
-                        }`}
-                    >
-                      {stage.name}
-                    </h3>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${stage.isTerminated || stage.isLocked
-                        ? 'bg-slate-100 text-slate-500 border-slate-200'
-                        : stage.statusType === 'passed'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : stage.statusType === 'rejected'
-                            ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}
-                    >
-                      {stage.status}
-                    </span>
-                  </div>
-
-                  {/* Action Buttons Sequence */}
-                  {stage.isLocked || stage.status === 'Locked' ? (
-                    <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1.5 cursor-not-allowed">
-                      <Icon name="lock" size="xs" className="text-slate-400" />
-                      <span>Round Locked (Candidate Failed Previous Round)</span>
-                    </span>
-                  ) : !stage.isTerminated && (
-                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:ml-auto">
-                      {stage.name.toLowerCase().includes('aptitude') ? (
-                        /* Paper Aptitude Round: Simplify to Pass / Fail buttons */
-                        stage.statusType === 'passed' ? (
-                          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                            <Icon name="check" size="xs" />
-                            <span>Passed (Paper Aptitude)</span>
-                          </span>
-                        ) : stage.statusType === 'rejected' ? (
-                          <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
-                            <Icon name="x" size="xs" />
-                            <span>Failed (Paper Aptitude)</span>
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handlePaperAptitudePass(stage.id)}
-                              className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-600 text-white text-[11.5px] sm:text-xs font-bold hover:bg-emerald-700 transition-colors cursor-pointer shadow-2xs"
-                            >
-                              <Icon name="check" size="xs" />
-                              <span>Pass Round</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handlePaperAptitudeFail(stage.id)}
-                              className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 text-[11.5px] sm:text-xs font-bold hover:bg-rose-100 transition-colors cursor-pointer shadow-2xs"
-                            >
-                              <Icon name="x" size="xs" />
-                              <span>Fail Round</span>
-                            </button>
-                          </div>
-                        )
-                      ) : (
-                        /* Standard Non-Paper Rounds */
-                        <>
-                          {!stage.isOfferRound && (() => {
-                            const isAssessment =
-                              stage.roundType === 'Assessment' ||
-                              (stage.name.includes('Coding & Algorithm') && !stage.name.includes('F2F'));
-
-                            return (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedAssignStage(stage);
-                                    const options = stage.isDirectorRound ? directorOptions : interviewerOptions;
-                                    setAssignedInterviewer(options[0]?.value || '');
-                                  }}
-                                  className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-purple-500 bg-purple-50 text-purple-700 text-[11.5px] sm:text-xs font-semibold hover:bg-purple-100 transition-colors cursor-pointer"
-                                >
-                                  <Icon name="user" size="xs" />
-                                  <span>
-                                    {stage.isDirectorRound
-                                      ? 'Assign Director'
-                                      : isAssessment
-                                        ? 'Assign Evaluator'
-                                        : 'Schedule & Assign Interviewer'}
-                                  </span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedFeedbackStage(stage);
-                                    setFeedbackText(stage.isDirectorRound ? stage.feedback : '');
-                                    setDirectorDecision('offer');
-                                    setScorecardTechnical(3);
-                                    setScorecardCommunication(3);
-                                    setScorecardProblemSolving(3);
-                                    setScorecardCulturalFit(3);
-                                    setScorecardStrengths('');
-                                    setScorecardWeaknesses('');
-                                    setScorecardRecommendation('Hire');
-                                  }}
-                                  className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-blue-500 bg-blue-50 text-blue-700 text-[11.5px] sm:text-xs font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
-                                >
-                                  <Icon name="pencil" size="xs" />
-                                  <span>{stage.isDirectorRound ? 'Director Decision' : 'Submit Feedback'}</span>
-                                </button>
-
-                                {isAssessment && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setShowScheduleTestModal(true)}
-                                    className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-emerald-500 bg-white text-emerald-700 hover:bg-emerald-50 cursor-pointer shadow-2xs"
-                                  >
-                                    <Icon name="calendar" size="xs" />
-                                    <span>Schedule &amp; Send Test</span>
-                                  </button>
-                                )}
-                              </>
-                            );
-                          })()}
-
-                          {/* Stage 5 Offer Action */}
-                          {stage.isOfferRound && (
-                            <button
-                              type="button"
-                              onClick={() => setShowOfferModal(true)}
-                              className="h-7 sm:h-7.5 px-3 sm:px-3.5 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 text-[11.5px] sm:text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer shadow-2xs"
-                            >
-                              <Icon name="file-text" size="xs" />
-                              <span className="hidden sm:inline">View & Rollout Offer Letter</span>
-                              <span className="sm:hidden">Rollout Offer Letter</span>
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
+              return (
+                <div key={stage.id} className="relative">
+                  {/* Vertical Track Line connecting to the next milestone */}
+                  {!isLast && (
+                    <div
+                      className={`absolute -left-7 sm:-left-9 top-8 bottom-[-22px] w-0.5 transform translate-x-[13px] sm:translate-x-[15px] z-0 ${
+                        isPassed
+                          ? 'bg-[var(--status-success)]'
+                          : isInProgress
+                          ? 'bg-gradient-to-b from-[var(--status-warning)] via-[var(--border-strong)] to-[var(--border-soft)]'
+                          : 'border-l-2 border-dashed border-[var(--border-strong)]'
+                      }`}
+                    />
                   )}
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs pt-1 border-t border-slate-100">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-slate-400 font-medium">Date</span>
-                    <span className="font-semibold text-slate-800 flex items-center gap-1">
-                      <Icon name="calendar" size="xs" className="text-slate-400" />
-                      {stage.date}
-                    </span>
-                  </div>
-
-                  {!stage.isOfferRound && (
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-slate-400 font-medium">Interviewer / Role</span>
-                      <div className="flex items-center gap-2">
-                        <span className="w-6.5 h-6.5 rounded-full bg-blue-100 text-blue-700 font-bold text-[11px] flex items-center justify-center shrink-0">
-                          {stage.interviewerInitials}
+                  {/* Flipkart Milestone Node Badge */}
+                  <div className="absolute -left-7 sm:-left-9 top-4 z-10 flex items-center justify-center">
+                    {isPassed ? (
+                      <span className="w-7 h-7 rounded-full bg-[var(--status-success)] text-white flex items-center justify-center shadow-xs ring-4 ring-[var(--canvas)]" title={`Stage ${stage.id}: Passed`}>
+                        <Icon name="check" size="xs" className="stroke-[3]" />
+                      </span>
+                    ) : isRejected ? (
+                      <span className="w-7 h-7 rounded-full bg-[var(--status-danger)] text-white flex items-center justify-center shadow-xs ring-4 ring-[var(--canvas)]" title={`Stage ${stage.id}: Failed`}>
+                        <Icon name="x" size="xs" className="stroke-[3]" />
+                      </span>
+                    ) : isInProgress ? (
+                      <span className="relative flex h-7 w-7 items-center justify-center" title={`Stage ${stage.id}: In-Progress`}>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--status-warning)] opacity-35" />
+                        <span className="relative w-7 h-7 rounded-full bg-[var(--status-warning)] text-black font-extrabold text-xs flex items-center justify-center shadow-md ring-4 ring-[var(--canvas)]">
+                          {stage.id}
                         </span>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-slate-900 leading-tight">
-                            {stage.interviewer}
-                          </span>
-                          <span className="text-[10.5px] text-slate-500 font-medium">{stage.interviewerRole}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className={`flex flex-col gap-0.5 ${stage.isOfferRound ? 'sm:col-span-2' : 'sm:col-span-1'}`}>
-                    <span className="text-slate-400 font-medium">Feedback / Remarks</span>
-                    <p className="text-slate-700 font-normal leading-relaxed">
-                      {stage.feedback}
-                    </p>
-
-                    {stage.attempts && stage.attempts.length > 0 && (
-                      <div className="mt-1 flex flex-col gap-1 text-[10.5px]">
-                        {stage.attempts.map((att) => (
-                          <div key={att.attempt} className="flex items-center gap-2">
-                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono font-bold">
-                              Attempt #{att.attempt}: {att.score} ({att.result})
-                            </span>
-                            <span className="text-slate-400">{att.date}</span>
-                          </div>
-                        ))}
-                      </div>
+                      </span>
+                    ) : (
+                      <span className="w-7 h-7 rounded-full bg-[var(--surface-3)] text-[var(--text-tertiary)] border border-[var(--border-default)] font-bold text-xs flex items-center justify-center ring-4 ring-[var(--canvas)]" title={`Stage ${stage.id}: Pending`}>
+                        {stage.id}
+                      </span>
                     )}
                   </div>
 
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-slate-400 font-medium">Result</span>
-                    <span
-                      className={`font-bold ${stage.statusType === 'passed'
-                        ? 'text-emerald-600'
-                        : stage.statusType === 'rejected'
-                          ? 'text-rose-600'
-                          : 'text-amber-600'
-                        }`}
-                    >
-                      {stage.result}
-                    </span>
+                  {/* Stage Card */}
+                  <div
+                    className={`bg-[var(--surface-1)] border rounded-xl p-4.5 shadow-2xs flex flex-col gap-3.5 transition-all ${
+                      stage.isTerminated
+                        ? 'border-[var(--border-default)] opacity-60 bg-[var(--surface-2)]'
+                        : isPassed
+                        ? 'border-[var(--status-success)]/40 hover:border-[var(--status-success)]'
+                        : isRejected
+                        ? 'border-[var(--status-danger)]/40 hover:border-[var(--status-danger)]'
+                        : isInProgress
+                        ? 'border-[var(--status-warning)] shadow-xs ring-1 ring-[var(--status-warning)]/30'
+                        : 'border-[var(--border-default)] opacity-85 hover:opacity-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2.5">
+                      <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                        <h3
+                          className={`text-sm sm:text-base font-bold font-heading ${
+                            stage.isTerminated ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text-primary)]'
+                          }`}
+                        >
+                          {stage.name}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                            stage.isTerminated || stage.isLocked
+                              ? 'bg-[var(--surface-3)] text-[var(--text-tertiary)] border-[var(--border-default)]'
+                              : isPassed
+                              ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]'
+                              : isRejected
+                              ? 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border-[var(--status-danger-border)]'
+                              : isInProgress
+                              ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border-[var(--status-warning-border)]'
+                              : 'bg-[var(--surface-3)] text-[var(--text-secondary)] border-[var(--border-default)]'
+                          }`}
+                        >
+                          {stage.status}
+                        </span>
+                      </div>
+
+                      {/* Action Buttons Sequence */}
+                      {stage.isLocked || stage.status === 'Locked' ? (
+                        <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-[var(--surface-2)] text-[var(--text-tertiary)] border border-[var(--border-default)] flex items-center gap-1.5 cursor-not-allowed">
+                          <Icon name="lock" size="xs" className="text-[var(--text-tertiary)]" />
+                          <span>Round Locked (Candidate Failed Previous Round)</span>
+                        </span>
+                      ) : !stage.isTerminated && (
+                        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:ml-auto">
+                          {stage.name.toLowerCase().includes('aptitude') ? (
+                            /* Paper Aptitude Round: Simplify to Pass / Fail buttons */
+                            stage.statusType === 'passed' ? (
+                              <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
+                                <Icon name="check" size="xs" />
+                                <span>Passed (Paper Aptitude)</span>
+                              </span>
+                            ) : stage.statusType === 'rejected' ? (
+                              <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1">
+                                <Icon name="x" size="xs" />
+                                <span>Failed (Paper Aptitude)</span>
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handlePaperAptitudePass(stage.id)}
+                                  className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--status-success)] bg-[var(--status-success)] text-white text-[11.5px] sm:text-xs font-bold hover:opacity-90 transition-colors cursor-pointer shadow-2xs"
+                                >
+                                  <Icon name="check" size="xs" />
+                                  <span>Pass Round</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handlePaperAptitudeFail(stage.id)}
+                                  className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] text-[11.5px] sm:text-xs font-bold hover:bg-[var(--status-danger)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                >
+                                  <Icon name="x" size="xs" />
+                                  <span>Fail Round</span>
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            /* Standard Non-Paper Rounds */
+                            <>
+                              {!stage.isOfferRound && (() => {
+                                const isAssessment =
+                                  stage.roundType === 'Assessment' ||
+                                  (stage.name.includes('Coding & Algorithm') && !stage.name.includes('F2F'));
+
+                                return (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedAssignStage(stage);
+                                        const options = stage.isDirectorRound ? directorOptions : interviewerOptions;
+                                        setAssignedInterviewer(options[0]?.value || '');
+                                      }}
+                                      className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                    >
+                                      <Icon name="user" size="xs" />
+                                      <span>
+                                        {stage.isDirectorRound
+                                          ? 'Assign Director'
+                                          : isAssessment
+                                            ? 'Assign Evaluator'
+                                            : 'Schedule & Assign Interviewer'}
+                                      </span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedFeedbackStage(stage);
+                                        setFeedbackText(stage.isDirectorRound ? stage.feedback : '');
+                                        setDirectorDecision('offer');
+                                        setScorecardTechnical(3);
+                                        setScorecardCommunication(3);
+                                        setScorecardProblemSolving(3);
+                                        setScorecardCulturalFit(3);
+                                        setScorecardStrengths('');
+                                        setScorecardWeaknesses('');
+                                        setScorecardRecommendation('Hire');
+                                      }}
+                                      className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-blue)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                    >
+                                      <Icon name="pencil" size="xs" />
+                                      <span>{stage.isDirectorRound ? 'Director Decision' : 'Submit Feedback'}</span>
+                                    </button>
+
+                                    {isAssessment && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowScheduleTestModal(true)}
+                                        className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] hover:bg-[var(--accent-green)] hover:text-white cursor-pointer shadow-2xs"
+                                      >
+                                        <Icon name="calendar" size="xs" />
+                                        <span>Schedule &amp; Send Test</span>
+                                      </button>
+                                    )}
+                                  </>
+                                );
+                              })()}
+
+                              {/* Stage 5 Offer Action */}
+                              {stage.isOfferRound && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowOfferModal(true)}
+                                  className="h-7 sm:h-7.5 px-3 sm:px-3.5 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] text-[11.5px] sm:text-xs font-bold hover:bg-[var(--accent-green)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                >
+                                  <Icon name="file-text" size="xs" />
+                                  <span className="hidden sm:inline">View & Rollout Offer Letter</span>
+                                  <span className="sm:hidden">Rollout Offer Letter</span>
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs pt-2 border-t border-[var(--border-soft)]">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[var(--text-tertiary)] font-medium">Date</span>
+                        <span className="font-semibold text-[var(--text-primary)] flex items-center gap-1">
+                          <Icon name="calendar" size="xs" className="text-[var(--text-tertiary)]" />
+                          {stage.date}
+                        </span>
+                      </div>
+
+                      {!stage.isOfferRound && (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[var(--text-tertiary)] font-medium">Interviewer / Role</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-6.5 h-6.5 rounded-full font-bold text-[11px] flex items-center justify-center shrink-0 border ${
+                              stage.interviewerInitials === 'UA' || stage.interviewer.toLowerCase().includes('unassigned')
+                                ? 'bg-[var(--surface-3)] text-[var(--text-tertiary)] border-[var(--border-default)]'
+                                : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
+                            }`}>
+                              {stage.interviewerInitials}
+                            </span>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-[var(--text-primary)] leading-tight">
+                                {stage.interviewer}
+                              </span>
+                              <span className="text-[10.5px] text-[var(--text-tertiary)] font-medium">{stage.interviewerRole}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className={`flex flex-col gap-0.5 ${stage.isOfferRound ? 'sm:col-span-2' : 'sm:col-span-1'}`}>
+                        <span className="text-[var(--text-tertiary)] font-medium">Feedback / Remarks</span>
+                        <p className="text-[var(--text-secondary)] font-normal leading-relaxed">
+                          {stage.feedback}
+                        </p>
+
+                        {stage.attempts && stage.attempts.length > 0 && (
+                          <div className="mt-1 flex flex-col gap-1 text-[10.5px]">
+                            {stage.attempts.map((att) => (
+                              <div key={att.attempt} className="flex items-center gap-2">
+                                <span className="px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-secondary)] font-mono font-bold">
+                                  Attempt #{att.attempt}: {att.score} ({att.result})
+                                </span>
+                                <span className="text-[var(--text-tertiary)]">{att.date}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[var(--text-tertiary)] font-medium">Result</span>
+                        <span
+                          className={`font-bold ${stage.statusType === 'passed'
+                            ? 'text-[var(--status-success)]'
+                            : stage.statusType === 'rejected'
+                              ? 'text-[var(--status-danger)]'
+                              : stage.status === 'In-Progress'
+                                ? 'text-[var(--status-warning)]'
+                                : 'text-[var(--text-tertiary)]'
+                            }`}
+                        >
+                          {stage.result}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

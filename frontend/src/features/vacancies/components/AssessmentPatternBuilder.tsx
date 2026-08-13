@@ -339,7 +339,7 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
                 <label className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block mb-1 text-center">
                   Total Marks
                 </label>
-                <div className="h-9 px-2 rounded-md border border-indigo-200/80 bg-indigo-50/70 font-mono font-extrabold text-[12px] text-indigo-700 flex items-center justify-center whitespace-nowrap">
+                <div className="h-9 px-2 rounded-md border border-[var(--accent-indigo)]/30 bg-[var(--accent-indigo-dim)] font-mono font-extrabold text-[12px] text-[var(--accent-indigo)] flex items-center justify-center whitespace-nowrap">
                   {sec.totalMarks} Marks
                 </div>
               </div>
@@ -350,7 +350,7 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
                   <button
                     type="button"
                     onClick={() => handleRemoveSection(sec.id)}
-                    className="h-9 w-9 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-tertiary)] hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-colors flex items-center justify-center cursor-pointer"
+                    className="h-9 w-9 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-tertiary)] hover:text-[var(--status-danger-text)] hover:border-[var(--status-danger-border)] hover:bg-[var(--status-danger-bg)] transition-colors flex items-center justify-center cursor-pointer"
                     title="Remove Section"
                   >
                     <Icon name="trash-2" size="xs" />
@@ -364,14 +364,14 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
         </div>
 
         {/* Total Summary Row */}
-        <div className="p-3.5 bg-gradient-to-r from-indigo-50/60 to-purple-50/60 border border-indigo-200/80 rounded-xl flex items-center justify-between text-[13px] font-bold font-sans">
+        <div className="p-3.5 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-xl flex items-center justify-between text-[13px] font-bold font-sans">
           <span className="text-[var(--text-primary)]">Configured Round Pattern Summary:</span>
           <div className="flex items-center gap-4 font-mono text-[12px]">
-            <span className="text-indigo-700">{grandTotalQuestions} Total Questions</span>
-            <span>•</span>
-            <span className="text-purple-700">{grandTotalTime} Total Mins</span>
-            <span>•</span>
-            <span className="text-emerald-700">{grandTotalMarks} Total Marks</span>
+            <span className="text-[var(--accent-indigo)]">{grandTotalQuestions} Total Questions</span>
+            <span className="text-[var(--text-tertiary)]">•</span>
+            <span className="text-[var(--accent-violet)]">{grandTotalTime} Total Mins</span>
+            <span className="text-[var(--text-tertiary)]">•</span>
+            <span className="text-[var(--status-success)]">{grandTotalMarks} Total Marks</span>
           </div>
         </div>
       </div>
@@ -379,7 +379,7 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
       {/* STEP 2: Download Pattern-Based Excel Template */}
       <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3">
-          <span className="w-6 h-6 rounded-full bg-purple-600 text-white font-extrabold text-[11px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+          <span className="w-6 h-6 rounded-full bg-[var(--accent-violet)] text-white font-extrabold text-[11px] flex items-center justify-center shrink-0 mt-0.5">2</span>
           <div>
             <h4 className="text-sm font-extrabold text-[var(--text-primary)] font-heading">
               STEP 2: Download Pattern-Based Multi-Worksheet Excel Template (.xlsx)
@@ -393,7 +393,7 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
         <button
           type="button"
           onClick={handleDownloadTemplate}
-          className="h-10 px-5 flex items-center gap-2 rounded-full bg-purple-600 text-white text-[12.5px] font-bold shadow-md hover:bg-purple-700 cursor-pointer shrink-0"
+          className="h-10 px-5 flex items-center gap-2 rounded-full bg-[var(--accent-violet)] hover:opacity-90 text-white text-[12.5px] font-bold shadow-md cursor-pointer shrink-0 transition-opacity"
         >
           <Icon name="download" size="xs" />
           <span>Download Template (.xlsx)</span>
@@ -403,7 +403,7 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
       {/* STEP 3: Upload Question Bank File */}
       <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-5 shadow-2xs flex flex-col gap-4">
         <div className="flex items-center gap-2 border-b border-[var(--border-default)] pb-3">
-          <span className="w-6 h-6 rounded-full bg-sky-600 text-white font-extrabold text-[11px] flex items-center justify-center">3</span>
+          <span className="w-6 h-6 rounded-full bg-[var(--accent-cyan)] text-white font-extrabold text-[11px] flex items-center justify-center">3</span>
           <h4 className="text-sm font-extrabold text-[var(--text-primary)] font-heading">
             STEP 3: Upload Configured Question Bank File (.xlsx / .csv)
           </h4>
@@ -418,7 +418,7 @@ export const AssessmentPatternBuilder: React.FC<AssessmentPatternBuilderProps> =
           />
 
           <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border ${
-            uploadSuccess && !uploadedFile ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-sky-50 text-sky-700 border-sky-200'
+            uploadSuccess && !uploadedFile ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]' : 'bg-[var(--accent-cyan-dim)] text-[var(--accent-cyan)] border-[var(--accent-cyan)]/30'
           }`}>
             <Icon name={uploadSuccess && !uploadedFile ? 'check-circle' : 'upload'} size="md" />
           </div>

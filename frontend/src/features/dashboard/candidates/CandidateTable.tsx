@@ -17,6 +17,7 @@ interface CandidateTableProps {
   loading?: boolean;
   visibleColumnIds?: CandidateColumnId[];
   onView?: (c: DashboardCandidate) => void;
+  onViewProgress?: (c: DashboardCandidate) => void;
   onResume?: (c: DashboardCandidate) => void;
   onEdit?: (c: DashboardCandidate) => void;
   onDelete?: (c: DashboardCandidate) => void;
@@ -88,6 +89,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
   loading = false,
   visibleColumnIds,
   onView,
+  onViewProgress,
   onResume,
   onEdit,
   onDelete,
@@ -102,17 +104,90 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
     [visibleColumnIds]
   );
 
-  const renderCell = (col: (typeof CANDIDATE_COLUMNS)[0], candidate: DashboardCandidate) => {
-    const cellPadding = "px-2.5 md:px-3 xl:px-3.5 2xl:px-4 py-1.5 md:py-2 xl:py-2.5";
-    const textSize = "text-[11.5px] md:text-[12px] xl:text-[12.5px] 2xl:text-[13px]";
+  const getStageBadgeStyle = (stage: string) => {
+    const s = stage?.toLowerCase() || '';
+    if (s.includes('screen') || s.includes('applied') || s.includes('register')) {
+      return {
+        bg: 'var(--accent-cyan-dim)',
+        color: 'var(--accent-cyan)',
+        border: 'rgba(8, 145, 178, 0.30)',
+        icon: 'filter',
+      };
+    }
+    if (s.includes('assess') || s.includes('test') || s.includes('tech 1') || s.includes('l1') || s.includes('aptitude')) {
+      return {
+        bg: 'var(--accent-violet-dim)',
+        color: 'var(--accent-violet)',
+        border: 'rgba(139, 92, 246, 0.30)',
+        icon: 'clipboard-check',
+      };
+    }
+    if (s.includes('interview') || s.includes('f2f') || s.includes('tech 2') || s.includes('l2') || s.includes('technical')) {
+      return {
+        bg: 'var(--accent-indigo-dim)',
+        color: 'var(--accent-indigo)',
+        border: 'rgba(99, 102, 241, 0.30)',
+        icon: 'mic',
+      };
+    }
+    if (s.includes('director') || s.includes('mgmt') || s.includes('final') || s.includes('hr')) {
+      return {
+        bg: 'var(--status-warning-bg)',
+        color: 'var(--status-warning-text)',
+        border: 'var(--status-warning-border)',
+        icon: 'shield',
+      };
+    }
+    if (s.includes('offer')) {
+      return {
+        bg: 'var(--accent-blue-dim)',
+        color: 'var(--accent-blue)',
+        border: 'rgba(37, 99, 235, 0.30)',
+        icon: 'send',
+      };
+    }
+    if (s.includes('hired') || s.includes('join') || s.includes('select')) {
+      return {
+        bg: 'var(--status-success-bg)',
+        color: 'var(--status-success-text)',
+        border: 'var(--status-success-border)',
+        icon: 'check-circle',
+      };
+    }
+    if (s.includes('hold') || s.includes('withdraw') || s.includes('pause')) {
+      return {
+        bg: 'var(--accent-orange-dim)',
+        color: 'var(--accent-orange)',
+        border: 'rgba(234, 88, 12, 0.30)',
+        icon: 'pause-circle',
+      };
+    }
+    if (s.includes('reject') || s.includes('drop')) {
+      return {
+        bg: 'var(--status-danger-bg)',
+        color: 'var(--status-danger-text)',
+        border: 'var(--status-danger-border)',
+        icon: 'x-circle',
+      };
+    }
+    return {
+      bg: 'var(--surface-3)',
+      color: 'var(--text-secondary)',
+      border: 'var(--border-default)',
+      icon: 'users',
+    };
+  };
+
+  const renderCell = (col: (typeof columns)[0], candidate: DashboardCandidate) => {
+    const cellPadding = "px-2 xl:px-2.5 py-1.5 md:py-2 min-w-0";
+    const textSize = "text-[11.5px] md:text-[12px] xl:text-[12.5px]";
 
     switch (col.id) {
       case 'avatar':
         return (
           <td
             key={col.id}
-            className={`${cellPadding} w-10`}
-            style={{ textAlign: col.align || 'left' }}
+            className="pl-3.5 pr-2.5 py-1.5 md:py-2 w-12 text-center"
           >
             <InitialsAvatar name={candidate.name} />
           </td>
@@ -120,10 +195,14 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
 
       case 'candidate':
         return (
-          <td key={col.id} className={cellPadding}>
+          <td key={col.id} className="pl-2.5 pr-3 py-1.5 md:py-2 min-w-0">
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className={`${textSize} font-semibold text-[var(--text-primary)] truncate font-heading group-hover:text-[var(--accent-indigo)] transition-colors duration-150`}>{candidate.name}</span>
-              <span className="text-[9.5px] md:text-[10px] text-[var(--text-tertiary)] font-mono">{candidate.code}</span>
+              <span className={`${textSize} font-semibold text-[var(--text-primary)] truncate font-heading group-hover:text-[var(--accent-indigo)] transition-colors duration-150 block`} title={candidate.name}>
+                {candidate.name}
+              </span>
+              <span className="text-[10px] text-[var(--text-secondary)] font-mono opacity-85 truncate block">
+                {candidate.code}
+              </span>
             </div>
           </td>
         );
@@ -131,7 +210,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       case 'email':
         return (
           <td key={col.id} className={cellPadding}>
-            <span className={`${textSize} text-[var(--text-secondary)] truncate block max-w-[170px]`} title={candidate.email}>
+            <span className={`${textSize} text-[var(--text-secondary)] truncate block`} title={candidate.email}>
               {candidate.email}
             </span>
           </td>
@@ -140,7 +219,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       case 'role':
         return (
           <td key={col.id} className={cellPadding}>
-            <span className={`${textSize} text-[var(--text-secondary)] truncate block max-w-[180px]`} title={candidate.role}>
+            <span className={`${textSize} text-[var(--text-primary)] font-medium truncate block`} title={candidate.role}>
               {candidate.role}
             </span>
           </td>
@@ -156,20 +235,27 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
         );
 
       case 'currentRound': {
-        const stageStyles: Record<string, { bg: string; text: string; border: string }> = {
-          'Screening':      { bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200' },
-          'Technical':      { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
-          'HR Interview':   { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
-          'Director Round': { bg: 'bg-rose-50',   text: 'text-rose-700',   border: 'border-rose-200' },
-        };
-        const s = stageStyles[candidate.currentRound] ?? { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' };
+        const badgeStyle = getStageBadgeStyle(candidate.currentRound);
         return (
           <td key={col.id} className={cellPadding}>
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap ${s.bg} ${s.text} ${s.border}`}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onViewProgress) onViewProgress(candidate);
+                else onView?.(candidate);
+              }}
+              style={{
+                background: badgeStyle.bg,
+                color: badgeStyle.color,
+                borderColor: badgeStyle.border,
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border whitespace-nowrap font-sans shadow-2xs truncate max-w-full hover:scale-105 transition-transform cursor-pointer"
+              title={`Click to view ${candidate.name}'s live pipeline progress`}
             >
-              {candidate.currentRound}
-            </span>
+              <Icon name={badgeStyle.icon as any} size="xs" className="shrink-0 opacity-85" />
+              <span className="truncate">{candidate.currentRound}</span>
+            </button>
           </td>
         );
       }
@@ -177,11 +263,13 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       case 'assignedInterviewer':
         return (
           <td key={col.id} className={cellPadding}>
-            <div className="flex items-center gap-1.5 md:gap-2 text-[var(--text-secondary)]">
-              <span className="w-5 h-5 md:w-5.5 md:h-5.5 xl:w-6 xl:h-6 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo-hover)] font-mono font-bold text-[9px] md:text-[9.5px] xl:text-[10px] border border-[var(--border-default)] flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-1.5 text-[var(--text-secondary)] min-w-0">
+              <span className="w-5 h-5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-mono font-bold text-[9px] border border-[var(--accent-indigo)]/30 flex items-center justify-center shrink-0">
                 {candidate.assignedInterviewer.split(' ').map(w => w[0]).join('')}
               </span>
-              <span className={`${textSize} truncate max-w-[130px] font-medium`}>{candidate.assignedInterviewer}</span>
+              <span className={`${textSize} truncate font-medium text-[var(--text-primary)]`} title={candidate.assignedInterviewer}>
+                {candidate.assignedInterviewer}
+              </span>
             </div>
           </td>
         );
@@ -189,14 +277,18 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       case 'hiringLocation':
         return (
           <td key={col.id} className={cellPadding}>
-            <span className={`${textSize} text-[var(--text-secondary)] truncate block max-w-[120px]`}>{candidate.hiringLocation}</span>
+            <span className={`${textSize} text-[var(--text-secondary)] truncate block`} title={candidate.hiringLocation}>
+              {candidate.hiringLocation}
+            </span>
           </td>
         );
 
       case 'testLocation':
         return (
           <td key={col.id} className={cellPadding}>
-            <span className={`${textSize} text-[var(--text-secondary)] truncate block max-w-[120px]`}>{candidate.testLocation}</span>
+            <span className={`${textSize} text-[var(--text-secondary)] truncate block`} title={candidate.testLocation}>
+              {candidate.testLocation}
+            </span>
           </td>
         );
 
@@ -211,15 +303,19 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
 
       case 'actions':
         return (
-          <td key={col.id} className={`${cellPadding} text-right`}>
+          <td key={col.id} className="pl-1 pr-3.5 sm:pr-4 py-1.5 md:py-2 text-right w-[135px]">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onView?.(candidate); }}
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-slate-300 bg-white text-slate-700 text-[11px] font-semibold hover:bg-slate-50 hover:border-slate-400 hover:text-slate-900 transition-all duration-150 cursor-pointer shadow-sm whitespace-nowrap"
-              title={`View ${candidate.name}'s profile`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onViewProgress) onViewProgress(candidate);
+                else onView?.(candidate);
+              }}
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)] text-[11px] font-semibold hover:bg-[var(--accent-indigo-dim)] hover:border-[var(--accent-indigo)] hover:text-[var(--accent-indigo)] transition-all duration-150 cursor-pointer shadow-2xs whitespace-nowrap"
+              title={`View ${candidate.name}'s hiring progress flow`}
             >
-              <Icon name="eye" size="xs" className="text-slate-500" />
-              <span>View Details</span>
+              <Icon name="trending-up" size="xs" className="text-[var(--accent-indigo)]" />
+              <span>View Progress</span>
             </button>
           </td>
         );
@@ -230,33 +326,65 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
   };
 
   return (
-    <div className="w-full overflow-x-auto scrollbar-step max-h-[600px] overflow-y-auto">
+    <div className="w-full overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-step">
       <table
-        className="w-full border-collapse"
-        style={{ minWidth: `${columns.reduce((acc, c) => acc + c.minWidth, 0)}px` }}
+        className="w-full min-w-[1080px] border-collapse table-fixed"
         aria-label="Candidates"
         role="grid"
       >
+        <colgroup>
+          {columns.map((col) => {
+            let widthStyle = 'auto';
+            if (col.id === 'avatar') widthStyle = '48px';
+            else if (col.id === 'candidate') widthStyle = '12%';
+            else if (col.id === 'email') widthStyle = '13%';
+            else if (col.id === 'role') widthStyle = '14%';
+            else if (col.id === 'experience') widthStyle = '6.5%';
+            else if (col.id === 'currentRound') widthStyle = '8.5%';
+            else if (col.id === 'assignedInterviewer') widthStyle = '12%';
+            else if (col.id === 'hiringLocation') widthStyle = '9.5%';
+            else if (col.id === 'testLocation') widthStyle = '9.5%';
+            else if (col.id === 'appliedDate') widthStyle = '8%';
+            else if (col.id === 'actions') widthStyle = '135px';
+
+            return <col key={col.id} style={{ width: widthStyle }} />;
+          })}
+        </colgroup>
+
         {/* Sticky Column headers */}
         <thead className="sticky top-0 z-10 bg-[var(--surface-2)] shadow-xs">
           <tr className="border-b border-[var(--border-soft)]">
-            {columns.map((col) => (
-              <th
-                key={col.id}
-                scope="col"
-                className={`px-2.5 md:px-3.5 xl:px-4 py-2 md:py-2.5 xl:py-3 text-[10px] md:text-[10.5px] xl:text-[11px] 2xl:text-[11.5px] font-bold text-[var(--text-secondary)] font-heading uppercase tracking-[0.06em] whitespace-nowrap select-none
-                  ${col.sortable ? 'cursor-pointer hover:text-[var(--text-primary)] transition-colors' : ''}
-                  ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}`}
-                aria-sort={col.sortable ? 'none' : undefined}
-              >
-                <span className="inline-flex items-center gap-1">
-                  {col.label}
-                  {col.sortable && (
-                    <Icon name="chevrons-up-down" size="xs" className="opacity-40" />
-                  )}
-                </span>
-              </th>
-            ))}
+            {columns.map((col) => {
+              const isAvatar = col.id === 'avatar';
+              const isCandidate = col.id === 'candidate';
+              const isActions = col.id === 'actions';
+              const paddingClass = isAvatar
+                ? 'pl-3.5 pr-2.5 py-2 md:py-2.5 w-12 text-center'
+                : isCandidate
+                ? 'pl-2.5 pr-3 py-2 md:py-2.5 text-left'
+                : isActions
+                ? 'pl-1 pr-3.5 sm:pr-4 py-2 md:py-2.5 text-right w-[135px]'
+                : 'px-2 xl:px-2.5 py-2 md:py-2.5 text-left';
+
+              return (
+                <th
+                  key={col.id}
+                  scope="col"
+                  className={`${paddingClass} text-[10px] md:text-[10.5px] xl:text-[11px] font-bold text-[var(--text-secondary)] font-heading uppercase tracking-[0.05em] whitespace-nowrap select-none
+                    ${col.sortable ? 'cursor-pointer hover:text-[var(--text-primary)] transition-colors' : ''}
+                    ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}`}
+                  aria-sort={col.sortable ? 'none' : undefined}
+                  title={col.label}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <span>{col.label}</span>
+                    {col.sortable && (
+                      <Icon name="chevrons-up-down" size="xs" className="opacity-40 shrink-0" />
+                    )}
+                  </span>
+                </th>
+              );
+            })}
           </tr>
         </thead>
 

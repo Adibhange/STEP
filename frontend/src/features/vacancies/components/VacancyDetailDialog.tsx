@@ -135,7 +135,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                     {vacancy.title}
                   </h2>
                   <span className="font-mono text-[11px] text-[var(--text-tertiary)]">({vacancy.code})</span>
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-mono">
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border border-[var(--accent-violet)]/30 font-mono">
                     {vacancy.driveType || 'Walk-in Drive'}
                   </span>
                 </div>
@@ -230,7 +230,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                     <div className="flex justify-between items-center"><span className="text-[var(--text-secondary)] font-medium">Applied</span><span className="font-mono font-bold text-[var(--text-primary)]">{vacancy.appliedCount}</span></div>
                     <div className="flex justify-between items-center"><span className="text-[var(--text-secondary)] font-medium">Screened / Assessment</span><span className="font-mono font-bold text-[var(--text-primary)]">{vacancy.assessmentCount}</span></div>
                     <div className="flex justify-between items-center"><span className="text-[var(--text-secondary)] font-medium">Interviewing</span><span className="font-mono font-bold text-[var(--text-primary)]">{vacancy.interviewCount}</span></div>
-                    <div className="flex justify-between items-center"><span className="text-[var(--text-secondary)] font-medium">Offered</span><span className="font-mono font-bold text-emerald-600">{vacancy.offeredCount}</span></div>
+                    <div className="flex justify-between items-center"><span className="text-[var(--text-secondary)] font-medium">Offered</span><span className="font-mono font-bold text-[var(--status-success)]">{vacancy.offeredCount}</span></div>
                   </div>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                     type="button"
                     onClick={() => setWalkInEnabled(!walkInEnabled)}
                     className={`px-3 py-1 rounded-full text-[11.5px] font-bold cursor-pointer transition-all ${
-                      walkInEnabled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-[var(--surface-3)] text-[var(--text-tertiary)]'
+                      walkInEnabled ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]' : 'bg-[var(--surface-3)] text-[var(--text-tertiary)]'
                     }`}
                   >
                     {walkInEnabled ? (isDirectHiring ? '✓ Apply Link Active' : '✓ Walk-in QR Active') : 'Link Paused'}

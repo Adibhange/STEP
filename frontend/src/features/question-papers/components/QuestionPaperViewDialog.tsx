@@ -19,11 +19,11 @@ interface QuestionPaperViewDialogProps {
 }
 
 const QUESTION_TYPE_BADGE: Record<string, string> = {
-  SINGLE_CHOICE: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  MULTI_CHOICE: 'bg-violet-50 text-violet-700 border-violet-200',
-  CODING: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  SQL: 'bg-amber-50 text-amber-700 border-amber-200',
-  SUBJECTIVE: 'bg-purple-50 text-purple-700 border-purple-200',
+  SINGLE_CHOICE: 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30',
+  MULTI_CHOICE: 'bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border-[var(--accent-violet)]/30',
+  CODING: 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]',
+  SQL: 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border-[var(--status-warning-border)]',
+  SUBJECTIVE: 'bg-[var(--accent-cyan-dim)] text-[var(--accent-cyan)] border-[var(--accent-cyan)]/30',
 };
 
 const QUESTION_TYPE_LABEL: Record<string, string> = {
@@ -53,20 +53,20 @@ function MCQQuestionCard({ question, index }: { question: QuestionItem; index: n
               key={opt.label}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border text-[12.5px] transition-all ${
                 isCorrect
-                  ? 'bg-emerald-50 border-emerald-300 border-l-4 border-l-emerald-500'
+                  ? 'bg-[var(--status-success-bg)] border-[var(--status-success-border)] border-l-4 border-l-[var(--status-success)]'
                   : 'bg-[var(--surface-2)] border-[var(--border-default)]'
               }`}
             >
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-extrabold shrink-0 border ${
-                isCorrect ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)]'
+                isCorrect ? 'bg-[var(--status-success)] text-white border-[var(--status-success)]' : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)]'
               }`}>
                 {opt.label}
               </span>
-              <span className={`font-medium ${isCorrect ? 'text-emerald-800 font-bold' : 'text-[var(--text-primary)]'}`}>
+              <span className={`font-medium ${isCorrect ? 'text-[var(--status-success-text)] font-bold' : 'text-[var(--text-primary)]'}`}>
                 {opt.text}
               </span>
               {isCorrect && (
-                <span className="ml-auto text-[10px] font-bold font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                <span className="ml-auto text-[10px] font-bold font-mono text-[var(--status-success-text)] bg-[var(--status-success-bg)] border border-[var(--status-success-border)] px-2 py-0.5 rounded-full shrink-0">
                   ✓ Correct
                 </span>
               )}

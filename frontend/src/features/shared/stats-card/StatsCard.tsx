@@ -102,7 +102,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       <div className="flex items-center justify-between gap-1.5 mb-1.5 pt-0.5">
         <div className="flex items-center gap-2 min-w-0">
           <span
-            className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-transform duration-180 ease-out group-hover:scale-[1.05]"
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-180 ease-out group-hover:scale-[1.05]"
             style={{ background: bgColor, color: accentColor }}
           >
             <Icon name={icon as any} size="xs" />
@@ -112,14 +112,14 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           </h3>
         </div>
 
-        {/* Animated Trend Arrow Pill Badge */}
-        {trend !== undefined && (
+        {/* Animated Trend Arrow Pill Badge - only shown when trend != 0 */}
+        {trend !== undefined && trend !== 0 && (
           <span
             className={`inline-flex items-center gap-0.5 text-[10.5px] font-bold px-1.5 py-0.5 rounded-full font-mono shrink-0
               transition-all duration-200 group-hover:scale-105 ${
               isPositiveTrend
-                ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success)]'
-                : 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger)]'
+                ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]'
+                : 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)]'
             }`}
           >
             <span className={`inline-block transition-transform duration-200 ${
@@ -135,11 +135,11 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       </div>
 
       {/* KPI Hero Count with Smooth Counter Animation & Subtitle Stack */}
-      <div className="flex flex-col mt-0.5">
-        <span className="text-[23px] font-black text-[var(--text-primary)] font-mono tracking-tight leading-none">
+      <div className="flex flex-col mt-1">
+        <span className="text-[24px] font-black text-[var(--text-primary)] font-mono tracking-tight leading-none">
           <AnimatedCounter value={count} />
         </span>
-        <span className="text-[11px] font-semibold text-[var(--text-secondary)] opacity-75 mt-1 truncate">
+        <span className="text-[11.5px] font-medium text-[var(--text-secondary)] mt-1.5 truncate">
           {subtitle}
         </span>
       </div>

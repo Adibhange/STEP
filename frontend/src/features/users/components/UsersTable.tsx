@@ -68,12 +68,12 @@ export const UsersTable: React.FC<UsersTableProps> = ({ users, isLoading, onEdit
                 <td className="py-3 px-4">
                   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                     user.role === 'Director'
-                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border-[var(--status-warning-border)]'
                       : user.role === 'HR'
-                      ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                      ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
                       : (user.role as string) === 'Administrator' || user.role === 'SuperAdmin'
-                      ? 'bg-purple-50 text-purple-800 border-purple-200'
-                      : 'bg-blue-50 text-blue-800 border-blue-200'
+                      ? 'bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border-[var(--accent-violet)]/30'
+                      : 'bg-[var(--accent-cyan-dim)] text-[var(--accent-cyan)] border-[var(--accent-cyan)]/30'
                   }`}>
                     <Icon name={user.role === 'Director' ? 'shield' : 'user'} size="xs" />
                     <span>{user.role}</span>
@@ -81,12 +81,12 @@ export const UsersTable: React.FC<UsersTableProps> = ({ users, isLoading, onEdit
                 </td>
                 <td className="py-3 px-4 text-[var(--text-secondary)] font-semibold">{user.department}</td>
                 <td className="py-3 px-4">
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
                     user.status === 'Active'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                      ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]'
+                      : 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border-default)]'
                   }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Active' ? 'bg-[var(--status-success)]' : 'bg-[var(--text-tertiary)]'}`} />
                     <span>{user.status}</span>
                   </span>
                 </td>

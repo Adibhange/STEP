@@ -66,18 +66,18 @@ const FormSelect = ({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 text-xs font-semibold flex items-center justify-between gap-2 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer shadow-2xs"
+        className="w-full h-10 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-between gap-2 hover:border-[var(--accent-indigo)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-indigo)]/20 transition-all cursor-pointer shadow-2xs"
       >
         <span className="truncate">{selected ? selected.label : value}</span>
         <Icon
           name="chevron-down"
           size="xs"
-          className={`text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180 text-blue-600' : ''}`}
+          className={`text-[var(--text-tertiary)] shrink-0 transition-transform ${open ? 'rotate-180 text-[var(--accent-indigo)]' : ''}`}
         />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150 max-h-48 overflow-y-auto scrollbar-thin">
+        <div className="absolute left-0 top-full mt-1 w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl shadow-xl z-50 p-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150 max-h-48 overflow-y-auto scrollbar-thin">
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -87,11 +87,11 @@ const FormSelect = ({
                 setOpen(false);
               }}
               className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
-                opt.value === value ? 'bg-blue-50 text-blue-800 font-bold' : 'text-slate-700 hover:bg-slate-50'
+                opt.value === value ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold' : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
               }`}
             >
               <span className="truncate">{opt.label}</span>
-              {opt.value === value && <Icon name="check-circle" size="xs" className="text-blue-600 shrink-0" />}
+              {opt.value === value && <Icon name="check-circle" size="xs" className="text-[var(--accent-indigo)] shrink-0" />}
             </button>
           ))}
         </div>
@@ -173,24 +173,24 @@ const FormDatePicker = ({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full h-10 px-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 text-xs font-semibold flex items-center justify-between gap-2 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer shadow-2xs"
+        className="w-full h-10 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-between gap-2 hover:border-[var(--accent-indigo)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-indigo)]/20 transition-all cursor-pointer shadow-2xs"
       >
-        <span className="flex items-center gap-2 font-mono font-bold text-slate-900">
-          <Icon name="calendar" size="xs" className="text-blue-600 shrink-0" />
+        <span className="flex items-center gap-2 font-mono font-bold text-[var(--text-primary)]">
+          <Icon name="calendar" size="xs" className="text-[var(--accent-indigo)] shrink-0" />
           <span>{formattedDisplay}</span>
         </span>
         <Icon
           name="chevron-down"
           size="xs"
-          className={`text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180 text-blue-600' : ''}`}
+          className={`text-[var(--text-tertiary)] shrink-0 transition-transform ${open ? 'rotate-180 text-[var(--accent-indigo)]' : ''}`}
         />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1.5 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute left-0 top-full mt-1.5 w-72 bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Header Month / Year Navigation */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="font-extrabold text-xs font-heading text-slate-900">
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--border-soft)]">
+            <span className="font-extrabold text-xs font-heading text-[var(--text-primary)]">
               {monthName} {viewYear}
             </span>
             <div className="flex items-center gap-1">
@@ -204,7 +204,7 @@ const FormDatePicker = ({
                     setViewMonth((m) => m - 1);
                   }
                 }}
-                className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
               >
                 <Icon name="chevron-left" size="xs" />
               </button>
@@ -218,7 +218,7 @@ const FormDatePicker = ({
                     setViewMonth((m) => m + 1);
                   }
                 }}
-                className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
               >
                 <Icon name="chevron-right" size="xs" />
               </button>
@@ -226,7 +226,7 @@ const FormDatePicker = ({
           </div>
 
           {/* Weekday Headers */}
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 py-2">
+          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[var(--text-tertiary)] py-2">
             <span>Su</span>
             <span>Mo</span>
             <span>Tu</span>
@@ -250,10 +250,10 @@ const FormDatePicker = ({
                   }}
                   className={`h-7 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
                     isSelected
-                      ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                      ? 'bg-[var(--accent-indigo)] text-white shadow-md font-extrabold'
                       : d.isCurrentMonth
-                      ? 'text-slate-800 hover:bg-blue-50 hover:text-blue-700'
-                      : 'text-slate-300 hover:bg-slate-50'
+                      ? 'text-[var(--text-primary)] hover:bg-[var(--accent-indigo-dim)] hover:text-[var(--accent-indigo)]'
+                      : 'text-[var(--text-tertiary)]/40 hover:bg-[var(--surface-hover)]'
                   }`}
                 >
                   {d.day}
@@ -375,26 +375,26 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200 font-sans"
+      className="fixed inset-0 z-50 bg-[var(--overlay)] backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200 font-sans"
       onClick={onClose}
     >
       <div
-        className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         
         {/* ── 1. MODAL HEADER ─────────────────────────────────────────────────── */}
-        <header className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
+        <header className="p-4 sm:p-5 bg-[var(--surface-2)] border-b border-[var(--border-default)] flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 flex items-center justify-center font-bold shrink-0">
               <Icon name="calendar" size="md" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-extrabold font-heading text-slate-900 tracking-tight">
+              <h2 className="text-base sm:text-lg font-extrabold font-heading text-[var(--text-primary)] tracking-tight">
                 Schedule & Send Candidate Assessment
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Candidate: <span className="font-semibold text-slate-800">{candidateName}</span> ({candidateCode}) • <span className="font-semibold text-slate-700">{vacancyTitle}</span>
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+                Candidate: <span className="font-semibold text-[var(--text-primary)]">{candidateName}</span> ({candidateCode}) • <span className="font-semibold text-[var(--text-secondary)]">{vacancyTitle}</span>
               </p>
             </div>
           </div>
@@ -402,7 +402,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
           >
             <Icon name="x" size="sm" />
           </button>
@@ -413,7 +413,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
           
           {/* ── TEST MODE SELECTION TABS (Home vs Office) ─────────────────────── */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
               Select Assessment Execution Mode
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -424,20 +424,20 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
                 onClick={() => setTestMode('From Home')}
                 className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1.5 ${
                   testMode === 'From Home'
-                    ? 'bg-blue-50/80 border-blue-500 text-blue-900 ring-2 ring-blue-500/20 shadow-2xs'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-[var(--accent-indigo-dim)] border-[var(--accent-indigo)] text-[var(--text-primary)] ring-2 ring-[var(--accent-indigo)]/20 shadow-2xs'
+                    : 'bg-[var(--surface-2)] border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs font-heading flex items-center gap-1.5">
-                    <Icon name="user" size="xs" className={testMode === 'From Home' ? 'text-blue-600' : 'text-slate-400'} />
+                    <Icon name="user" size="xs" className={testMode === 'From Home' ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'} />
                     <span>From Home (Remote Test)</span>
                   </span>
-                  <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${testMode === 'From Home' ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}>
+                  <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${testMode === 'From Home' ? 'border-[var(--accent-indigo)] bg-[var(--accent-indigo)]' : 'border-[var(--border-default)]'}`}>
                     {testMode === 'From Home' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-snug">
+                <p className="text-[11px] text-[var(--text-tertiary)] leading-snug">
                   Candidate logs in with Access ID & 4-digit Passcode. Link & PIN are valid strictly during the assigned time slot.
                 </p>
               </button>
@@ -448,20 +448,20 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
                 onClick={() => setTestMode('In Office')}
                 className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1.5 ${
                   testMode === 'In Office'
-                    ? 'bg-indigo-50/80 border-indigo-500 text-indigo-900 ring-2 ring-indigo-500/20 shadow-2xs'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-[var(--accent-indigo-dim)] border-[var(--accent-indigo)] text-[var(--text-primary)] ring-2 ring-[var(--accent-indigo)]/20 shadow-2xs'
+                    : 'bg-[var(--surface-2)] border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs font-heading flex items-center gap-1.5">
-                    <Icon name="building" size="xs" className={testMode === 'In Office' ? 'text-indigo-600' : 'text-slate-400'} />
+                    <Icon name="building" size="xs" className={testMode === 'In Office' ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'} />
                     <span>In Office (Venue Test)</span>
                   </span>
-                  <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${testMode === 'In Office' ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'}`}>
+                  <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${testMode === 'In Office' ? 'border-[var(--accent-indigo)] bg-[var(--accent-indigo)]' : 'border-[var(--border-default)]'}`}>
                     {testMode === 'In Office' && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-snug">
+                <p className="text-[11px] text-[var(--text-tertiary)] leading-snug">
                   Candidate accesses via direct magic token link at office venue. Bypasses manual passcode entry.
                 </p>
               </button>
@@ -469,19 +469,19 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
           </div>
 
           {/* ── AUTO-LINKED QUESTION PAPER CARD & SCHEDULE CONTROLS ─────────── */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] flex items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2.5">
-              <Icon name="clipboard-check" size="xs" className="text-blue-600 shrink-0" />
+              <Icon name="clipboard-check" size="xs" className="text-[var(--accent-indigo)] shrink-0" />
               <div className="flex flex-col">
-                <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
                   Linked Vacancy Assessment Paper (Auto-Selected)
                 </span>
-                <span className="text-xs font-bold text-slate-900 font-heading mt-0.5">
+                <span className="text-xs font-bold text-[var(--text-primary)] font-heading mt-0.5">
                   {linkedPaperTitle}
                 </span>
               </div>
             </div>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] shrink-0">
               Auto-Assigned
             </span>
           </div>
@@ -491,24 +491,24 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
             
             {/* Custom Popover Calendar Date Picker */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700">Scheduled Date</label>
+              <label className="text-xs font-bold text-[var(--text-secondary)]">Scheduled Date</label>
               <FormDatePicker value={scheduledDate} onChange={setScheduledDate} />
             </div>
 
             {/* If Home: Time Slot Start & End Dropdowns */}
             {testMode === 'From Home' ? (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700">Valid Time Slot Window</label>
+                <label className="text-xs font-bold text-[var(--text-secondary)]">Valid Time Slot Window</label>
                 <div className="flex items-center gap-2">
                   <FormSelect value={startTime} onChange={setStartTime} options={TIME_SLOT_OPTIONS} />
-                  <span className="text-xs text-slate-400 font-bold">to</span>
+                  <span className="text-xs text-[var(--text-tertiary)] font-bold">to</span>
                   <FormSelect value={endTime} onChange={setEndTime} options={TIME_SLOT_OPTIONS} />
                 </div>
               </div>
             ) : (
               /* If Office: Custom Popover Venue Selection */
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700">Office Test Center Venue</label>
+                <label className="text-xs font-bold text-[var(--text-secondary)]">Office Test Center Venue</label>
                 <FormSelect value={selectedVenue} onChange={setSelectedVenue} options={officeLocationOptions} />
               </div>
             )}
@@ -517,32 +517,32 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
           {/* ── MODE-SPECIFIC DETAILS & CREDENTIALS ────────────────────────────── */}
           {testMode === 'From Home' ? (
             /* FROM HOME CREDENTIALS BOX */
-            <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200 flex flex-col gap-3 shadow-2xs">
+            <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] flex flex-col gap-3 shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-blue-900 font-heading flex items-center gap-1.5">
-                  <Icon name="lock" size="xs" className="text-blue-600" />
+                <span className="text-xs font-extrabold text-[var(--text-primary)] font-heading flex items-center gap-1.5">
+                  <Icon name="lock" size="xs" className="text-[var(--accent-indigo)]" />
                   <span>Candidate Login Credentials (Home Test)</span>
                 </span>
-                <span className="text-[10.5px] font-mono font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded border border-blue-200">
+                <span className="text-[10.5px] font-mono font-bold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-2 py-0.5 rounded border border-[var(--accent-indigo)]/30">
                   Strict Slot Validity
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-                <div className="flex flex-col gap-1 bg-white p-2.5 rounded-lg border border-blue-200">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Candidate Access ID</span>
-                  <span className="font-extrabold text-slate-900">{accessCode}</span>
+                <div className="flex flex-col gap-1 bg-[var(--surface-1)] p-2.5 rounded-lg border border-[var(--border-default)]">
+                  <span className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase">Candidate Access ID</span>
+                  <span className="font-extrabold text-[var(--text-primary)]">{accessCode}</span>
                 </div>
 
-                <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between bg-[var(--surface-1)] p-2.5 rounded-lg border border-[var(--border-default)]">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">4-Digit Passcode</span>
-                    <span className="font-extrabold text-blue-700 text-sm tracking-widest">{passcode}</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase">4-Digit Passcode</span>
+                    <span className="font-extrabold text-[var(--accent-indigo)] text-sm tracking-widest">{passcode}</span>
                   </div>
                   <button
                     type="button"
                     onClick={handleRegeneratePasscode}
-                    className="p-1 rounded text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                    className="p-1 rounded text-[var(--accent-indigo)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                     title="Regenerate Passcode"
                   >
                     <Icon name="spinner" size="xs" />
@@ -550,7 +550,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] font-mono text-slate-600 bg-white/80 p-2.5 rounded-lg border border-blue-100">
+              <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-secondary)] bg-[var(--surface-1)] p-2.5 rounded-lg border border-[var(--border-default)]">
                 <span className="truncate max-w-xs">{homeExamUrl}</span>
                 <button
                   type="button"
@@ -558,7 +558,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
                     navigator.clipboard.writeText(homeExamUrl);
                     toast.success('Exam URL Copied to Clipboard!');
                   }}
-                  className="text-blue-700 font-bold hover:underline shrink-0 ml-2 cursor-pointer"
+                  className="text-[var(--accent-indigo)] font-bold hover:underline shrink-0 ml-2 cursor-pointer"
                 >
                   Copy URL
                 </button>
@@ -566,22 +566,22 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
             </div>
           ) : (
             /* IN OFFICE DIRECT MAGIC LINK BOX */
-            <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200 flex flex-col gap-3 shadow-2xs">
+            <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] flex flex-col gap-3 shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-indigo-900 font-heading flex items-center gap-1.5">
-                  <Icon name="external-link" size="xs" className="text-indigo-600" />
+                <span className="text-xs font-extrabold text-[var(--text-primary)] font-heading flex items-center gap-1.5">
+                  <Icon name="external-link" size="xs" className="text-[var(--accent-indigo)]" />
                   <span>Direct Venue Access Link (In Office)</span>
                 </span>
-                <span className="text-[10.5px] font-mono font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded border border-indigo-200">
+                <span className="text-[10.5px] font-mono font-bold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-2 py-0.5 rounded border border-[var(--accent-indigo)]/30">
                   Passcode Bypass Token
                 </span>
               </div>
 
-              <p className="text-[11.5px] text-slate-600 leading-relaxed">
+              <p className="text-[11.5px] text-[var(--text-tertiary)] leading-relaxed">
                 Candidate accesses the test center venue desktop. Opening the direct magic token link auto-authenticates the candidate directly into the Welcome & Instructions screen.
               </p>
 
-              <div className="flex items-center justify-between text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-lg border border-indigo-200">
+              <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-primary)] bg-[var(--surface-1)] p-2.5 rounded-lg border border-[var(--border-default)]">
                 <span className="truncate max-w-md">{officeExamUrl}</span>
                 <button
                   type="button"
@@ -589,7 +589,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
                     navigator.clipboard.writeText(officeExamUrl);
                     toast.success('Direct Magic Token URL Copied!');
                   }}
-                  className="text-indigo-700 font-bold hover:underline shrink-0 ml-2 cursor-pointer"
+                  className="text-[var(--accent-indigo)] font-bold hover:underline shrink-0 ml-2 cursor-pointer"
                 >
                   Copy Token URL
                 </button>
@@ -598,15 +598,15 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
           )}
 
           {/* ── DISPATCH NOTIFICATION CHECKBOXES ───────────────────────────── */}
-          <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
-            <span className="text-xs font-bold text-slate-700">Dispatch Invitation Channels:</span>
-            <div className="flex items-center gap-5 text-xs font-medium text-slate-700">
+          <div className="flex flex-col gap-2 pt-1 border-t border-[var(--border-soft)]">
+            <span className="text-xs font-bold text-[var(--text-secondary)]">Dispatch Invitation Channels:</span>
+            <div className="flex items-center gap-5 text-xs font-medium text-[var(--text-primary)]">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={sendEmail}
                   onChange={(e) => setSendEmail(e.target.checked)}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--accent-indigo)] focus:ring-[var(--accent-indigo)]"
                 />
                 <span>Email ({candidateEmail})</span>
               </label>
@@ -615,7 +615,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
                   type="checkbox"
                   checked={sendSms}
                   onChange={(e) => setSendSms(e.target.checked)}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--accent-indigo)] focus:ring-[var(--accent-indigo)]"
                 />
                 <span>WhatsApp / SMS ({candidatePhone})</span>
               </label>
@@ -623,17 +623,17 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
           </div>
 
           {/* ── FOOTER ACTIONS ───────────────────────────────────────────────── */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-default)]">
             <button
               type="button"
               onClick={onClose}
-              className="h-9 px-4 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors"
+              className="h-9 px-4 rounded-xl border border-[var(--border-default)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="h-9 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+              className="h-9 px-5 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo)]/90 text-white font-extrabold text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
             >
               <Icon name="send" size="xs" />
               <span>Schedule & Dispatch Test Invitation</span>

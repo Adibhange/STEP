@@ -7,6 +7,7 @@ import { FilterBar } from "../shared/FilterBar";
 import { TablePagination } from "../shared/TablePagination";
 import { CandidateTable } from "./CandidateTable";
 import { AddCandidateDialog } from "./AddCandidateDialog";
+import { CandidateProgressModal } from "./CandidateProgressModal";
 import { CANDIDATE_FILTERS, type FilterDef } from "../config/candidateFilters";
 import { useGetCandidatesQuery } from "@/store/services/api";
 import { toast } from "@/design-system/feedback/toast";
@@ -54,6 +55,8 @@ export const CandidateWorkspace: React.FC = () => {
   }, [apiCandidatesResponse]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedProgressCandidate, setSelectedProgressCandidate] = useState<DashboardCandidate | null>(null);
+  const [progressViewMode, setProgressViewMode] = useState<'modal' | 'drawer' | 'popover'>('modal');
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilter>({});
@@ -243,7 +246,7 @@ export const CandidateWorkspace: React.FC = () => {
             <Icon
               name="search"
               size="xs"
-              className={`shrink-0 transition-opacity duration-150 ${searchFocused ? "opacity-100 text-[var(--accent-indigo)]" : "opacity-60 text-[var(--text-tertiary)]"}`}
+              className={`shrink-0 transition-opacity duration-150 ${searchFocused ? "opacity-100 text-[var(--accent-indigo)]" : "opacity-75 text-[var(--text-tertiary)]"}`}
             />
             <input
               type="search"
@@ -252,7 +255,7 @@ export const CandidateWorkspace: React.FC = () => {
               onChange={(e) => handleSearch(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              className="flex-1 bg-transparent border-none outline-none text-[11.5px] md:text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] min-w-0 font-sans"
+              className="flex-1 bg-transparent border-none outline-none text-[11.5px] md:text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] min-w-0 font-sans"
               aria-label="Search candidates"
             />
             {search ? (
@@ -262,7 +265,7 @@ export const CandidateWorkspace: React.FC = () => {
                   setSearch("");
                   setCurrentPage(1);
                 }}
-                className="text-(--text-tertiary) hover:text-(--text-primary) transition-colors cursor-pointer"
+                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 aria-label="Clear search"
               >
                 <Icon
@@ -293,8 +296,8 @@ export const CandidateWorkspace: React.FC = () => {
               }
             }}
             className="h-8 w-8 sm:w-auto px-0 sm:px-3 flex items-center justify-center gap-2 rounded-full border border-[var(--border-default)]
-              text-[12px] font-semibold text-[var(--text-primary)] bg-[var(--surface-1)]
-              hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] hover:-translate-y-[1px] hover:shadow-xs active:scale-[0.98]
+              text-[12px] font-semibold text-[var(--text-primary)] bg-[var(--surface-2)]
+              hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] hover:-translate-y-[1px] hover:shadow-2xs active:scale-[0.98]
               transition-all duration-150 focus-ring-step cursor-pointer shrink-0"
             aria-label="Export candidates to Excel (.xlsx)"
             title="Export candidates to Excel (.xlsx)"
@@ -309,7 +312,7 @@ export const CandidateWorkspace: React.FC = () => {
             type="button"
             onClick={() => setIsAddModalOpen(true)}
             className="h-8 w-8 sm:w-auto px-0 sm:px-3.5 flex items-center justify-center gap-1.5 rounded-full
-              bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md hover:from-indigo-700 hover:to-purple-700 hover:-translate-y-[1px] active:scale-[0.98]
+              bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white shadow-2xs hover:-translate-y-[1px] active:scale-[0.98]
               text-[12px] font-bold transition-all duration-150 focus-ring-step cursor-pointer shrink-0 border-none"
             aria-label="Add new candidate"
             title="Add new candidate"
@@ -344,6 +347,7 @@ export const CandidateWorkspace: React.FC = () => {
           loading={isLoading}
           filterKey={filterKey}
           onView={(c) => router.push(`/dashboard/candidates/${c.id}`)}
+          onViewProgress={(c) => setSelectedProgressCandidate(c)}
         />
       </div>
 
@@ -359,6 +363,14 @@ export const CandidateWorkspace: React.FC = () => {
       <AddCandidateDialog
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+      />
+
+      {/* Option 1: Compact Modal Dialog for Quick Progress View */}
+      <CandidateProgressModal
+        candidate={selectedProgressCandidate}
+        isOpen={selectedProgressCandidate !== null}
+        onClose={() => setSelectedProgressCandidate(null)}
+        onNavigateToProfile={(id) => router.push(`/dashboard/candidates/${id}`)}
       />
     </section>
   );

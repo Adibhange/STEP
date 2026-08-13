@@ -69,8 +69,8 @@ export const KpiSection: React.FC = () => {
         trendLabel: 'withdrawn',
         subMetric: 'Withdrawn / Hold',
         icon: 'pause-circle',
-        colorToken: '--status-warning',
-        bgToken: '--status-warning-bg',
+        colorToken: '--accent-orange',
+        bgToken: '--accent-orange-dim',
       },
       {
         id: 'rejected',
@@ -80,8 +80,8 @@ export const KpiSection: React.FC = () => {
         trendLabel: 'archived',
         subMetric: 'Rejected Candidates',
         icon: 'x-circle',
-        colorToken: '--status-danger',
-        bgToken: '--status-danger-bg',
+        colorToken: '--accent-red',
+        bgToken: '--accent-red-dim',
       },
       {
         id: 'hired',
@@ -91,8 +91,8 @@ export const KpiSection: React.FC = () => {
         trendLabel: 'joined',
         subMetric: 'Joined Candidates',
         icon: 'check-circle',
-        colorToken: '--status-success',
-        bgToken: '--status-success-bg',
+        colorToken: '--accent-green',
+        bgToken: '--accent-green-dim',
       },
     ];
   }, [funnelResponse]);

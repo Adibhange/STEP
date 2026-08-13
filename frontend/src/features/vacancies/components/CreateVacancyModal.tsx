@@ -566,11 +566,11 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                       onClick={() => setDriveType('Walk-in Drive')}
                       className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
                         driveType === 'Walk-in Drive'
-                          ? 'border-[var(--accent-indigo)] bg-indigo-50/50 shadow-2xs'
+                          ? 'border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] shadow-2xs'
                           : 'border-[var(--border-default)] bg-[var(--surface-2)] hover:border-[var(--border-strong)]'
                       }`}
                     >
-                      <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--accent-indigo)] text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                         <Icon name="grid" size="xs" />
                       </div>
                       <div>
@@ -587,11 +587,11 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                       onClick={() => setDriveType('Direct / Sourced Hiring')}
                       className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
                         driveType === 'Direct / Sourced Hiring'
-                          ? 'border-[var(--accent-indigo)] bg-indigo-50/50 shadow-2xs'
+                          ? 'border-[var(--accent-violet)] bg-[var(--accent-violet-dim)] shadow-2xs'
                           : 'border-[var(--border-default)] bg-[var(--surface-2)] hover:border-[var(--border-strong)]'
                       }`}
                     >
-                      <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--accent-violet)] text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
                         <Icon name="users" size="xs" />
                       </div>
                       <div>
@@ -808,7 +808,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                                     key={tl.value}
                                     className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border text-[11px] font-mono cursor-pointer transition-all ${
                                       isChecked
-                                        ? 'bg-indigo-50 border-indigo-200 text-indigo-900 font-bold'
+                                        ? 'bg-[var(--accent-indigo-dim)] border-[var(--accent-indigo)]/30 text-[var(--accent-indigo)] font-bold'
                                         : 'border-transparent text-[var(--text-primary)] hover:bg-[var(--surface-2)]'
                                     }`}
                                   >
@@ -902,7 +902,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                       {/* Flow Header */}
                       <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
                             Track {String.fromCharCode(65 + flowIdx)}
                           </span>
                           <input
@@ -939,20 +939,20 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                               key={round.id}
                               className={`p-3 rounded-lg border flex flex-wrap items-center justify-between gap-3 text-[12px] ${
                                 isFirstRoundLocked
-                                  ? 'bg-indigo-50/60 border-indigo-200'
+                                  ? 'bg-[var(--accent-indigo-dim)] border-[var(--accent-indigo)]/30'
                                   : 'bg-[var(--surface-2)] border-[var(--border-default)]'
                               }`}
                             >
                               <div className="flex items-center gap-2 flex-1 min-w-[240px]">
                                 <span className={`w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold text-[10px] ${
-                                  isFirstRoundLocked ? 'bg-indigo-600 text-white' : 'bg-[var(--accent-indigo)] text-white'
+                                  isFirstRoundLocked ? 'bg-[var(--accent-indigo)] text-white' : 'bg-[var(--surface-3)] text-[var(--text-secondary)]'
                                 }`}>
                                   {rIdx + 1}
                                 </span>
 
                                 {isWalkInFirstRound ? (
                                   <div className="flex items-center gap-2">
-                                    <span className="font-bold text-indigo-900 font-heading">
+                                    <span className="font-bold text-[var(--accent-indigo)] font-heading">
                                       General Aptitude & Logical Test
                                     </span>
                                     <span className="text-[10px] font-mono font-bold text-indigo-800 bg-indigo-200/80 px-2 py-0.5 rounded-full">
@@ -1147,7 +1147,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                           />
                         </div>
 
-                        <div className="w-24 shrink-0 bg-indigo-50 border border-indigo-200 rounded-md h-9 flex items-center justify-center font-mono font-bold text-indigo-700 text-[12.5px]">
+                        <div className="w-24 shrink-0 bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 rounded-md h-9 flex items-center justify-center font-mono font-bold text-[var(--accent-indigo)] text-[12.5px]">
                           {sec.totalMarks} Marks
                         </div>
 
@@ -1295,7 +1295,7 @@ export const CreateVacancyModal: React.FC<CreateVacancyModalProps> = ({ isOpen, 
                       <h4 className="text-sm font-extrabold text-[var(--text-primary)] font-heading">{title || 'Untitled Vacancy'}</h4>
                       <span className="text-[11px] font-mono text-[var(--text-tertiary)]">{role} · {department}</span>
                     </div>
-                    <span className="text-[11px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <span className="text-[11px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
                       {driveType}
                     </span>
                   </div>

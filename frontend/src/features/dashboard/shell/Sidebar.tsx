@@ -266,8 +266,10 @@ const NavItemRow: React.FC<NavItemRowProps> = ({ item, active, collapsed }) => {
             {item.label}
           </span>
           {item.badge !== undefined && (
-            <span className={`text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shrink-0 font-mono ${
-              item.isDisabled ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-[var(--accent-indigo)] text-white'
+            <span className={`text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1.5 shrink-0 font-mono ${
+              item.isDisabled
+                ? 'bg-[var(--surface-3)] text-[var(--text-tertiary)] border border-[var(--border-default)]'
+                : 'bg-[var(--accent-indigo)] text-white shadow-2xs'
             }`}>
               {typeof item.badge === 'number' && item.badge > 99 ? '99+' : item.badge}
             </span>

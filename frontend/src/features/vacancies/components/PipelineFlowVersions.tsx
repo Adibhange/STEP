@@ -229,7 +229,7 @@ export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = ({ vaca
             <h3 className="text-base font-extrabold text-[var(--text-primary)] font-heading">
               Dynamic Pipeline Flow Versions
             </h3>
-            <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
               {flowList.length} Versions Configured
             </span>
           </div>
@@ -278,7 +278,7 @@ export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = ({ vaca
                       className="text-sm font-extrabold text-[var(--text-primary)] font-heading bg-transparent outline-none border-b border-transparent hover:border-[var(--border-default)] focus:border-[var(--accent-indigo)] min-w-[160px]"
                     />
                     {flow.isDefault && (
-                      <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                      <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 shrink-0">
                         Default Walk-in Flow
                       </span>
                     )}

@@ -73,10 +73,10 @@ export const Select: React.FC<SelectProps> & {
     >
       <SelectPrimitive.Trigger
         aria-label={label}
-        className={`h-9 px-3 rounded-lg border flex items-center justify-between gap-2 ${widthClass} text-xs transition-all duration-150 ease-out cursor-pointer select-none focus-ring-step outline-none ${
+        className={`h-8 px-2.5 rounded-lg border flex items-center justify-between gap-1.5 ${widthClass} text-[11.5px] transition-all duration-150 ease-out cursor-pointer select-none focus-ring-step outline-none ${
           value
-            ? 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-primary)] font-medium hover:border-[var(--border-strong)]'
-            : 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-tertiary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] font-normal'
+            ? 'bg-[var(--surface-2)] border-[var(--accent-indigo)]/50 text-[var(--text-primary)] font-semibold shadow-2xs'
+            : 'bg-[var(--surface-2)] border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] font-medium shadow-2xs'
         }`}
       >
         <span className="truncate">

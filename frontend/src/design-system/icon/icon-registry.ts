@@ -67,6 +67,9 @@ import {
   Link as LinkIcon,
   Paperclip,
   FileUp,
+  Sun,
+  Moon,
+  Monitor,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -141,7 +144,10 @@ export type IconName =
   | 'award'
   | 'link'
   | 'paperclip'
-  | 'file-up';
+  | 'file-up'
+  | 'sun'
+  | 'moon'
+  | 'monitor';
 
 export const iconRegistry: Record<IconName, LucideIcon> = {
   'search': Search,
@@ -215,4 +221,7 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'link': LinkIcon,
   'paperclip': Paperclip,
   'file-up': FileUp,
+  'sun': Sun,
+  'moon': Moon,
+  'monitor': Monitor,
 };

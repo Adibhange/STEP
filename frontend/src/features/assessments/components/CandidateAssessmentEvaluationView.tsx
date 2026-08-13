@@ -198,34 +198,34 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
     <div className="min-h-screen bg-[var(--canvas,#f7f8fb)] text-[var(--text-primary,#0f172a)] flex flex-col font-sans">
 
       {/* ── 1. FULL-PAGE TOP NAVIGATION HEADER ───────────────────────────────── */}
-      <header className="h-16 bg-white border-b border-[var(--border-default,rgba(15,23,42,0.09))] px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0 shadow-2xs">
+      <header className="h-16 bg-[var(--surface-1)] border-b border-[var(--border-default)] px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0 shadow-2xs">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleBackClick}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            className="px-3 py-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
           >
             <Icon name="arrow-left" size="xs" />
             <span>Back to Candidate Profile</span>
           </button>
 
-          <div className="h-5 w-px bg-slate-200 hidden sm:block" />
+          <div className="h-5 w-px bg-[var(--border-default)] hidden sm:block" />
 
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center font-bold shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 flex items-center justify-center font-bold shrink-0">
               <Icon name="clipboard-check" size="xs" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm sm:text-base font-extrabold font-heading text-slate-900 tracking-tight">
+                <h1 className="text-sm sm:text-base font-extrabold font-heading text-[var(--text-primary)] tracking-tight">
                   Candidate Assessment Evaluation Workspace
                 </h1>
-                <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
                   {candidateCode}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Candidate: <span className="font-semibold text-slate-800">{candidateName}</span> • Vacancy: <span className="font-semibold text-slate-800">{vacancyTitle}</span>
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                Candidate: <span className="font-semibold text-[var(--text-primary)]">{candidateName}</span> • Vacancy: <span className="font-semibold text-[var(--text-secondary)]">{vacancyTitle}</span>
               </p>
             </div>
           </div>
@@ -233,14 +233,14 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
 
         {/* Real session status badge — replaces the old fictional multi-attempt tab switcher */}
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono text-slate-500">{evaluation.paperTitle}</span>
+          <span className="text-[11px] font-mono text-[var(--text-tertiary)]">{evaluation.paperTitle}</span>
           <span
             className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold border ${
               isPublished
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]'
                 : evaluation.sessionStatus === 'Submitted'
-                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                : 'bg-slate-100 text-slate-600 border-slate-200'
+                ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border-[var(--status-warning-border)]'
+                : 'bg-[var(--surface-3)] text-[var(--text-tertiary)] border-[var(--border-default)]'
             }`}
           >
             {isPublished ? 'Published' : evaluation.sessionStatus}
@@ -252,30 +252,30 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
       <div className="flex-1 flex overflow-hidden">
 
         {/* ── LEFT SIDEBAR (Round-Wise Square Button Palette) ── */}
-        <aside className="w-80 sm:w-96 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 scrollbar-thin">
+        <aside className="w-80 sm:w-96 bg-[var(--surface-1)] border-r border-[var(--border-default)] p-4 flex flex-col gap-4 overflow-y-auto shrink-0 scrollbar-thin">
 
           {/* Proctoring Audit Log Card — real data */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2.5 shadow-2xs">
+          <div className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] flex flex-col gap-2.5 shadow-2xs">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                <Icon name="calendar" size="xs" className="text-blue-600" />
+              <span className="font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
+                <Icon name="calendar" size="xs" className="text-[var(--accent-indigo)]" />
                 <span>Test Duration & Time Used</span>
               </span>
-              <span className="font-mono font-bold text-slate-900">
+              <span className="font-mono font-bold text-[var(--text-primary)]">
                 {timeUsedMinutes !== null ? `${timeUsedMinutes} / ${evaluation.frozenTotalDurationMinutes} Mins` : `— / ${evaluation.frozenTotalDurationMinutes} Mins`}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-[10.5px] font-mono border-t border-slate-200 pt-2">
+            <div className="grid grid-cols-2 gap-2 text-[10.5px] font-mono border-t border-[var(--border-soft)] pt-2">
               <div className="flex flex-col">
-                <span className="text-slate-500">Proctoring Violations</span>
-                <span className={`font-bold ${evaluation.tabSwitchWarnings > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                <span className="text-[var(--text-tertiary)]">Proctoring Violations</span>
+                <span className={`font-bold ${evaluation.tabSwitchWarnings > 0 ? 'text-[var(--status-warning)]' : 'text-[var(--status-success)]'}`}>
                   {evaluation.tabSwitchWarnings} Warning(s)
                 </span>
               </div>
               <div className="flex flex-col">
-                <span className="text-slate-500">Integrity Score</span>
-                <span className={`font-bold ${evaluation.assessmentIntegrityScore < 100 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                <span className="text-[var(--text-tertiary)]">Integrity Score</span>
+                <span className={`font-bold ${evaluation.assessmentIntegrityScore < 100 ? 'text-[var(--status-warning)]' : 'text-[var(--status-success)]'}`}>
                   {evaluation.assessmentIntegrityScore}/100
                 </span>
               </div>
@@ -284,15 +284,15 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
 
           {/* Round-Wise Question Palette (SQUARE TILES SHOWING NUMBERS ONLY) */}
           <div className="flex flex-col gap-4">
-            <h4 className="text-xs font-extrabold text-slate-500 font-heading uppercase tracking-wider">
+            <h4 className="text-xs font-extrabold text-[var(--text-tertiary)] font-heading uppercase tracking-wider">
               Round Question Palette
             </h4>
 
             {roundGroups.map((group) => (
               <div key={group.title} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 border-b border-slate-200 pb-1">
+                <div className="flex items-center justify-between text-[11px] font-bold text-[var(--text-secondary)] border-b border-[var(--border-default)] pb-1">
                   <span>{group.title}</span>
-                  <span className="text-[10px] font-mono text-blue-700">
+                  <span className="text-[10px] font-mono text-[var(--accent-indigo)]">
                     {isMcqType(group.answers[0].questionType) ? 'Auto MCQ' : 'Manual Grade'}
                   </span>
                 </div>
@@ -311,14 +311,14 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
                         onClick={() => setSelectedAnswerId(a.candidateExamAnswerId)}
                         className={`w-10 h-10 rounded-xl font-mono text-xs font-extrabold transition-all cursor-pointer flex flex-col items-center justify-center relative ${
                           isSelected
-                            ? 'bg-blue-600 text-white border-2 border-blue-400 shadow-md scale-105 z-10 font-bold'
+                            ? 'bg-[var(--accent-indigo)] text-white border-2 border-[var(--accent-indigo)] shadow-md scale-105 z-10 font-bold'
                             : isCorrect
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 font-bold'
+                            ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] hover:bg-[var(--status-success-bg)]/80 font-bold'
                             : isIncorrect
-                            ? 'bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100 font-bold'
+                            ? 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] hover:bg-[var(--status-danger-bg)]/80 font-bold'
                             : a.evaluationStatus === 'Evaluated' || a.evaluationLocked
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 font-bold'
-                            : 'bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100 font-bold'
+                            ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] hover:bg-[var(--status-success-bg)]/80 font-bold'
+                            : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border border-[var(--status-warning-border)] hover:bg-[var(--status-warning-bg)]/80 font-bold'
                         }`}
                       >
                         <span>{a.questionDisplayOrder}</span>
@@ -334,23 +334,23 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
           </div>
 
           {/* Final Score Summary & Publish Action Card */}
-          <div className="mt-auto p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-3 shadow-2xs">
+          <div className="mt-auto p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] flex flex-col gap-3 shadow-2xs">
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-slate-500">
+              <span className="text-[11px] font-semibold text-[var(--text-tertiary)]">
                 {isPublished ? 'Published Score' : 'Current Score (Pending Publish)'}
               </span>
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-extrabold font-mono text-emerald-600">
+                <span className="text-2xl font-extrabold font-mono text-[var(--status-success)]">
                   {currentScore} / {maxPossibleMarks}
                 </span>
               </div>
-              <p className="text-[10px] font-mono text-slate-500">
+              <p className="text-[10px] font-mono text-[var(--text-tertiary)]">
                 MCQ Auto: {autoMcqScore} + Manual: {manualScore}
               </p>
             </div>
 
             {isPublished ? (
-              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold text-center">
+              <div className="p-2.5 rounded-lg bg-[var(--status-success-bg)] border border-[var(--status-success-border)] text-[var(--status-success-text)] text-[11px] font-bold text-center">
                 Result published and locked.
               </div>
             ) : (
@@ -359,7 +359,7 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
                 onClick={handlePublish}
                 disabled={!canPublish || isPublishing}
                 title={!allNonMcqEvaluated ? 'All coding/SQL/subjective answers must be evaluated first' : undefined}
-                className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all shadow-2xs cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-10 rounded-xl bg-[var(--status-success)] hover:opacity-90 text-white font-extrabold text-xs transition-all shadow-2xs cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isPublishing ? (
                   <Icon name="spinner" size="xs" className="animate-spin" />
@@ -370,7 +370,7 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
               </button>
             )}
             {!isPublished && !allNonMcqEvaluated && (
-              <p className="text-[10px] text-amber-700 font-semibold text-center">
+              <p className="text-[10px] text-[var(--status-warning-text)] font-semibold text-center">
                 Evaluate every Coding/SQL/Subjective answer before publishing.
               </p>
             )}
@@ -378,29 +378,29 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
         </aside>
 
         {/* ── RIGHT MAIN PANEL (Selected Question Viewer & Manual Evaluation Form) ── */}
-        <main className="flex-1 p-6 overflow-y-auto flex flex-col gap-5 scrollbar-thin bg-white">
+        <main className="flex-1 p-6 overflow-y-auto flex flex-col gap-5 scrollbar-thin bg-[var(--canvas)]">
 
           {/* Selected Question Header */}
-          <div className="flex items-start justify-between border-b border-slate-200 pb-3 flex-wrap gap-3">
+          <div className="flex items-start justify-between border-b border-[var(--border-default)] pb-3 flex-wrap gap-3">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-mono font-extrabold border border-blue-200">
+                <span className="px-2.5 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-mono font-extrabold border border-[var(--accent-indigo)]/30">
                   Question #{selectedAnswer.questionDisplayOrder}
                 </span>
-                <span className="text-[10.5px] font-mono font-bold px-2 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                <span className="text-[10.5px] font-mono font-bold px-2 py-0.2 rounded bg-[var(--surface-3)] text-[var(--text-secondary)] border border-[var(--border-default)]">
                   {selectedAnswer.questionType}
                 </span>
               </div>
-              <h3 className="text-base font-bold text-slate-900 font-heading mt-1 leading-relaxed">
+              <h3 className="text-base font-bold text-[var(--text-primary)] font-heading mt-1 leading-relaxed">
                 {selectedAnswer.questionText}
               </h3>
             </div>
 
             <div className="flex flex-col items-end shrink-0 font-mono">
-              <span className="text-sm font-extrabold text-emerald-700">
+              <span className="text-sm font-extrabold text-[var(--status-success)]">
                 {selectedAnswer.marksObtained} / {selectedAnswer.marks} Marks
               </span>
-              <span className={`text-[10px] font-bold px-2 py-0.2 rounded mt-0.5 ${isMcqType(selectedAnswer.questionType) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.2 rounded mt-0.5 ${isMcqType(selectedAnswer.questionType) ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]' : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border border-[var(--status-warning-border)]'}`}>
                 {isMcqType(selectedAnswer.questionType) ? 'Auto-Evaluated' : selectedAnswer.evaluationLocked ? 'Locked (Published)' : 'Manual Evaluation Required'}
               </span>
             </div>
@@ -409,8 +409,8 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
           {/* ── MCQs: Auto-Evaluated Choice Viewer ──────────────────────────── */}
           {isMcqType(selectedAnswer.questionType) && (
             <div className="flex flex-col gap-3">
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
-                <Icon name="check-circle" size="xs" className="shrink-0 text-emerald-600" />
+              <div className="p-3 rounded-xl bg-[var(--status-success-bg)] border border-[var(--status-success-border)] text-[var(--status-success-text)] text-xs font-semibold flex items-center gap-2">
+                <Icon name="check-circle" size="xs" className="shrink-0 text-[var(--status-success)]" />
                 <span>Auto-Evaluated by System Engine. Correct options are scored automatically.</span>
               </div>
 
@@ -422,24 +422,24 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
                       key={opt.id}
                       className={`p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 ${
                         opt.isCorrect
-                          ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold shadow-2xs'
+                          ? 'bg-[var(--status-success-bg)] border-[var(--status-success-border)] text-[var(--status-success-text)] font-bold shadow-2xs'
                           : isSelected && !opt.isCorrect
-                          ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold shadow-2xs'
-                          : 'bg-white border-slate-200 text-slate-700'
+                          ? 'bg-[var(--status-danger-bg)] border-[var(--status-danger-border)] text-[var(--status-danger-text)] font-bold shadow-2xs'
+                          : 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-primary)]'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="font-mono font-bold text-slate-500">{opt.label}.</span>
+                        <span className="font-mono font-bold text-[var(--text-tertiary)]">{opt.label}.</span>
                         <span>{opt.text}</span>
                       </div>
 
                       {opt.isCorrect && (
-                        <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                        <span className="text-[10px] font-mono font-bold text-[var(--status-success-text)] bg-[var(--status-success-bg)] px-2 py-0.5 rounded border border-[var(--status-success-border)]">
                           Correct Answer
                         </span>
                       )}
                       {isSelected && !opt.isCorrect && (
-                        <span className="text-[10px] font-mono font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded border border-rose-300">
+                        <span className="text-[10px] font-mono font-bold text-[var(--status-danger-text)] bg-[var(--status-danger-bg)] px-2 py-0.5 rounded border border-[var(--status-danger-border)]">
                           Candidate Choice
                         </span>
                       )}
@@ -453,11 +453,11 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
           {/* ── NON-MCQs: Submitted Code / SQL / Essay Viewer ────────────────── */}
           {!isMcqType(selectedAnswer.questionType) && (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between text-xs font-mono text-slate-600">
+              <div className="flex items-center justify-between text-xs font-mono text-[var(--text-secondary)]">
                 <span>Candidate Submitted {selectedAnswer.questionType} Solution:</span>
               </div>
 
-              <pre className="p-4 rounded-xl bg-slate-900 text-emerald-300 border border-slate-800 font-mono text-xs leading-relaxed overflow-x-auto scrollbar-thin max-h-80 shadow-2xs">
+              <pre className="p-4 rounded-xl bg-[#0d1117] text-emerald-400 border border-[var(--border-default)] font-mono text-xs leading-relaxed overflow-x-auto scrollbar-thin max-h-80 shadow-2xs">
                 <code>{selectedAnswer.submittedAnswerText || '(No answer submitted)'}</code>
               </pre>
             </div>
@@ -465,20 +465,20 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
 
           {/* ── MANUAL EVALUATION FORM PANEL (For Non-MCQ Questions) ─────────── */}
           {!isMcqType(selectedAnswer.questionType) && (
-            <div className="mt-auto p-5 rounded-xl bg-white border border-slate-200 flex flex-col gap-4 shadow-2xs">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <h4 className="text-xs font-extrabold text-amber-700 font-heading uppercase tracking-wider flex items-center gap-1.5">
+            <div className="mt-auto p-5 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)] flex flex-col gap-4 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-2">
+                <h4 className="text-xs font-extrabold text-[var(--status-warning-text)] font-heading uppercase tracking-wider flex items-center gap-1.5">
                   <Icon name="pencil" size="xs" />
                   <span>Manual Evaluation & Marks Input</span>
                 </h4>
-                <span className="text-[11px] font-mono text-slate-500">
+                <span className="text-[11px] font-mono text-[var(--text-tertiary)]">
                   Max Allowed: {selectedAnswer.marks} Marks
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700">Awarded Marks</label>
+                  <label className="text-xs font-bold text-[var(--text-secondary)]">Awarded Marks</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -492,14 +492,14 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
                           [selectedAnswer.candidateExamAnswerId]: Math.min(selectedAnswer.marks, Math.max(0, Number(e.target.value) || 0)),
                         }))
                       }
-                      className="w-full h-10 px-3.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono text-sm font-extrabold outline-none focus:border-blue-500 shadow-2xs disabled:opacity-60"
+                      className="w-full h-10 px-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] text-[var(--text-primary)] font-mono text-sm font-extrabold outline-none focus:border-[var(--accent-indigo)] shadow-2xs disabled:opacity-60"
                     />
-                    <span className="text-xs font-mono text-slate-500 font-bold">/ {selectedAnswer.marks}</span>
+                    <span className="text-xs font-mono text-[var(--text-tertiary)] font-bold">/ {selectedAnswer.marks}</span>
                   </div>
                 </div>
 
                 <div className="sm:col-span-2 flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700">Evaluator Feedback & Remarks</label>
+                  <label className="text-xs font-bold text-[var(--text-secondary)]">Evaluator Feedback & Remarks</label>
                   <textarea
                     value={notesDraft[selectedAnswer.candidateExamAnswerId] ?? selectedAnswer.evaluatorRemarks ?? ''}
                     disabled={selectedAnswer.evaluationLocked}
@@ -508,7 +508,7 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
                     }
                     placeholder="Enter manual evaluation feedback notes for this candidate response..."
                     rows={3}
-                    className="w-full p-3 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-800 outline-none focus:border-blue-500 scrollbar-thin leading-relaxed shadow-2xs disabled:opacity-60"
+                    className="w-full p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] scrollbar-thin leading-relaxed shadow-2xs disabled:opacity-60"
                   />
                 </div>
               </div>
@@ -518,7 +518,7 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
                   type="button"
                   onClick={handleSaveAnswer}
                   disabled={isSavingAnswer}
-                  className="self-end px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="self-end px-4 py-2 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo)]/90 text-white font-bold text-xs transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isSavingAnswer ? <Icon name="spinner" size="xs" className="animate-spin" /> : <Icon name="check" size="xs" />}
                   <span>{isSavingAnswer ? 'Saving…' : 'Save Evaluation'}</span>

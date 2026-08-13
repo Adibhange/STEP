@@ -84,7 +84,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                 className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold font-sans
                   transition-all duration-150 cursor-pointer
                   ${p === currentPage
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs border-none'
+                    ? 'bg-[var(--accent-indigo)] text-[var(--text-on-accent)] shadow-2xs border border-[var(--accent-indigo)]'
                     : 'border border-[var(--border-default)] text-[var(--text-secondary)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
                   }`}
               >

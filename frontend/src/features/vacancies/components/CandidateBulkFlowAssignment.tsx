@@ -154,7 +154,7 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
           <h3 className="text-xs sm:text-sm font-extrabold text-[var(--text-primary)] font-heading">
             Bulk Candidate Pipeline Flow Assignment
           </h3>
-          <span className="text-[10.5px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="text-[10.5px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
             {candidates.length} Candidates &middot; {unassignedCandidates.length} Unassigned
           </span>
         </div>
@@ -236,7 +236,7 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
               paginatedCandidates.map((c) => {
                 const isSelected = selectedIds.includes(c.id);
                 return (
-                  <tr key={c.id} className={`hover:bg-[var(--surface-hover)] transition-colors ${isSelected ? 'bg-indigo-50/40' : ''}`}>
+                  <tr key={c.id} className={`hover:bg-[var(--surface-hover)] transition-colors ${isSelected ? 'bg-[var(--accent-indigo-dim)]' : ''}`}>
                     <td className="py-3 px-4">
                       <input
                         type="checkbox"

@@ -8,6 +8,8 @@ export type TableDensity = 'standard';
 export interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  toggleTheme: (e?: React.MouseEvent | { clientX?: number; clientY?: number }) => void;
+  setThemeWithTransition: (theme: Theme, e?: React.MouseEvent | { clientX?: number; clientY?: number }) => void;
   reducedMotion: boolean;
   setReducedMotion: (reducedMotion: boolean) => void;
   tableDensity: TableDensity;
@@ -24,7 +26,7 @@ const SIDEBAR_STORAGE_KEY = 'step-sidebar-collapsed';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode; defaultTheme?: Theme }> = ({
   children,
-  defaultTheme = 'system',
+  defaultTheme = 'dark',
 }) => {
   const [theme, setThemeState] = useState<Theme>(defaultTheme);
   const [reducedMotion, setReducedMotionState] = useState<boolean>(false);
@@ -60,16 +62,32 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode; defaultTheme?:
     }
   }, []);
 
-  // Update DOM class for dark mode
+  // Update DOM class and data-theme attribute for dark mode
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('light', 'dark');
+
+    const applyTheme = () => {
+      root.classList.remove('light', 'dark');
+      let effectiveTheme: 'light' | 'dark' = 'light';
+
+      if (theme === 'system') {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        effectiveTheme = systemDark ? 'dark' : 'light';
+      } else {
+        effectiveTheme = theme;
+      }
+
+      root.classList.add(effectiveTheme);
+      root.setAttribute('data-theme', effectiveTheme);
+    };
+
+    applyTheme();
 
     if (theme === 'system') {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.add(systemDark ? 'dark' : 'light');
-    } else {
-      root.classList.add(theme);
+      const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleColorSchemeChange = () => applyTheme();
+      colorSchemeQuery.addEventListener('change', handleColorSchemeChange);
+      return () => colorSchemeQuery.removeEventListener('change', handleColorSchemeChange);
     }
   }, [theme]);
 
@@ -80,6 +98,82 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode; defaultTheme?:
     } catch {
       // Fallback
     }
+  };
+
+  /**
+   * Smooth circular radial expansion transition from click origin across the full screen
+   */
+  const setThemeWithTransition = (
+    newTheme: Theme,
+    e?: React.MouseEvent | { clientX?: number; clientY?: number }
+  ) => {
+    if (
+      typeof document === 'undefined' ||
+      !(document as any).startViewTransition ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setTheme(newTheme);
+      return;
+    }
+
+    const targetEl = (
+      e && 'currentTarget' in e
+        ? (e.currentTarget as HTMLElement)
+        : e && 'target' in e
+        ? (e.target as HTMLElement)
+        : undefined
+    );
+    const rect = targetEl?.getBoundingClientRect?.();
+    const x = rect ? rect.left + rect.width / 2 : (e?.clientX ?? (window.innerWidth - 80));
+    const y = rect ? rect.top + rect.height / 2 : (e?.clientY ?? 40);
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = (document as any).startViewTransition(() => {
+      // Synchronously mutate root classes and attributes so the transition captures the complete updated frame instantly!
+      const root = document.documentElement;
+      root.classList.remove('light', 'dark');
+      let effectiveTheme: 'light' | 'dark' = 'light';
+      if (newTheme === 'system') {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        effectiveTheme = systemDark ? 'dark' : 'light';
+      } else {
+        effectiveTheme = newTheme;
+      }
+      root.classList.add(effectiveTheme);
+      root.setAttribute('data-theme', effectiveTheme);
+
+      setThemeState(newTheme);
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+      } catch {
+        // Fallback
+      }
+    });
+
+    transition.ready.then(() => {
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${endRadius}px at ${x}px ${y}px)`,
+      ];
+      document.documentElement.animate(
+        {
+          clipPath: clipPath,
+        },
+        {
+          duration: 750,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    });
+  };
+
+  const toggleTheme = (e?: React.MouseEvent | { clientX?: number; clientY?: number }) => {
+    const nextTheme: Theme = theme === 'dark' ? 'light' : 'dark';
+    setThemeWithTransition(nextTheme, e);
   };
 
   const setSidebarCollapsed = (collapsed: boolean) => {
@@ -104,6 +198,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode; defaultTheme?:
       value={{
         theme,
         setTheme,
+        toggleTheme,
+        setThemeWithTransition,
         reducedMotion,
         setReducedMotion,
         tableDensity,

@@ -654,8 +654,8 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   // ── MULTI-TAB LOCKED SCREEN ───────────────────────────────────────────────
   if (isMultiTabLocked) {
     return (
-      <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans">
-        <div className="max-w-md w-full bg-white border border-rose-200 rounded-2xl p-6 shadow-2xl text-center flex flex-col items-center gap-4">
+      <div className="min-h-screen bg-[var(--canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-sans">
+        <div className="max-w-md w-full bg-[var(--surface-1)] border border-rose-200 rounded-2xl p-6 shadow-2xl text-center flex flex-col items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center font-bold">
             <Icon name="lock" size="lg" />
           </div>
@@ -688,8 +688,8 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     if (testMode === 'In Office' && sessionTokenFromUrl && !showLoginFallback) {
       if (isResumeError) {
         return (
-          <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans text-center">
-            <div className="max-w-md w-full bg-white border border-rose-200 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3">
+          <div className="min-h-screen bg-[var(--canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-sans text-center">
+            <div className="max-w-md w-full bg-[var(--surface-1)] border border-rose-200 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-3">
               <Icon name="alert-triangle" size="lg" className="text-rose-600" />
               <h2 className="text-lg font-extrabold text-rose-700 font-heading">Unable to Resolve Token Link</h2>
               <p className="text-xs text-slate-500">
@@ -707,7 +707,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
         );
       }
       return (
-        <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans">
+        <div className="min-h-screen bg-[var(--canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-sans">
           <div className="flex flex-col items-center gap-3 text-slate-500 text-xs font-semibold">
             <Icon name="spinner" size="lg" className="animate-spin text-blue-600" />
             <span>{isResuming ? 'Loading your assessment session…' : 'Preparing your assessment session…'}</span>
@@ -717,8 +717,8 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
     }
 
     return (
-      <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans relative">
-        <div className="max-w-lg w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col gap-5">
+      <div className="min-h-screen bg-[var(--canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-sans relative">
+        <div className="max-w-lg w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col gap-5">
           {testMode === 'In Office' ? (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1 text-center">
@@ -845,8 +845,8 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   // ── 2. PRE-EXAM INSTRUCTIONS & WELCOME SCREEN (With Round-Wise Time Limits) ──
   if (examStep === 'instructions') {
     return (
-      <div className="h-screen w-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-3 sm:p-5 font-sans overflow-hidden">
-        <div className="max-w-5xl w-full bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[96vh] overflow-y-auto">
+      <div className="h-screen w-screen bg-[var(--canvas)] text-[var(--text-primary)] flex items-center justify-center p-3 sm:p-5 font-sans overflow-hidden">
+        <div className="max-w-5xl w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[96vh] overflow-y-auto">
 
           {/* Vacancy & Exam Header */}
           <div className="flex items-start justify-between border-b border-slate-200 pb-3 flex-wrap gap-2">
@@ -950,8 +950,8 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   // ── 3. POST-EXAM SUBMITTED SUMMARY SCREEN ────────────────────────────────
   if (examStep === 'submitted') {
     return (
-      <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans">
-        <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-2xl text-center flex flex-col items-center gap-4">
+      <div className="min-h-screen bg-[var(--canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-sans">
+        <div className="max-w-md w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl p-6 sm:p-8 shadow-2xl text-center flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center font-bold">
             <Icon name="check-circle" size="lg" />
           </div>
@@ -994,7 +994,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   // ── 4. LIVE PROCTORED EXAM INTERFACE ─────────────────────────────────────
   if (!currentQ) {
     return (
-      <div className="min-h-screen bg-[#f7f8fb] text-slate-900 flex items-center justify-center p-4 font-sans">
+      <div className="min-h-screen bg-[var(--canvas)] text-[var(--text-primary)] flex items-center justify-center p-4 font-sans">
         <div className="flex flex-col items-center gap-3 text-slate-500 text-xs font-semibold">
           <Icon name="spinner" size="lg" className="animate-spin text-blue-600" />
           <span>Loading questions…</span>
@@ -1026,7 +1026,7 @@ export const CandidateExamPortal: React.FC<CandidateExamPortalProps> = ({
   });
 
   return (
-    <div className="h-screen w-screen bg-[#f7f8fb] text-slate-900 flex flex-col font-sans select-none overflow-hidden">
+    <div className="h-screen w-screen bg-[var(--canvas)] text-[var(--text-primary)] flex flex-col font-sans select-none overflow-hidden">
 
       {/* ── Top Header Navigation Bar ───────────────────────────────────────── */}
       <header className="h-14 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between shrink-0 shadow-2xs">
