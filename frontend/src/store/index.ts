@@ -2,11 +2,13 @@ import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import { stepApi } from './services/api';
 import notificationReducer from './ui/notificationSlice';
+import authReducer from './auth/authSlice';
 
 export const store = configureStore({
   reducer: {
     [stepApi.reducerPath]: stepApi.reducer,
     notification: notificationReducer,
+    auth: authReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -38,3 +40,4 @@ export * from './ui/notificationSlice';
 export * from './ui/notification.types';
 export * from './ui/notification.constants';
 export * from './ui/notification.utils';
+export * from './auth/authSlice';

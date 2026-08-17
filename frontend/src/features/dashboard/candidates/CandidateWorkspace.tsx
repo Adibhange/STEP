@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Icon } from "@/design-system";
+import { motion } from "framer-motion";
+import { Icon, tactilePopCardVariant } from "@/design-system";
 import { FilterBar } from "../shared/FilterBar";
 import { TablePagination } from "../shared/TablePagination";
 import { CandidateTable } from "./CandidateTable";
@@ -20,10 +21,15 @@ const ROWS_PER_PAGE_DEFAULT = 10;
 /**
  * STEP Enterprise CandidateWorkspace
  *
- * Sourced 100% dynamically from backend candidates API.
+ * Streamlined High-Density Table Workspace with Micro-Interactions:
+ * - Direct table layout (Zero unnecessary KPI card overhead)
+ * - Keyboard shortcuts (Ctrl+K / ⌘K instant search focus)
+ * - Smooth 150ms hover state transitions and ambient surface depth
+ * - Excel exporter and quick progress modal
  */
 export const CandidateWorkspace: React.FC = () => {
   const router = useRouter();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { data: apiCandidatesResponse, isLoading } = useGetCandidatesQuery();
 
   const apiCandidates: DashboardCandidate[] = useMemo(() => {
@@ -56,12 +62,23 @@ export const CandidateWorkspace: React.FC = () => {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedProgressCandidate, setSelectedProgressCandidate] = useState<DashboardCandidate | null>(null);
-  const [progressViewMode, setProgressViewMode] = useState<'modal' | 'drawer' | 'popover'>('modal');
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeFilters, setActiveFilters] = useState<ActiveFilter>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(ROWS_PER_PAGE_DEFAULT);
+
+  // Global Ctrl+K shortcut listener to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleFilterChange = useCallback((filterId: string, value: string) => {
     setActiveFilters((prev) => ({ ...prev, [filterId]: value }));
@@ -95,7 +112,6 @@ export const CandidateWorkspace: React.FC = () => {
       if (c.status) statusesSet.add(c.status.trim());
     });
 
-    // Populate standard options if dataset is sparse
     ['Applied', 'In-Progress', 'Offered', 'On Hold', 'Rejected', 'Hired'].forEach((s) => statusesSet.add(s));
     ['Registered', 'Screening', 'Assessment', 'Interview', 'HR Round', 'Director Round'].forEach((st) => stagesSet.add(st));
 
@@ -165,7 +181,7 @@ export const CandidateWorkspace: React.FC = () => {
     }
     if (activeFilters.stage) {
       const targetStage = activeFilters.stage.toLowerCase().trim();
-      result = result.filter((c) => (c.stage || '').toLowerCase().trim() === targetStage);
+      result = result.filter((c) => (c.stage || '').toLowerCase().trim().includes(targetStage));
     }
     if (activeFilters.hiringLocation) {
       const targetHiringLoc = activeFilters.hiringLocation.toLowerCase().trim();
@@ -203,21 +219,27 @@ export const CandidateWorkspace: React.FC = () => {
   const filterKey = `${currentPage}-${JSON.stringify(activeFilters)}-${search}`;
 
   return (
-    <section
+    <motion.section
+      variants={tactilePopCardVariant}
       className="bg-[var(--surface-1)] rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-[var(--shadow-xs)] flex flex-col relative z-0"
       aria-label="Candidate workspace"
     >
+      {/* Top Highlight Catch */}
+      <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none rounded-t-[var(--radius-lg)]" />
+
       {/* Header Row */}
       <div className="flex items-center justify-between gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[var(--border-default)] bg-[var(--surface-1)] rounded-t-[var(--radius-lg)] relative z-30 overflow-visible min-w-0">
+        {/* Title & Count Badge */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <h2 className="text-sm sm:text-[var(--type-h3-size)] font-extrabold text-[var(--text-primary)] tracking-tight font-heading">
             Candidates
           </h2>
-          <span className="text-[11px] sm:text-[11.5px] font-extrabold text-[var(--text-on-accent)] bg-[var(--accent-indigo)] px-2 sm:px-2.5 py-0.5 rounded-full font-mono shadow-2xs shrink-0">
+          <span className="text-[11px] sm:text-[11.5px] font-extrabold text-[var(--text-on-accent)] bg-[var(--accent-indigo)] px-2 sm:px-2.5 py-0.5 rounded-full font-mono shadow-2xs shrink-0 tabular-figures">
             {filteredCandidates.length}
           </span>
         </div>
 
+        {/* Desktop Filter Bar */}
         <div className="flex-1 min-w-0 relative hidden md:block">
           <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-[var(--surface-1)] to-transparent z-10" />
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-[var(--surface-1)] to-transparent z-10" />
@@ -233,6 +255,7 @@ export const CandidateWorkspace: React.FC = () => {
           </div>
         </div>
 
+        {/* Search Input, Export Button & Add Candidate Button */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <div
             className={`relative flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-full border
@@ -249,6 +272,7 @@ export const CandidateWorkspace: React.FC = () => {
               className={`shrink-0 transition-opacity duration-150 ${searchFocused ? "opacity-100 text-[var(--accent-indigo)]" : "opacity-75 text-[var(--text-tertiary)]"}`}
             />
             <input
+              ref={searchInputRef}
               type="search"
               placeholder="Search candidates..."
               value={search}
@@ -268,13 +292,10 @@ export const CandidateWorkspace: React.FC = () => {
                 className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 aria-label="Clear search"
               >
-                <Icon
-                  name="x"
-                  size="xs"
-                />
+                <Icon name="x" size="xs" />
               </button>
             ) : (
-              <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--surface-3)] border border-[var(--border-default)] text-[9.5px] font-mono font-bold text-[var(--text-tertiary)] shrink-0">
+              <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--surface-3)] border border-[var(--border-default)] text-[9.5px] font-mono font-bold text-[var(--text-tertiary)] shrink-0 select-none">
                 ⌘K
               </kbd>
             )}
@@ -317,10 +338,7 @@ export const CandidateWorkspace: React.FC = () => {
             aria-label="Add new candidate"
             title="Add new candidate"
           >
-            <Icon
-              name="plus"
-              size="xs"
-            />
+            <Icon name="plus" size="xs" />
             <span className="whitespace-nowrap hidden sm:inline">
               Add Candidate
             </span>
@@ -328,6 +346,7 @@ export const CandidateWorkspace: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile Filter Bar */}
       <div className="md:hidden border-b border-[var(--border-default)] bg-[var(--surface-1)]">
         <div className="overflow-x-auto scrollbar-none flex items-center gap-2 px-4 py-2.5">
           <FilterBar
@@ -341,6 +360,7 @@ export const CandidateWorkspace: React.FC = () => {
         </div>
       </div>
 
+      {/* Candidate Table */}
       <div className="relative z-10">
         <CandidateTable
           candidates={paginatedCandidates}
@@ -351,6 +371,7 @@ export const CandidateWorkspace: React.FC = () => {
         />
       </div>
 
+      {/* Table Pagination */}
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -360,18 +381,18 @@ export const CandidateWorkspace: React.FC = () => {
         onRowsPerPageChange={(n) => setRowsPerPage(n)}
       />
 
+      {/* Modals & Dialogs */}
       <AddCandidateDialog
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />
 
-      {/* Option 1: Compact Modal Dialog for Quick Progress View */}
       <CandidateProgressModal
         candidate={selectedProgressCandidate}
         isOpen={selectedProgressCandidate !== null}
         onClose={() => setSelectedProgressCandidate(null)}
         onNavigateToProfile={(id) => router.push(`/dashboard/candidates/${id}`)}
       />
-    </section>
+    </motion.section>
   );
 };

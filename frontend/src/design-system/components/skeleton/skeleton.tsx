@@ -15,16 +15,16 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   ...props
 }) => {
   const variantStyles: Record<string, string> = {
-    text: 'h-[1rem] w-full rounded-xs',
+    text: 'h-[1rem] w-full rounded-md',
     circular: 'rounded-full shrink-0',
-    rectangular: 'w-full h-[3rem] rounded-sm',
+    rectangular: 'w-full h-[3rem] rounded-lg',
   };
 
   return (
     <div
       role="status"
       aria-label="Loading..."
-      className={`animate-pulse bg-[var(--surface-subtle)] border border-[var(--border-subtle)]/50 ${variantStyles[variant]} ${className}`}
+      className={`animate-pulse bg-[var(--surface-3)] border border-[var(--border-default)]/60 ${variantStyles[variant]} ${className}`}
       style={{
         width: typeof width === 'number' ? `${width}px` : width,
         height: typeof height === 'number' ? `${height}px` : height,

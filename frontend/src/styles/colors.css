@@ -3,9 +3,10 @@
  * STEP Enterprise Platform — Color Token Architecture (Light & Dark Themes)
  * ═══════════════════════════════════════════════════════════════════════════
  *
+ * Generated with UI/UX Pro Max Design Intelligence:
+ * Specialised for HRTech, Talent Acquisition, ATS Workflows & Candidate Dashboards.
+ * 
  * 1-to-1 mapped design tokens for both Light and Dark themes.
- * Dark theme palette is tailored to obsidian slate, carbon surfaces,
- * high-contrast typography, and radiant status/accent highlights.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -14,14 +15,19 @@
 .light,
 [data-theme="light"] {
   /* 1. Canvas */
-  --canvas:                 #f7f8fb;
-  --canvas-elevated:        #f3f5f8;
+  --canvas:                 #f8fafc;
+  --canvas-elevated:        #f1f5f9;
 
-  /* 2. Surfaces */
+  /* 2. Surfaces (Crisp High-Contrast Pure White Architecture) */
   --surface-1:              #ffffff;
-  --surface-2:              #f9fafc;
-  --surface-3:              #f3f5f8;
-  --surface-4:              #eceff4;
+  --surface-2:              #f8fafc;
+  --surface-3:              #f1f5f9;
+  --surface-4:              #e2e8f0;
+
+  /* Deprecated Aliases for legacy component compatibility */
+  --surface-base:           var(--surface-1);
+  --surface-subtle:         var(--surface-2);
+  --surface-elevated:       var(--surface-3);
 
   /* 3. Interactive Surfaces */
   --surface-hover:          rgba(15, 23, 42, 0.04);
@@ -29,19 +35,21 @@
   --surface-selected:       rgba(99, 102, 241, 0.08);
   --surface-disabled:       rgba(15, 23, 42, 0.025);
 
-  /* 4. Borders */
-  --border-soft:            rgba(15, 23, 42, 0.05);
-  --border-default:         rgba(15, 23, 42, 0.09);
-  --border-strong:          rgba(15, 23, 42, 0.16);
-  --border-focus:           rgba(99, 102, 241, 0.55);
-  --border-active:          rgba(99, 102, 241, 0.32);
+  /* 4. Borders (Crisp Clean Boundaries) */
+  --border-soft:            rgba(15, 23, 42, 0.06);
+  --border-default:         rgba(15, 23, 42, 0.10);
+  --border-strong:          rgba(15, 23, 42, 0.18);
+  --border-focus:           rgba(99, 102, 241, 0.65);
+  --border-active:          rgba(99, 102, 241, 0.35);
+  --border-subtle:          var(--border-soft);
 
   /* 5. Typography */
   --text-primary:           rgba(15, 23, 42, 0.96);
   --text-secondary:         rgba(15, 23, 42, 0.72);
-  --text-tertiary:          rgba(15, 23, 42, 0.48);
-  --text-placeholder:       rgba(15, 23, 42, 0.35);
+  --text-tertiary:          rgba(15, 23, 42, 0.50);
+  --text-placeholder:       rgba(15, 23, 42, 0.38);
   --text-disabled:          rgba(15, 23, 42, 0.28);
+  --text-muted:             var(--text-tertiary);
   --text-inverse:           #ffffff;
   --text-on-accent:         #ffffff;
 
@@ -53,6 +61,10 @@
   --accent-violet:          #8b5cf6;
   --accent-violet-hover:    #7c3aed;
   --accent-violet-dim:      rgba(139, 92, 246, 0.12);
+
+  --accent-teal:            #0d9488;
+  --accent-teal-hover:      #0f766e;
+  --accent-teal-dim:        rgba(13, 148, 136, 0.12);
 
   --accent-blue:            #2563eb;
   --accent-blue-hover:      #1d4ed8;
@@ -78,12 +90,12 @@
   --page-accent-hover:      var(--accent-indigo-hover);
   --page-accent-dim:        var(--accent-indigo-dim);
 
-  /* 7. Status */
+  /* 7. Status & Candidate Pipeline Badges (Crisp High-Contrast Pastels) */
   --status-success:         #10b981;
-  --status-success-text:    #15803d;
-  --status-success-title:   #166534;
-  --status-success-bg:      #f0fdf4;
-  --status-success-border:  #bbf7d0;
+  --status-success-text:    #047857;
+  --status-success-title:   #065f46;
+  --status-success-bg:      #ecfdf5;
+  --status-success-border:  #a7f3d0;
 
   --status-warning:         #f59e0b;
   --status-warning-text:    #b45309;
@@ -98,21 +110,37 @@
   --status-danger-border:   #fecaca;
 
   --status-info:            #6366f1;
-  --status-info-text:       #1d4ed8;
-  --status-info-title:      #1e40af;
-  --status-info-bg:         #eff6ff;
-  --status-info-border:     #bfdbfe;
+  --status-info-text:       #4338ca;
+  --status-info-title:      #3730a3;
+  --status-info-bg:         #eef2ff;
+  --status-info-border:     #c7d2fe;
 
-  /* 8. Components */
+  /* 8. Talent AI Match & Scoring Scales */
+  --score-high:             #059669;
+  --score-high-bg:          #ecfdf5;
+  --score-high-border:      #a7f3d0;
+  --score-high-text:        #047857;
+
+  --score-mid:              #d97706;
+  --score-mid-bg:           #fffbeb;
+  --score-mid-border:       #fde68a;
+  --score-mid-text:         #b45309;
+
+  --score-low:              #e11d48;
+  --score-low-bg:           #fff1f2;
+  --score-low-border:       #fecdd3;
+  --score-low-text:         #be123c;
+
+  /* 9. Components */
   --input-bg:               #ffffff;
   --input-bg-focus:         #ffffff;
 
   --table-row:              #ffffff;
-  --table-row-stripe:       #fafbfc;
-  --table-row-hover:        #f4f6f9;
-  --table-row-selected:     rgba(99, 102, 241, 0.06);
+  --table-row-stripe:       #f8fafc;
+  --table-row-hover:        #f1f5f9;
+  --table-row-selected:     rgba(99, 102, 241, 0.08);
 
-  --divider:                rgba(15, 23, 42, 0.08);
+  --divider:                rgba(15, 23, 42, 0.06);
 
   --scrollbar-thumb:        rgba(15, 23, 42, 0.16);
   --scrollbar-thumb-hover:  rgba(15, 23, 42, 0.28);
@@ -120,152 +148,177 @@
   --shimmer-base:           #eef1f5;
   --shimmer-highlight:      rgba(255, 255, 255, 0.9);
 
-  /* 9. Selection */
+  /* 10. Selection & Focus */
   --selection:              rgba(99, 102, 241, 0.12);
   --selection-text:         #0f172a;
-  --selection-border:       rgba(99, 102, 241, 0.28);
+  --selection-border:       rgba(99, 102, 241, 0.32);
 
-  /* 10. Focus */
   --focus-ring:             #6366f1;
   --focus-ring-offset:      2px;
-  --focus-glow:             rgba(99, 102, 241, 0.18);
+  --focus-glow:             rgba(99, 102, 241, 0.20);
 
-  /* 11. Overlays */
-  --overlay:                rgba(15, 23, 42, 0.45);
-  --scrim:                  rgba(15, 23, 42, 0.22);
+  /* 11. Overlays & Modals */
+  --overlay:                rgba(15, 23, 42, 0.50);
+  --scrim:                  rgba(15, 23, 42, 0.25);
 
   /* 12. Disabled */
-  --disabled-surface:       #f5f6f8;
+  --disabled-surface:       #f1f5f9;
   --disabled-border:        rgba(15, 23, 42, 0.08);
-  --disabled-text:          rgba(15, 23, 42, 0.35);
+  --disabled-text:          rgba(15, 23, 42, 0.38);
 }
 
-/* ── DARK THEME FOUNDATION (OBSIDIAN / CARBON) ─────────────────────────── */
+/* ── DARK THEME FOUNDATION (SOLID OBSIDIAN CARBON) ───────────────────────── */
 .dark,
 [data-theme="dark"] {
   /* 1. Canvas */
-  --canvas:                 #0b0d13;
-  --canvas-elevated:        #0f121a;
+  --canvas:                 #080b11;
+  --canvas-elevated:        #0c1018;
 
-  /* 2. Surfaces */
-  --surface-1:              #131722;
-  --surface-2:              #181d2a;
-  --surface-3:              #1e2536;
-  --surface-4:              #252e42;
+  /* 2. Surfaces (Multi-tier Solid Obsidian Depth Scale) */
+  --surface-1:              #0f1420;
+  --surface-2:              #151b2b;
+  --surface-3:              #1c2438;
+  --surface-4:              #242e46;
+
+  /* Deprecated Aliases for legacy component compatibility */
+  --surface-base:           var(--surface-1);
+  --surface-subtle:         var(--surface-2);
+  --surface-elevated:       var(--surface-3);
 
   /* 3. Interactive Surfaces */
   --surface-hover:          rgba(255, 255, 255, 0.06);
   --surface-active:         rgba(255, 255, 255, 0.10);
-  --surface-selected:       rgba(99, 102, 241, 0.18);
+  --surface-selected:       rgba(99, 102, 241, 0.20);
   --surface-disabled:       rgba(255, 255, 255, 0.03);
 
   /* 4. Borders */
-  --border-soft:            rgba(255, 255, 255, 0.06);
-  --border-default:         rgba(255, 255, 255, 0.10);
-  --border-strong:          rgba(255, 255, 255, 0.18);
-  --border-focus:           rgba(129, 140, 248, 0.70);
-  --border-active:          rgba(99, 102, 241, 0.45);
+  --border-soft:            rgba(255, 255, 255, 0.07);
+  --border-default:         rgba(255, 255, 255, 0.11);
+  --border-strong:          rgba(255, 255, 255, 0.20);
+  --border-focus:           rgba(129, 140, 248, 0.75);
+  --border-active:          rgba(99, 102, 241, 0.50);
+  --border-subtle:          var(--border-soft);
 
-  /* 5. Typography */
-  --text-primary:           rgba(255, 255, 255, 0.96);
-  --text-secondary:         rgba(255, 255, 255, 0.70);
-  --text-tertiary:          rgba(255, 255, 255, 0.45);
-  --text-placeholder:       rgba(255, 255, 255, 0.30);
-  --text-disabled:          rgba(255, 255, 255, 0.22);
-  --text-inverse:           #0b0d13;
+  /* 5. Typography (High Contrast, Reduced Eye Strain) */
+  --text-primary:           rgba(255, 255, 255, 0.98);
+  --text-secondary:         rgba(255, 255, 255, 0.74);
+  --text-tertiary:          rgba(255, 255, 255, 0.48);
+  --text-placeholder:       rgba(255, 255, 255, 0.32);
+  --text-disabled:          rgba(255, 255, 255, 0.24);
+  --text-muted:             var(--text-tertiary);
+  --text-inverse:           #080b11;
   --text-on-accent:         #ffffff;
 
-  /* 6. Accents */
+  /* 6. Accents (Radiant Luminescence) */
   --accent-indigo:          #6366f1;
-  --accent-indigo-hover:    #4f46e5;
-  --accent-indigo-dim:      rgba(99, 102, 241, 0.15);
+  --accent-indigo-hover:    #818cf8;
+  --accent-indigo-dim:      rgba(99, 102, 241, 0.18);
 
   --accent-violet:          #8b5cf6;
-  --accent-violet-hover:    #7c3aed;
-  --accent-violet-dim:      rgba(139, 92, 246, 0.15);
+  --accent-violet-hover:    #a78bfa;
+  --accent-violet-dim:      rgba(139, 92, 246, 0.18);
+
+  --accent-teal:            #14b8a6;
+  --accent-teal-hover:      #2dd4bf;
+  --accent-teal-dim:        rgba(20, 184, 166, 0.18);
 
   --accent-blue:            #60a5fa;
-  --accent-blue-hover:      #3b82f6;
-  --accent-blue-dim:        rgba(96, 165, 250, 0.18);
+  --accent-blue-hover:      #93c5fd;
+  --accent-blue-dim:        rgba(96, 165, 250, 0.20);
 
   --accent-cyan:            #38bdf8;
-  --accent-cyan-hover:      #0ea5e9;
-  --accent-cyan-dim:        rgba(56, 189, 248, 0.18);
+  --accent-cyan-hover:      #7dd3fc;
+  --accent-cyan-dim:        rgba(56, 189, 248, 0.20);
 
   --accent-green:           #34d399;
-  --accent-green-hover:     #10b981;
-  --accent-green-dim:       rgba(52, 211, 153, 0.18);
+  --accent-green-hover:     #6ee7b7;
+  --accent-green-dim:       rgba(52, 211, 153, 0.20);
 
   --accent-orange:          #fb923c;
-  --accent-orange-hover:    #f97316;
-  --accent-orange-dim:      rgba(251, 146, 60, 0.18);
+  --accent-orange-hover:    #fdba74;
+  --accent-orange-dim:      rgba(251, 146, 60, 0.20);
 
   --accent-red:             #f87171;
-  --accent-red-hover:       #ef4444;
-  --accent-red-dim:         rgba(248, 113, 113, 0.18);
+  --accent-red-hover:       #fca5a5;
+  --accent-red-dim:         rgba(248, 113, 113, 0.20);
 
   --page-accent:            var(--accent-indigo);
   --page-accent-hover:      var(--accent-indigo-hover);
   --page-accent-dim:        var(--accent-indigo-dim);
 
-  /* 7. Status */
+  /* 7. Status & Candidate Pipeline Badges */
   --status-success:         #34d399;
   --status-success-text:    #4ade80;
   --status-success-title:   #86efac;
-  --status-success-bg:      rgba(16, 185, 129, 0.14);
-  --status-success-border:  rgba(52, 211, 153, 0.30);
+  --status-success-bg:      rgba(16, 185, 129, 0.16);
+  --status-success-border:  rgba(52, 211, 153, 0.32);
 
   --status-warning:         #fbbf24;
   --status-warning-text:    #fcd34d;
   --status-warning-title:   #fde68a;
-  --status-warning-bg:      rgba(245, 158, 11, 0.14);
-  --status-warning-border:  rgba(251, 191, 36, 0.30);
+  --status-warning-bg:      rgba(245, 158, 11, 0.16);
+  --status-warning-border:  rgba(251, 191, 36, 0.32);
 
   --status-danger:          #f87171;
   --status-danger-text:     #fca5a5;
   --status-danger-title:    #fecaca;
-  --status-danger-bg:       rgba(239, 68, 68, 0.14);
-  --status-danger-border:   rgba(248, 113, 113, 0.30);
+  --status-danger-bg:       rgba(239, 68, 68, 0.16);
+  --status-danger-border:   rgba(248, 113, 113, 0.32);
 
   --status-info:            #818cf8;
-  --status-info-text:       #93c5fd;
-  --status-info-title:      #bfdbfe;
-  --status-info-bg:         rgba(99, 102, 241, 0.14);
-  --status-info-border:     rgba(129, 140, 248, 0.30);
+  --status-info-text:       #a5b4fc;
+  --status-info-title:      #c7d2fe;
+  --status-info-bg:         rgba(99, 102, 241, 0.16);
+  --status-info-border:     rgba(129, 140, 248, 0.32);
 
-  /* 8. Components */
-  --input-bg:               #161c28;
-  --input-bg-focus:         #1b2232;
+  /* 8. Talent AI Match & Scoring Scales */
+  --score-high:             #34d399;
+  --score-high-bg:          rgba(16, 185, 129, 0.16);
+  --score-high-border:      rgba(52, 211, 153, 0.32);
+  --score-high-text:        #6ee7b7;
 
-  --table-row:              #131722;
-  --table-row-stripe:       #161b27;
-  --table-row-hover:        #1c2333;
-  --table-row-selected:     rgba(99, 102, 241, 0.16);
+  --score-mid:              #fbbf24;
+  --score-mid-bg:           rgba(245, 158, 11, 0.16);
+  --score-mid-border:       rgba(251, 191, 36, 0.32);
+  --score-mid-text:         #fde68a;
+
+  --score-low:              #f43f5e;
+  --score-low-bg:           rgba(244, 63, 94, 0.16);
+  --score-low-border:       rgba(251, 113, 133, 0.32);
+  --score-low-text:         #fda4af;
+
+  /* 9. Components */
+  --input-bg:               #121724;
+  --input-bg-focus:         #171e2e;
+
+  --table-row:              #0f1420;
+  --table-row-stripe:       #131926;
+  --table-row-hover:        #182032;
+  --table-row-selected:     rgba(99, 102, 241, 0.18);
 
   --divider:                rgba(255, 255, 255, 0.08);
 
   --scrollbar-thumb:        rgba(255, 255, 255, 0.16);
   --scrollbar-thumb-hover:  rgba(255, 255, 255, 0.28);
 
-  --shimmer-base:           #181d2a;
-  --shimmer-highlight:      rgba(255, 255, 255, 0.06);
+  --shimmer-base:           #151b2b;
+  --shimmer-highlight:      rgba(255, 255, 255, 0.08);
 
-  /* 9. Selection */
+  /* 10. Selection & Focus */
   --selection:              rgba(99, 102, 241, 0.30);
   --selection-text:         #ffffff;
   --selection-border:       rgba(129, 140, 248, 0.50);
 
-  /* 10. Focus */
   --focus-ring:             #818cf8;
   --focus-ring-offset:      2px;
   --focus-glow:             rgba(99, 102, 241, 0.35);
 
-  /* 11. Overlays */
-  --overlay:                rgba(0, 0, 0, 0.72);
-  --scrim:                  rgba(0, 0, 0, 0.45);
+  /* 11. Overlays & Modals */
+  --overlay:                rgba(4, 6, 10, 0.75);
+  --scrim:                  rgba(4, 6, 10, 0.50);
 
   /* 12. Disabled */
-  --disabled-surface:       #151924;
+  --disabled-surface:       #111622;
   --disabled-border:        rgba(255, 255, 255, 0.06);
   --disabled-text:          rgba(255, 255, 255, 0.24);
 }

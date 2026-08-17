@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { MetricCard } from './MetricCard';
+import { staggerContainer, kpiCardVariant } from '@/design-system';
 import type { KpiItem } from '@/features/dashboard/types/dashboard.types';
 
 interface MetricGridProps {
@@ -13,7 +15,7 @@ interface MetricGridProps {
 /**
  * STEP Enterprise MetricGrid
  *
- * Horizontal grid rendering MetricCard components.
+ * Horizontal grid rendering MetricCard components with Framer Motion stagger cascade.
  * Top clearance padding (pt-1.5) ensures hover lift (-2px) is never clipped.
  */
 export const MetricGrid: React.FC<MetricGridProps> = ({ items, loading = false }) => {
@@ -36,16 +38,24 @@ export const MetricGrid: React.FC<MetricGridProps> = ({ items, loading = false }
   }
 
   return (
-    <div
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
       className="flex flex-nowrap gap-2.5 overflow-x-auto pt-1.5 pb-1 px-0.5 scrollbar-step w-full"
       role="list"
       aria-label="Key metrics"
     >
       {items.map((item) => (
-        <div key={item.id} role="listitem" className="min-w-[160px] flex-1 shrink-0">
+        <motion.div
+          key={item.id}
+          variants={kpiCardVariant}
+          role="listitem"
+          className="min-w-[160px] flex-1 shrink-0"
+        >
           <MetricCard item={item} />
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 };

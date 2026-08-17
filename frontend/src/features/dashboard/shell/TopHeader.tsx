@@ -7,6 +7,7 @@ import { Icon, Badge } from '@/design-system';
 import type { QuickNotification, CurrentUser } from '@/features/dashboard/types/dashboard.types';
 import { useIdleTimerContext } from '@/hooks/useIdleTimer';
 import { useTheme, type Theme } from '@/providers/theme-provider';
+import { useAppDispatch, useAppSelector, selectCurrentUser, logout } from '@/store';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface TopHeaderProps {
@@ -19,6 +20,8 @@ interface TopHeaderProps {
 export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const dispatch = useAppDispatch();
+  const reduxUser = useAppSelector(selectCurrentUser);
 
   const { isIdle, formattedTime, resetTimer } = useIdleTimerContext();
   const { theme, toggleTheme, setThemeWithTransition } = useTheme();
@@ -26,44 +29,34 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const [user, setUser] = useState<CurrentUser>({
-    name: 'Administrator',
-    email: 'admin@sthapatya.com',
-    role: 'System Administrator',
-    avatarInitials: 'SA',
-  });
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const displayName = mounted && reduxUser?.name ? reduxUser.name : 'Administrator';
+  const displayEmail = mounted && reduxUser?.email ? reduxUser.email : 'admin@sthapatya.com';
+  const displayRole = mounted && reduxUser?.role ? reduxUser.role : 'System Administrator';
+  const avatarInitials = displayName
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  const user: CurrentUser = {
+    name: displayName,
+    email: displayEmail,
+    role: displayRole,
+    avatarInitials,
+  };
 
   const notifications: QuickNotification[] = [];
 
   const isDirector = user.role?.toLowerCase().includes('director') ?? false;
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedName = localStorage.getItem('step_name');
-      const email = localStorage.getItem('step_email');
-      const role = localStorage.getItem('step_role');
-
-      if (storedName || email || role) {
-        const displayName = storedName || (email ? email.split('@')[0] : 'User');
-        const initials = displayName
-          .split(' ')
-          .map((w) => w[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase();
-
-        setUser({
-          name: displayName,
-          email: email || 'user@sthapatya.com',
-          role: role || 'User',
-          avatarInitials: initials || displayName.slice(0, 2).toUpperCase(),
-        });
-      }
-    }
-  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -391,11 +384,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
                     type="button"
                     onClick={() => {
                       setProfileOpen(false);
-                      if (typeof window !== 'undefined') {
-                        localStorage.removeItem('step_token');
-                        localStorage.removeItem('step_role');
-                        localStorage.removeItem('step_email');
-                      }
+                      dispatch(logout());
                       router.push('/');
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-[var(--status-danger)] hover:bg-[var(--status-danger-bg)] transition-colors cursor-pointer font-semibold"

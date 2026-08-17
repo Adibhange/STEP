@@ -215,9 +215,18 @@ export type { NotificationItem, NotificationVariant, NotificationAction } from '
 export { Icon } from './icon';
 export type { IconProps, IconSizeKey, IconStrokeKey, IconColorToken, IconName } from './icon';
 
-// Motion System Programmatic Tokens
+// Motion System Programmatic Tokens & Framer Motion Variants
 export { MOTION_DURATIONS } from './motion/durations';
 export { EASING_CURVES, EASING_CSS_STRINGS } from './motion/easing';
+export {
+  staggerContainer,
+  staggerFastContainer,
+  kpiCardVariant,
+  tactilePopCardVariant,
+  tactilePopItemVariant,
+  fadeSlideUpVariant,
+  scalePopVariant,
+} from './motion/variants';
 
 // UI Utilities & Ref Helpers
 export { composeRefs } from './utils/compose-refs';

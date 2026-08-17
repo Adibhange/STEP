@@ -2,13 +2,8 @@
 
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Badge, Icon } from '@/design-system';
-import { ActionMenu } from '../shared/ActionMenu';
+import { Icon } from '@/design-system';
 import { EmptyState } from '../shared/EmptyState';
-import {
-  CANDIDATE_STATUS_CONFIG,
-  type CandidateStatus,
-} from '../config/status.config';
 import { CANDIDATE_COLUMNS, type CandidateColumnId } from '../config/candidateColumns';
 import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
 
@@ -25,7 +20,7 @@ interface CandidateTableProps {
   filterKey?: string;
 }
 
-/** Render candidate initials avatar */
+/** Render candidate initials avatar with radiant border */
 const InitialsAvatar: React.FC<{ name: string }> = ({ name }) => {
   const initials = name
     .split(' ')
@@ -35,19 +30,20 @@ const InitialsAvatar: React.FC<{ name: string }> = ({ name }) => {
     .toUpperCase();
 
   const colors = [
-    ['--accent-indigo-dim', '--accent-indigo-hover'],
-    ['--accent-violet-dim', '--accent-violet-hover'],
-    ['--accent-blue-dim', '--accent-blue-hover'],
-    ['--accent-cyan-dim', '--accent-cyan-hover'],
-    ['--accent-green-dim', '--accent-green-hover'],
-    ['--accent-orange-dim', '--accent-orange-hover'],
+    ['--accent-indigo-dim', '--accent-indigo'],
+    ['--accent-violet-dim', '--accent-violet'],
+    ['--accent-teal-dim', '--accent-teal'],
+    ['--accent-blue-dim', '--accent-blue'],
+    ['--accent-cyan-dim', '--accent-cyan'],
+    ['--status-success-bg', '--status-success-text'],
+    ['--accent-orange-dim', '--accent-orange'],
   ];
   const colorIdx = name.charCodeAt(0) % colors.length;
   const [bg, fg] = colors[colorIdx];
 
   return (
     <span
-      className="w-5.5 h-5.5 md:w-6 md:h-6 xl:w-6.5 xl:h-6.5 2xl:w-7 2xl:h-7 rounded-full flex items-center justify-center text-[9.5px] md:text-[10px] xl:text-[11px] font-black shrink-0 transition-transform duration-150 hover:scale-105"
+      className="w-6 h-6 md:w-6.5 md:h-6.5 rounded-full flex items-center justify-center text-[10px] md:text-[10.5px] font-black shrink-0 transition-transform duration-150 group-hover:scale-105 shadow-2xs border border-white/10"
       style={{ background: `var(${bg})`, color: `var(${fg})` }}
       aria-hidden="true"
     >
@@ -81,8 +77,8 @@ const SkeletonRow: React.FC<{ cols: number }> = ({ cols }) => (
  *
  * Micro-interactions:
  * - Table filtering / pagination switching: Rows fade in (180ms easeOut)
- * - Row hover: 120ms background color transition
- * - Row action icons: Smooth fade in (opacity 0 -> 100) on row hover
+ * - Row hover: 120ms background color transition with left accent indicator
+ * - Row action icons: Smooth slide/glow on hover
  */
 export const CandidateTable: React.FC<CandidateTableProps> = ({
   candidates,
@@ -90,10 +86,6 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
   visibleColumnIds,
   onView,
   onViewProgress,
-  onResume,
-  onEdit,
-  onDelete,
-  onDownload,
   filterKey = 'table-root',
 }) => {
   const columns = useMemo(
@@ -110,7 +102,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       return {
         bg: 'var(--accent-cyan-dim)',
         color: 'var(--accent-cyan)',
-        border: 'rgba(8, 145, 178, 0.30)',
+        border: 'rgba(8, 145, 178, 0.35)',
         icon: 'filter',
       };
     }
@@ -118,7 +110,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       return {
         bg: 'var(--accent-violet-dim)',
         color: 'var(--accent-violet)',
-        border: 'rgba(139, 92, 246, 0.30)',
+        border: 'rgba(139, 92, 246, 0.35)',
         icon: 'clipboard-check',
       };
     }
@@ -126,7 +118,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       return {
         bg: 'var(--accent-indigo-dim)',
         color: 'var(--accent-indigo)',
-        border: 'rgba(99, 102, 241, 0.30)',
+        border: 'rgba(99, 102, 241, 0.35)',
         icon: 'mic',
       };
     }
@@ -142,7 +134,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       return {
         bg: 'var(--accent-blue-dim)',
         color: 'var(--accent-blue)',
-        border: 'rgba(37, 99, 235, 0.30)',
+        border: 'rgba(37, 99, 235, 0.35)',
         icon: 'send',
       };
     }
@@ -158,7 +150,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       return {
         bg: 'var(--accent-orange-dim)',
         color: 'var(--accent-orange)',
-        border: 'rgba(234, 88, 12, 0.30)',
+        border: 'rgba(234, 88, 12, 0.35)',
         icon: 'pause-circle',
       };
     }
@@ -187,8 +179,10 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
         return (
           <td
             key={col.id}
-            className="pl-3.5 pr-2.5 py-1.5 md:py-2 w-12 text-center"
+            className="pl-3.5 pr-2.5 py-1.5 md:py-2 w-12 text-center relative"
           >
+            {/* Left hover indicator line */}
+            <div className="absolute left-0 inset-y-1 w-[2.5px] rounded-r bg-[var(--accent-indigo)] opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none" />
             <InitialsAvatar name={candidate.name} />
           </td>
         );
@@ -197,10 +191,10 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
         return (
           <td key={col.id} className="pl-2.5 pr-3 py-1.5 md:py-2 min-w-0">
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className={`${textSize} font-semibold text-[var(--text-primary)] truncate font-heading group-hover:text-[var(--accent-indigo)] transition-colors duration-150 block`} title={candidate.name}>
+              <span className={`${textSize} font-bold text-[var(--text-primary)] truncate font-heading group-hover:text-[var(--accent-indigo)] transition-colors duration-150 block`} title={candidate.name}>
                 {candidate.name}
               </span>
-              <span className="text-[10px] text-[var(--text-secondary)] font-mono opacity-85 truncate block">
+              <span className="text-[10px] text-[var(--text-tertiary)] font-mono opacity-90 truncate block">
                 {candidate.code}
               </span>
             </div>
@@ -228,8 +222,8 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       case 'experience':
         return (
           <td key={col.id} className={cellPadding}>
-            <span className={`${textSize} text-[var(--text-secondary)] font-medium whitespace-nowrap`}>
-              {candidate.experience || `${candidate.experienceYears} Years`}
+            <span className={`${textSize} text-[var(--text-secondary)] font-medium tabular-figures whitespace-nowrap`}>
+              {candidate.experience || `${candidate.experienceYears ?? 0} Years`}
             </span>
           </td>
         );
@@ -250,7 +244,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
                 color: badgeStyle.color,
                 borderColor: badgeStyle.border,
               }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border whitespace-nowrap font-sans shadow-2xs truncate max-w-full hover:scale-105 transition-transform cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border whitespace-nowrap font-sans shadow-2xs truncate max-w-full hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
               title={`Click to view ${candidate.name}'s live pipeline progress`}
             >
               <Icon name={badgeStyle.icon as any} size="xs" className="shrink-0 opacity-85" />
@@ -295,7 +289,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
       case 'appliedDate':
         return (
           <td key={col.id} className={cellPadding}>
-            <span className={`${textSize} text-[var(--text-secondary)] font-mono font-tabular-nums whitespace-nowrap`}>
+            <span className={`${textSize} text-[var(--text-secondary)] font-mono tabular-figures whitespace-nowrap`}>
               {new Date(candidate.appliedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
             </span>
           </td>
@@ -311,7 +305,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
                 if (onViewProgress) onViewProgress(candidate);
                 else onView?.(candidate);
               }}
-              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)] text-[11px] font-semibold hover:bg-[var(--accent-indigo-dim)] hover:border-[var(--accent-indigo)] hover:text-[var(--accent-indigo)] transition-all duration-150 cursor-pointer shadow-2xs whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)] text-[11px] font-semibold hover:bg-[var(--accent-indigo-dim)] hover:border-[var(--accent-indigo)] hover:text-[var(--accent-indigo)] hover:-translate-y-[0.5px] active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-2xs whitespace-nowrap"
               title={`View ${candidate.name}'s hiring progress flow`}
             >
               <Icon name="trending-up" size="xs" className="text-[var(--accent-indigo)]" />
@@ -352,7 +346,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
         </colgroup>
 
         {/* Sticky Column headers */}
-        <thead className="sticky top-0 z-10 bg-[var(--surface-2)] shadow-xs">
+        <thead className="sticky top-0 z-10 bg-[var(--surface-2)]/95 backdrop-blur-[12px] shadow-xs">
           <tr className="border-b border-[var(--border-soft)]">
             {columns.map((col) => {
               const isAvatar = col.id === 'avatar';
@@ -388,14 +382,14 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
           </tr>
         </thead>
 
-        {/* Body with Smooth 180ms Fade Animation on Filter/Page Change */}
+        {/* Body with Smooth Fade Animation on Filter/Page Change */}
         <AnimatePresence mode="wait">
           <motion.tbody
             key={filterKey}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15, ease: [0.0, 0.0, 0.2, 1] }}
           >
             {loading ? (
               Array.from({ length: 10 }).map((_, i) => (
@@ -420,7 +414,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onView?.(candidate); }}
                   title={`Open ${candidate.name}'s profile`}
-                  className={`group border-b border-[var(--border-soft)] hover:bg-[var(--surface-hover)] transition-colors duration-120 cursor-pointer select-none
+                  className={`group border-b border-[var(--border-soft)] hover:bg-[var(--surface-hover)] transition-colors duration-150 cursor-pointer select-none relative
                     ${rowIdx % 2 === 1 ? 'bg-[var(--table-row-stripe)]' : 'bg-[var(--table-row)]'}`}
                 >
                   {columns.map((col) => renderCell(col, candidate))}

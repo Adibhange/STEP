@@ -379,7 +379,7 @@ export const ScheduleTestModal: React.FC<ScheduleTestModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="dialog-card rounded-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         

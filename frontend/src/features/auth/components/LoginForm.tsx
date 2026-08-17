@@ -9,23 +9,12 @@ import React, {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/design-system';
-import { useAppDispatch, notifySuccess, notifyError, notifyInfo } from '@/store';
+import { useAppDispatch, setCredentials, notifySuccess, notifyError, notifyInfo } from '@/store';
 import { useLoginMutation, useDirectorPinLoginMutation, type ApiEnvelope, type AuthResultData } from '@/store/services/api';
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   const body = (err as { data?: Partial<ApiEnvelope<unknown>> } | undefined)?.data;
   return body?.message || fallback;
-}
-
-function persistSession(payload: AuthResultData) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('step_token', payload.accessToken);
-  localStorage.setItem('step_refresh_token', payload.refreshToken);
-  localStorage.setItem('step_email', payload.user?.email || '');
-  localStorage.setItem('step_role', payload.user?.role || '');
-  localStorage.setItem('step_name', `${payload.user?.firstName || ''} ${payload.user?.lastName || ''}`.trim());
-  localStorage.setItem('step_emp_code', payload.user?.employeeCode || '');
-  localStorage.setItem('step_user_id', payload.user?.id ? String(payload.user.id) : '');
 }
 
 type AuthMode = 'standard' | 'director';
@@ -270,7 +259,19 @@ export const LoginForm: React.FC = () => {
     setLoading(true);
     try {
       const res = await login({ email: email.value, password: password.value }).unwrap();
-      persistSession(res.data);
+      dispatch(
+        setCredentials({
+          token: res.data.accessToken,
+          refreshToken: res.data.refreshToken,
+          user: {
+            id: res.data.user?.id,
+            name: `${res.data.user?.firstName || ''} ${res.data.user?.lastName || ''}`.trim(),
+            email: res.data.user?.email || '',
+            role: res.data.user?.role || '',
+            employeeCode: res.data.user?.employeeCode || '',
+          },
+        })
+      );
       dispatch(notifySuccess({ title: 'Welcome back', description: 'Redirecting to your workspace…' }));
       router.push('/dashboard');
     } catch (err) {
@@ -291,7 +292,19 @@ export const LoginForm: React.FC = () => {
       setLoading(true);
       try {
         const res = await directorPinLogin({ pin: v }).unwrap();
-        persistSession(res.data);
+        dispatch(
+          setCredentials({
+            token: res.data.accessToken,
+            refreshToken: res.data.refreshToken,
+            user: {
+              id: res.data.user?.id,
+              name: `${res.data.user?.firstName || ''} ${res.data.user?.lastName || ''}`.trim(),
+              email: res.data.user?.email || '',
+              role: res.data.user?.role || '',
+              employeeCode: res.data.user?.employeeCode || '',
+            },
+          })
+        );
         dispatch(notifySuccess({ title: 'Director clearance verified', description: 'Accessing governance workspace…' }));
         router.push('/dashboard');
       } catch (err) {

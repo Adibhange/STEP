@@ -2,8 +2,10 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icon } from '@/design-system';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { Icon, Skeleton } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
+import { staggerContainer, staggerFastContainer, fadeSlideUpVariant, scalePopVariant } from '@/design-system/motion';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 import { ScheduleTestModal } from '@/features/assessments/components/ScheduleTestModal';
 import {
@@ -103,18 +105,18 @@ const FormSelect = ({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs font-semibold flex items-center justify-between gap-2 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
+        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-between gap-2 hover:border-[var(--border-strong)] focus-ring-step transition-all cursor-pointer"
       >
         <span className="truncate">{selected ? selected.label : value}</span>
         <Icon
           name="chevron-down"
           size="xs"
-          className={`text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180 text-emerald-600' : ''}`}
+          className={`text-[var(--text-tertiary)] shrink-0 transition-transform ${open ? 'rotate-180 text-[var(--accent-indigo)]' : ''}`}
         />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute left-0 top-full mt-1 w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl shadow-[var(--shadow-lg)] z-50 p-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -123,11 +125,14 @@ const FormSelect = ({
                 onChange(opt.value);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${opt.value === value ? 'bg-emerald-50 text-emerald-800 font-bold' : 'text-slate-700 hover:bg-slate-50'
-                }`}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                opt.value === value
+                  ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold'
+                  : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+              }`}
             >
               <span className="truncate">{opt.label}</span>
-              {opt.value === value && <Icon name="check-circle" size="xs" className="text-emerald-600 shrink-0" />}
+              {opt.value === value && <Icon name="check-circle" size="xs" className="text-[var(--accent-indigo)] shrink-0" />}
             </button>
           ))}
         </div>
@@ -209,35 +214,35 @@ const FormDatePicker = ({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs font-semibold flex items-center justify-between hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
+        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-between hover:border-[var(--border-strong)] focus-ring-step transition-all cursor-pointer"
       >
-        <span className="font-mono">{formattedDisplay}</span>
-        <Icon name="calendar" size="xs" className="text-slate-400" />
+        <span className="font-mono tabular-figures">{formattedDisplay}</span>
+        <Icon name="calendar" size="xs" className="text-[var(--text-tertiary)]" />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-100">
+        <div className="absolute left-0 top-full mt-1 w-[260px] bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl shadow-[var(--shadow-xl)] z-50 p-3 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-[var(--border-soft)]">
             <button
               type="button"
               onClick={() => setViewMonth((m) => (m === 0 ? (setViewYear((y) => y - 1), 11) : m - 1))}
-              className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+              className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
             >
               <Icon name="chevron-left" size="xs" />
             </button>
-            <span className="font-bold text-xs text-slate-800 font-heading">
+            <span className="font-bold text-xs text-[var(--text-primary)] font-heading">
               {monthName} {viewYear}
             </span>
             <button
               type="button"
               onClick={() => setViewMonth((m) => (m === 11 ? (setViewYear((y) => y + 1), 0) : m + 1))}
-              className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+              className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
             >
               <Icon name="chevron-right" size="xs" />
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-[10px] font-bold text-slate-400 text-center mb-1 font-mono">
+          <div className="grid grid-cols-7 gap-1 text-[10px] font-bold text-[var(--text-tertiary)] text-center mb-1 font-mono">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
               <div key={d}>{d}</div>
             ))}
@@ -254,12 +259,13 @@ const FormDatePicker = ({
                     onChange(d.dateStr);
                     setOpen(false);
                   }}
-                  className={`h-7 w-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer ${isSelected
-                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
-                    : d.isCurrentMonth
-                      ? 'text-slate-700 hover:bg-slate-100'
-                      : 'text-slate-300'
-                    }`}
+                  className={`h-7 w-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer tabular-figures ${
+                    isSelected
+                      ? 'bg-[var(--accent-indigo)] text-white font-bold shadow-2xs'
+                      : d.isCurrentMonth
+                      ? 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+                      : 'text-[var(--text-disabled)]'
+                  }`}
                 >
                   {d.day}
                 </button>
@@ -272,14 +278,215 @@ const FormDatePicker = ({
   );
 };
 
+// ── Option 2: Tactile Pop-In (Scale: 0.90 ➔ 1.0 Spring Pop) ────────────────
+const applePopContainer: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.02,
+    },
+  },
+};
+
+const applePopCardLeft: Variants = {
+  hidden: { opacity: 0, scale: 0.88, y: 24 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      damping: 20,
+      stiffness: 280,
+      mass: 0.8,
+    },
+  },
+};
+
+const applePopCardRight: Variants = {
+  hidden: { opacity: 0, scale: 0.88, y: 24 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      damping: 20,
+      stiffness: 280,
+      mass: 0.8,
+      delay: 0.04,
+    },
+  },
+};
+
+const applePopCardDocs: Variants = {
+  hidden: { opacity: 0, scale: 0.90, y: 20 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      damping: 20,
+      stiffness: 280,
+      mass: 0.8,
+      delay: 0.08,
+    },
+  },
+};
+
+const applePopStageItem: Variants = {
+  hidden: { opacity: 0, scale: 0.92, y: 14 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      damping: 18,
+      stiffness: 300,
+      mass: 0.7,
+    },
+  },
+};
+
+const applePopDocItem: Variants = {
+  hidden: { opacity: 0, scale: 0.92, x: -10 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    x: 0,
+    transition: {
+      type: 'spring',
+      damping: 18,
+      stiffness: 300,
+    },
+  },
+};
+
+const applePopInfoSection: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const },
+  },
+};
+
+/**
+ * High-fidelity Skeleton Placeholder loader for Candidate Profile Page
+ * Perfectly aligned with the loaded card layout
+ */
+export const CandidateProfileSkeleton: React.FC = () => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.2 }}
+    className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[var(--canvas)] min-h-screen text-[13px] font-sans relative"
+  >
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
+      {/* Left Column Skeleton */}
+      <div className="lg:col-span-4 flex flex-col gap-3.5">
+        {/* Profile Card Skeleton */}
+        <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] flex flex-col gap-3.5 relative overflow-hidden">
+          <div className="flex items-start justify-between gap-2.5 border-b border-[var(--border-soft)] pb-3 min-h-[76px]">
+            <div className="flex items-center gap-3">
+              <Skeleton variant="circular" width={52} height={52} className="rounded-xl shrink-0" />
+              <div className="flex flex-col gap-2">
+                <Skeleton width={140} height={18} className="rounded-md" />
+                <Skeleton width={90} height={14} className="rounded-md" />
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Skeleton width={60} height={16} className="rounded" />
+                  <Skeleton width={60} height={16} className="rounded" />
+                </div>
+              </div>
+            </div>
+            <Skeleton width={70} height={24} className="rounded-full" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <Skeleton height={32} className="rounded-lg" />
+            <Skeleton height={32} className="rounded-lg" />
+          </div>
+
+          {/* 4 Detail Grid Skeletons */}
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex flex-col gap-2 pt-2 border-t border-[var(--border-soft)]">
+              <Skeleton width={110} height={14} className="rounded-sm" />
+              <div className="grid grid-cols-2 gap-2">
+                <Skeleton height={20} className="rounded-md" />
+                <Skeleton height={20} className="rounded-md" />
+                <Skeleton height={20} className="rounded-md" />
+                <Skeleton height={20} className="rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Documents Card Skeleton */}
+        <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] flex flex-col gap-2.5">
+          <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-2">
+            <Skeleton width={120} height={16} className="rounded-sm" />
+            <Skeleton width={60} height={16} className="rounded-sm" />
+          </div>
+          <div className="flex flex-col gap-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} height={44} className="rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column Skeleton — Perfectly aligned with Left Column */}
+      <div className="lg:col-span-8 flex flex-col gap-4">
+        <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] relative overflow-hidden">
+          <div className="flex items-start justify-between gap-2.5 min-h-[76px]">
+            <div className="flex items-center gap-3">
+              <Skeleton variant="rectangular" width={52} height={52} className="rounded-xl shrink-0" />
+              <div className="flex flex-col gap-2">
+                <Skeleton width={200} height={18} className="rounded-md" />
+                <Skeleton width={260} height={14} className="rounded-md" />
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Skeleton width={65} height={16} className="rounded" />
+                  <Skeleton width={80} height={16} className="rounded" />
+                </div>
+              </div>
+            </div>
+            <Skeleton width={140} height={32} className="rounded-lg shrink-0" />
+          </div>
+        </div>
+
+        {/* 5 Stages Timeline Skeleton */}
+        <div className="flex flex-col gap-3 pl-4 border-l-2 border-[var(--border-soft)] ml-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex flex-col gap-2 p-3.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton width={160} height={16} className="rounded-md" />
+                  <Skeleton width={60} height={18} className="rounded-full" />
+                </div>
+                <Skeleton width={70} height={14} className="rounded-sm" />
+              </div>
+              <Skeleton height={28} className="rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
+
 export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   candidateId = '1',
 }) => {
   const router = useRouter();
 
   const numericId = parseInt(String(candidateId).replace(/\D/g, ''), 10) || 1;
-  const { data: candidateRes } = useGetCandidateByIdQuery(numericId);
-  const { data: candidatesListRes } = useGetCandidatesQuery();
+  const { data: candidateRes, isLoading: isCandidateLoading, isFetching: isCandidateFetching } = useGetCandidateByIdQuery(numericId);
+  const { data: candidatesListRes, isLoading: isListLoading } = useGetCandidatesQuery();
   const [evaluateStage] = useEvaluateCandidateStageMutation();
   const [assignEvaluator] = useAssignEvaluatorMutation();
   const [uploadCandidateDocument] = useUploadCandidateDocumentMutation();
@@ -1403,19 +1610,32 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     }
   };
 
+  // ── High-Fidelity Loading State with Skeleton Fallback ───────────────────
+  if (isCandidateLoading || (!candidateRes?.data && (isListLoading || isCandidateFetching))) {
+    return <CandidateProfileSkeleton />;
+  }
+
   return (
-    <div className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[var(--canvas)] min-h-screen text-[13px] font-sans relative">
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={applePopContainer}
+      className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[var(--canvas)] min-h-screen text-[13px] font-sans relative"
+    >
       {/* ── Main 2-Column Section ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
         {/* LEFT COLUMN (4 cols / ~30%): Candidate Profile Overview & Documents */}
         <div className="lg:col-span-4 flex flex-col gap-3.5">
           {/* Card 1: Unified Candidate Profile Card */}
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col gap-3.5">
+          <motion.div variants={applePopCardLeft} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] flex flex-col gap-3.5 relative overflow-hidden">
+            {/* Top Inset Highlight Catch */}
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+
             {/* Header: Photo, Name, Badges & Actions */}
-            <div className="flex items-start justify-between gap-2.5 border-b border-slate-100 pb-3">
+            <div className="flex items-start justify-between gap-2.5 border-b border-[var(--border-soft)] pb-3 min-h-[76px]">
               <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className="group relative w-13 h-13 rounded-xl overflow-hidden shrink-0 border border-slate-200 shadow-2xs bg-slate-100 transition-transform hover:scale-[1.02]"
+                  className="group relative w-13 h-13 rounded-xl overflow-hidden shrink-0 border border-[var(--border-default)] shadow-2xs bg-[var(--surface-2)] transition-transform hover:scale-[1.02]"
                 >
                   {candidate.avatar && candidate.avatar.trim().length > 0 && !candidate.avatar.includes('unsplash') ? (
                     <img
@@ -1429,7 +1649,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     </div>
                   )}
                   {/* Hover Overlay with BOTH View (Eye) and Upload (Pencil) options */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white z-10">
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white z-10 backdrop-blur-xs">
                     <button
                       type="button"
                       onClick={() => setShowImageModal(true)}
@@ -1536,7 +1756,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
               <div className="flex flex-col gap-0.5">
                 <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Phone Number</span>
-                <span className="font-semibold text-[var(--text-primary)]">{candidate.phone}</span>
+                <span className="font-semibold text-[var(--text-primary)] tabular-figures">{candidate.phone}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
@@ -1561,17 +1781,17 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
               <div className="flex flex-col gap-0.5">
                 <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Current CTC</span>
-                <span className="font-semibold text-[var(--text-primary)]">{candidate.currentCtc}</span>
+                <span className="font-semibold text-[var(--text-primary)] tabular-figures">{candidate.currentCtc}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
                 <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Expected CTC</span>
-                <span className="font-semibold text-[var(--text-primary)]">{candidate.expectedCtc}</span>
+                <span className="font-semibold text-[var(--text-primary)] tabular-figures">{candidate.expectedCtc}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
                 <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Total Experience</span>
-                <span className="font-semibold text-[var(--text-primary)]">{candidate.experience}</span>
+                <span className="font-semibold text-[var(--text-primary)] tabular-figures">{candidate.experience}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
@@ -1586,10 +1806,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
               <div className="flex flex-col gap-0.5">
                 <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Academic Score</span>
-                <span className="font-semibold text-[var(--text-primary)]">
+                <span className="font-semibold text-[var(--text-primary)] tabular-figures">
                   {candidate.percentage || 'N/A'}{' '}
                   {candidate.passingYear ? (
-                    <span className="text-[var(--text-tertiary)] font-normal text-xs">({candidate.passingYear})</span>
+                    <span className="text-[var(--text-tertiary)] font-normal text-xs tabular-figures">({candidate.passingYear})</span>
                   ) : null}
                 </span>
               </div>
@@ -1623,13 +1843,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   </span>
                   <span className="text-[var(--text-secondary)] font-medium text-right">
                     Mobile:{' '}
-                    <strong className="text-[var(--text-primary)]">
+                    <strong className="text-[var(--text-primary)] tabular-figures">
                       {candidate.refMobile || '—'}
                     </strong>
                   </span>
                   <span className="text-xs col-span-2 pt-0.5">
                     {candidate.refVerifiedBy ? (
-                      <span className="text-[var(--status-success)] font-semibold">
+                      <span className="text-[var(--status-success-text)] font-semibold flex items-center gap-1">
+                        <Icon name="check-circle" size="xs" className="text-[var(--status-success)]" />
                         Verified By: {candidate.refVerifiedBy}
                       </span>
                     ) : (
@@ -1641,10 +1862,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 2: Documents Section (Resume, Application Form, Profile Photo) */}
-          <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl p-4 shadow-2xs flex flex-col gap-2.5">
+          <motion.div variants={applePopCardDocs} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] flex flex-col gap-2.5 relative overflow-hidden">
+            {/* Top Inset Highlight Catch */}
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+
             <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-2">
               <h2 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5 font-heading uppercase tracking-wider">
                 <Icon name="file-text" size="xs" className="text-[var(--text-tertiary)]" />
@@ -1652,7 +1876,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </h2>
 
               <div className="flex items-center gap-1.5">
-                <label
+                <motion.label
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 text-[10.5px] font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
                   title="Upload Candidate Resume"
                 >
@@ -1664,8 +1890,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     className="hidden"
                     onChange={(e) => handleUploadDocumentFile(e, 'Resume')}
                   />
-                </label>
-                <label
+                </motion.label>
+                <motion.label
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border border-[var(--accent-violet)]/30 text-[10.5px] font-bold hover:bg-[var(--accent-violet)] hover:text-white transition-colors cursor-pointer shadow-2xs"
                   title="Upload Application Form"
                 >
@@ -1677,19 +1905,21 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     className="hidden"
                     onChange={(e) => handleUploadDocumentFile(e, 'Application Form')}
                   />
-                </label>
+                </motion.label>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <motion.div variants={staggerFastContainer} className="flex flex-col gap-2">
               {documentsData.length === 0 ? (
                 <div className="p-2.5 text-center text-[var(--text-tertiary)] text-xs bg-[var(--surface-2)] rounded-lg">
                   No documents attached.
                 </div>
               ) : (
                 documentsData.map((doc) => (
-                  <div
+                  <motion.div
                     key={doc.id}
+                    variants={applePopDocItem}
+                    whileHover={{ x: 2, transition: { duration: 0.12 } }}
                     className="flex items-center justify-between p-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] transition-colors"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -1701,7 +1931,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                         <span className="font-semibold text-[var(--text-primary)] text-xs truncate" title={doc.name}>
                           {doc.name}
                         </span>
-                        <span className="text-[11px] text-[var(--text-secondary)] font-mono">
+                        <span className="text-[11px] text-[var(--text-secondary)] font-mono tabular-figures">
                           {doc.type} • {doc.size}
                         </span>
                       </div>
@@ -1733,33 +1963,65 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                         <Icon name="trash" size="xs" />
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         {/* RIGHT COLUMN (8 cols / ~70%): Hiring Stage Progress Cards */}
         <div className="lg:col-span-8 flex flex-col gap-4">
-          <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl p-4 shadow-2xs flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-sm sm:text-base font-bold text-[var(--text-primary)] font-heading flex items-center gap-2">
-              <Icon name="list" size="xs" className="text-[var(--accent-indigo)]" />
-              <span>Recruitment Stages & Hiring Flow</span>
-            </h2>
+          {/* Header Card: Icon, Title, Subtitle, Badges & Action — Perfectly Aligned with Card 1 */}
+          <motion.div variants={applePopCardRight} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] relative overflow-hidden">
+            {/* Top Inset Highlight Catch */}
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
 
-            {/* View Candidate Assignment Details Button */}
-            <button
-              type="button"
-              onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation`)}
-              className="h-8 px-2.5 sm:px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors shadow-2xs cursor-pointer w-full sm:w-auto justify-center sm:justify-start"
-            >
-              <Icon name="external-link" size="xs" />
-              <span className="hidden sm:inline">Evaluation Workspace</span>
-              <span className="sm:hidden">Evaluation</span>
-            </button>
-          </div>
-          <div className="relative pl-7 sm:pl-9 flex flex-col gap-4.5">
+            <div className="flex items-start justify-between gap-2.5 min-h-[76px]">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-13 h-13 rounded-xl bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 flex items-center justify-center shrink-0 shadow-2xs font-bold">
+                  <Icon name="list" size="md" />
+                </div>
+
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h2 className="font-bold text-[var(--text-primary)] text-base font-heading truncate">
+                      Recruitment Stages &amp; Hiring Flow
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold border bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30 shrink-0">
+                      {stagesData.length} Stages
+                    </span>
+                  </div>
+                  <span className="text-xs text-[var(--text-secondary)] font-medium truncate mt-0.5">
+                    Live candidate evaluation timeline &amp; panel feedback scorecard history
+                  </span>
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]">
+                      {stagesData.filter((s) => s.statusType === 'passed').length} Passed
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border border-[var(--status-warning-border)]">
+                      {stagesData.find((s) => s.status === 'In-Progress') ? `Stage ${stagesData.find((s) => s.status === 'In-Progress')?.id} Active` : 'In Pipeline'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation`)}
+                  className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors shadow-2xs cursor-pointer"
+                >
+                  <Icon name="external-link" size="xs" />
+                  <span>Evaluation Workspace</span>
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div variants={staggerFastContainer} className="relative pl-7 sm:pl-9 flex flex-col gap-4.5">
             {stagesData.map((stage, index) => {
               const isLast = index === stagesData.length - 1;
               const isPassed = stage.statusType === 'passed';
@@ -1767,7 +2029,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               const isInProgress = stage.status === 'In-Progress';
 
               return (
-                <div key={stage.id} className="relative">
+                <motion.div key={stage.id} variants={applePopStageItem} className="relative">
                   {/* Vertical Track Line connecting to the next milestone */}
                   {!isLast && (
                     <div
@@ -1781,16 +2043,26 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     />
                   )}
 
-                  {/* Flipkart Milestone Node Badge */}
+                  {/* Milestone Node Badge */}
                   <div className="absolute -left-7 sm:-left-9 top-4 z-10 flex items-center justify-center">
                     {isPassed ? (
-                      <span className="w-7 h-7 rounded-full bg-[var(--status-success)] text-white flex items-center justify-center shadow-xs ring-4 ring-[var(--canvas)]" title={`Stage ${stage.id}: Passed`}>
+                      <motion.span
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        className="w-7 h-7 rounded-full bg-[var(--status-success)] text-white flex items-center justify-center shadow-xs ring-4 ring-[var(--canvas)]"
+                        title={`Stage ${stage.id}: Passed`}
+                      >
                         <Icon name="check" size="xs" className="stroke-[3]" />
-                      </span>
+                      </motion.span>
                     ) : isRejected ? (
-                      <span className="w-7 h-7 rounded-full bg-[var(--status-danger)] text-white flex items-center justify-center shadow-xs ring-4 ring-[var(--canvas)]" title={`Stage ${stage.id}: Failed`}>
+                      <motion.span
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        className="w-7 h-7 rounded-full bg-[var(--status-danger)] text-white flex items-center justify-center shadow-xs ring-4 ring-[var(--canvas)]"
+                        title={`Stage ${stage.id}: Failed`}
+                      >
                         <Icon name="x" size="xs" className="stroke-[3]" />
-                      </span>
+                      </motion.span>
                     ) : isInProgress ? (
                       <span className="relative flex h-7 w-7 items-center justify-center" title={`Stage ${stage.id}: In-Progress`}>
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--status-warning)] opacity-35" />
@@ -1806,8 +2078,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   </div>
 
                   {/* Stage Card */}
-                  <div
-                    className={`bg-[var(--surface-1)] border rounded-xl p-4.5 shadow-2xs flex flex-col gap-3.5 transition-all ${
+                  <motion.div
+                    whileHover={{ y: -2, transition: { duration: 0.15 } }}
+                    className={`bg-[var(--surface-1)] border rounded-[var(--radius-lg)] p-4 sm:p-5 shadow-[var(--shadow-xs)] flex flex-col gap-3.5 transition-all ${
                       stage.isTerminated
                         ? 'border-[var(--border-default)] opacity-60 bg-[var(--surface-2)]'
                         : isPassed
@@ -2033,1070 +2306,966 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                         </span>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* --- 3. Edit Candidate Profile Details Modal Dialog ------------------------ */}
-      {showEditProfileModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setShowEditProfileModal(false)}
-        >
-          <form
-            onSubmit={handleSaveProfileEdit}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 rounded-2xl p-5 max-w-xl w-full shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto scrollbar-step"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 font-bold">
-                  <Icon name="pencil" size="xs" />
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="text-base font-bold text-slate-900 font-heading">
-                    Edit Profile Information — {candidate.name}
-                  </h3>
-                  <span className="text-xs text-slate-500 font-medium">
-                    Update personal, career, CTC, and education details
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowEditProfileModal(false)}
-                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <Icon name="x" size="sm" />
-              </button>
-            </div>
-
-            {/* Profile Edit Form Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={editProfileForm.name}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, name: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={editProfileForm.email}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, email: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
-                <input
-                  type="tel"
-                  value={editProfileForm.phone}
-                  maxLength={15}
-                  onChange={(e) => {
-                    // Allow only digits, spaces, +, and dashes
-                    const cleaned = e.target.value.replace(/[^\d\s+\-]/g, '');
-                    setEditProfileForm({ ...editProfileForm, phone: cleaned });
-                  }}
-                  placeholder="+91 98765 43210"
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Location</label>
-                <input
-                  type="text"
-                  value={editProfileForm.location}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, location: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Experience</label>
-                <input
-                  type="text"
-                  value={editProfileForm.experience}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, experience: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Notice Period</label>
-                <input
-                  type="text"
-                  value={editProfileForm.noticePeriod}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, noticePeriod: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Current Company</label>
-                <input
-                  type="text"
-                  value={editProfileForm.currentCompany}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, currentCompany: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Current Designation</label>
-                <input
-                  type="text"
-                  value={editProfileForm.currentDesignation}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, currentDesignation: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Current CTC</label>
-                <input
-                  type="text"
-                  value={editProfileForm.currentCtc}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, currentCtc: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Expected CTC</label>
-                <input
-                  type="text"
-                  value={editProfileForm.expectedCtc}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, expectedCtc: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="font-bold text-slate-700 block mb-1">Education</label>
-                <input
-                  type="text"
-                  value={editProfileForm.education}
-                  onChange={(e) => setEditProfileForm({ ...editProfileForm, education: e.target.value })}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowEditProfileModal(false)}
-                className="h-8.5 px-4 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="h-8.5 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
-              >
-                <Icon name="check-circle" size="xs" />
-                <span>Save Profile Changes</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
       {/* --- 5. High-Resolution Profile Photo Lightbox Modal -------------------- */}
-      {showImageModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setShowImageModal(false)}
-        >
-          <div
-            className="relative max-w-md w-full bg-white rounded-2xl p-6 shadow-2xl flex flex-col gap-4 items-center overflow-hidden border border-slate-200"
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {showImageModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setShowImageModal(false)}
           >
-            <div className="w-full flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex flex-col">
-                <h3 className="text-base font-bold text-slate-900 font-heading">
-                  {candidate.name}
-                </h3>
-                <span className="text-xs text-slate-500 font-medium">{candidate.designation}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowImageModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                aria-label="Close photo dialog"
-              >
-                <Icon name="x" size="sm" />
-              </button>
-            </div>
-
-            <div className="w-full min-h-[220px] rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center p-6">
-              {candidate.avatar && candidate.avatar.trim().length > 0 && !candidate.avatar.includes('unsplash') ? (
-                <img
-                  src={candidate.avatar}
-                  alt={candidate.name}
-                  className="w-full h-full object-contain max-h-[360px] rounded-lg shadow-sm"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-[var(--accent-indigo)] via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-3xl shadow-xl font-heading tracking-tight">
-                    {nameInitials}
-                  </div>
-                  <span className="text-xs font-semibold text-slate-500">Candidate Avatar Initials</span>
-                </div>
-              )}
-            </div>
-
-            <div className="w-full flex items-center justify-between pt-1 text-xs text-slate-600 font-medium border-t border-slate-100">
-              <span>{candidate.email || 'Email not specified'}</span>
-              <span>{candidate.experience}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 6. Editable Offer Letter Rollout Form Modal Dialog ───────────────── */}
-      {showOfferModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setShowOfferModal(false)}
-        >
-          <form
-            onSubmit={handleRolloutOffer}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 rounded-2xl p-5 max-w-2xl w-full shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto scrollbar-step"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-bold">
-                  <Icon name="file-text" size="xs" />
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="text-base font-bold text-slate-900 font-heading">
-                    Offer Letter — {candidate.name}
-                  </h3>
-                  <span className="text-xs text-slate-500 font-medium">
-                    {!offerLetterId
-                      ? 'Set the offered CTC and joining date, then generate the letter'
-                      : offerRes?.data?.status === 'PendingApproval'
-                        ? 'Awaiting Director PIN approval before it can be sent'
-                        : offerRes?.data?.status === 'Approved'
-                          ? 'Approved — ready to download and dispatch'
-                          : 'Loading offer status…'}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowOfferModal(false)}
-                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <Icon name="x" size="sm" />
-              </button>
-            </div>
-
-            {/* Real fields only — Role/Email are derived, not independently settable; CTC/Joining
-             * Date lock once generated since GenerateOfferLetterCommandHandler rejects a re-generate
-             * while an offer is already active. Manager/Location/Fixed-Variable-split/Expiry/Remarks
-             * were removed — none of them have any backing field on OfferLetter, so editing them
-             * here never persisted anything. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Role / Vacancy</label>
-                <div className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-semibold flex items-center truncate">
-                  {candidate.designation}
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Candidate Email</label>
-                <div className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium flex items-center truncate">
-                  {candidate.email}
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Total Offered CTC (₹ LPA)</label>
-                {offerLetterId ? (
-                  <div className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-emerald-700 font-bold flex items-center">
-                    ₹{offerRes?.data?.offeredCTC ?? offerCtc} LPA
-                  </div>
-                ) : (
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={offerCtc}
-                    onChange={(e) => setOfferCtc(e.target.value)}
-                    placeholder="e.g. 14.5"
-                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Joining Date</label>
-                {offerLetterId ? (
-                  <div className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-semibold flex items-center">
-                    {offerRes?.data?.joiningDate
-                      ? new Date(offerRes.data.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : offerJoiningDate}
-                  </div>
-                ) : (
-                  <FormDatePicker value={offerJoiningDate} onChange={setOfferJoiningDate} />
-                )}
-              </div>
-            </div>
-
-            {/* Generated Document + Director PIN Approval */}
-            {offerLetterId && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 shadow-2xs">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded bg-red-100 text-red-600 font-bold text-xs flex items-center justify-center shrink-0">
-                      PDF
-                    </span>
-                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-900 text-xs">
-                        Offer_{candidate.name.replace(/\s+/g, '_')}.pdf
-                      </span>
-                      <span className="text-[10.5px] text-slate-500 font-mono">
-                        Prepared by {offerRes?.data?.preparedByName || '…'} • Status: {offerRes?.data?.status || 'Loading…'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleDownloadOffer}
-                    className="h-7.5 px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer flex items-center gap-1"
-                  >
-                    <Icon name="download" size="xs" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-
-                {offerRes?.data?.status === 'PendingApproval' && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700">Director Security PIN (6 digits)</label>
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={offerApprovalPin}
-                      onChange={(e) => setOfferApprovalPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="••••••"
-                      className="w-full h-9 px-3 rounded-xl border border-slate-300 text-sm font-mono tracking-widest text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                    />
-                    <span className="text-[11px] text-slate-500">Only a Director account can approve this — verified against the same PIN used for Director login.</span>
-                  </div>
-                )}
-
-                {offerRes?.data?.status === 'Approved' && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-700">
-                    <Icon name="check-circle" size="xs" />
-                    <span>
-                      Approved by {offerRes.data.approvedByName || 'the Director'}
-                      {offerRes.data.approvedAt ? ` on ${new Date(offerRes.data.approvedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : ''}.
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Footer Buttons */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowOfferModal(false)}
-                className="h-8.5 px-4 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-
-              {offerRes?.data?.status !== 'Approved' && (
-                <button
-                  type="submit"
-                  disabled={isGeneratingOffer || isApprovingOffer}
-                  className="h-8.5 px-4 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 cursor-pointer shadow-2xs inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Icon name="check-circle" size="xs" />
-                  <span>
-                    {!offerLetterId
-                      ? isGeneratingOffer ? 'Generating…' : 'Generate Offer Letter'
-                      : isApprovingOffer ? 'Approving…' : 'Approve with PIN'}
-                  </span>
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* ── 7. Assign Interviewer / Evaluator / Director Modal Dialog ─────────────────────── */}
-      {selectedAssignStage && (() => {
-        const isAssessmentRound =
-          selectedAssignStage.roundType === 'Assessment' ||
-          (selectedAssignStage.name.includes('Coding & Algorithm') && !selectedAssignStage.name.includes('F2F'));
-
-        return (
-          <div
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
-            onClick={() => setSelectedAssignStage(null)}
-          >
-            <form
-              onSubmit={handleSaveAssign}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="relative max-w-md w-full dialog-card rounded-[var(--radius-xl)] p-6 shadow-[var(--shadow-xl)] flex flex-col gap-4 items-center overflow-hidden"
               onClick={(e) => e.stopPropagation()}
-              className="bg-white border border-slate-200 rounded-2xl p-5 max-w-md w-full shadow-2xl flex flex-col gap-4"
             >
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              {/* Top Inset Highlight Catch */}
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+
+              <div className="w-full flex items-center justify-between border-b border-[var(--border-soft)] pb-3">
                 <div className="flex flex-col">
-                  <h3 className="text-base font-bold text-slate-900 font-heading">
-                    {selectedAssignStage.isDirectorRound
-                      ? 'Assign Director'
-                      : isAssessmentRound
-                        ? 'Assign Evaluator'
-                        : 'Assign Interviewer'}{' '}
-                    — {selectedAssignStage.name}
+                  <h3 className="text-base font-bold text-[var(--text-primary)] font-heading">
+                    {candidate.name}
                   </h3>
-                  <span className="text-xs text-slate-500 font-medium">Candidate: {candidate.name}</span>
+                  <span className="text-xs text-[var(--text-secondary)] font-medium">{candidate.designation}</span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedAssignStage(null)}
-                  className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  onClick={() => setShowImageModal(false)}
+                  className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+                  aria-label="Close photo dialog"
                 >
                   <Icon name="x" size="sm" />
                 </button>
               </div>
 
-              <div className="flex flex-col gap-3 text-xs">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    {selectedAssignStage.isDirectorRound
-                      ? 'Select Director (Exclusive Role)'
-                      : isAssessmentRound
-                        ? 'Select Evaluator (Technical Grader)'
-                        : 'Select Interviewer'}
-                  </label>
-                  <FormSelect
-                    value={assignedInterviewer}
-                    onChange={setAssignedInterviewer}
-                    options={selectedAssignStage.isDirectorRound ? directorOptions : interviewerOptions}
+              <div className="w-full min-h-[220px] rounded-xl overflow-hidden bg-[var(--surface-2)] border border-[var(--border-default)] flex items-center justify-center p-6">
+                {candidate.avatar && candidate.avatar.trim().length > 0 && !candidate.avatar.includes('unsplash') ? (
+                  <img
+                    src={candidate.avatar}
+                    alt={candidate.name}
+                    className="w-full h-full object-contain max-h-[360px] rounded-lg shadow-sm"
                   />
-                </div>
-
-                {!isAssessmentRound ? (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="font-bold text-slate-700 block mb-1">Date</label>
-                        <FormDatePicker
-                          value={assignDate}
-                          onChange={setAssignDate}
-                        />
-                      </div>
-                      <div>
-                        <label className="font-bold text-slate-700 block mb-1">Time</label>
-                        <input
-                          type="time"
-                          value={assignTime}
-                          onChange={(e) => setAssignTime(e.target.value)}
-                          className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-                        />
-                      </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-[var(--accent-indigo)] via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-3xl shadow-xl font-heading tracking-tight">
+                      {nameInitials}
                     </div>
-
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Meeting Mode</label>
-                      <FormSelect
-                        value={assignMode}
-                        onChange={setAssignMode}
-                        options={meetingModeOptions}
-                      />
-                    </div>
-                  </>
-                ) : null}
+                    <span className="text-xs font-semibold text-[var(--text-secondary)]">Candidate Avatar Initials</span>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="w-full flex items-center justify-between pt-1 text-xs text-[var(--text-secondary)] font-medium border-t border-[var(--border-soft)]">
+                <span>{candidate.email || 'Email not specified'}</span>
+                <span className="tabular-figures">{candidate.experience}</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── 6. Editable Offer Letter Rollout Form Modal Dialog ───────────────── */}
+      <AnimatePresence>
+        {showOfferModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setShowOfferModal(false)}
+          >
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              onSubmit={handleRolloutOffer}
+              onClick={(e) => e.stopPropagation()}
+              className="dialog-card rounded-[var(--radius-xl)] p-5 max-w-2xl w-full shadow-[var(--shadow-xl)] flex flex-col gap-4 max-h-[90vh] overflow-y-auto scrollbar-step relative overflow-hidden"
+            >
+              {/* Top Inset Highlight Catch */}
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+
+              <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] flex items-center justify-center shrink-0 font-bold border border-[var(--accent-indigo)]/30">
+                    <Icon name="file-text" size="xs" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h3 className="text-base font-bold text-[var(--text-primary)] font-heading">
+                      Offer Letter — {candidate.name}
+                    </h3>
+                    <span className="text-xs text-[var(--text-secondary)] font-medium">
+                      {!offerLetterId
+                        ? 'Set the offered CTC and joining date, then generate the letter'
+                        : offerRes?.data?.status === 'PendingApproval'
+                          ? 'Awaiting Director PIN approval before it can be sent'
+                          : offerRes?.data?.status === 'Approved'
+                            ? 'Approved — ready to download and dispatch'
+                            : 'Loading offer status…'}
+                    </span>
+                  </div>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setSelectedAssignStage(null)}
-                  className="h-8.5 px-4 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                  onClick={() => setShowOfferModal(false)}
+                  className="p-1 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer transition-colors"
+                >
+                  <Icon name="x" size="sm" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Role / Vacancy</label>
+                  <div className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-semibold flex items-center truncate">
+                    {candidate.designation}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Candidate Email</label>
+                  <div className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium flex items-center truncate">
+                    {candidate.email}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Total Offered CTC (₹ LPA)</label>
+                  {offerLetterId ? (
+                    <div className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--status-success-text)] font-bold flex items-center tabular-figures">
+                      ₹{offerRes?.data?.offeredCTC ?? offerCtc} LPA
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={offerCtc}
+                      onChange={(e) => setOfferCtc(e.target.value)}
+                      placeholder="e.g. 14.5"
+                      className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-bold text-[var(--status-success-text)] focus-ring-step tabular-figures"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Joining Date</label>
+                  {offerLetterId ? (
+                    <div className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-semibold flex items-center tabular-figures">
+                      {offerRes?.data?.joiningDate
+                        ? new Date(offerRes.data.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : offerJoiningDate}
+                    </div>
+                  ) : (
+                    <FormDatePicker value={offerJoiningDate} onChange={setOfferJoiningDate} />
+                  )}
+                </div>
+              </div>
+
+              {/* Generated Document + Director PIN Approval */}
+              {offerLetterId && (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] shadow-2xs">
+                    <div className="flex items-center gap-3">
+                      <span className="w-8 h-8 rounded bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] font-bold text-xs flex items-center justify-center shrink-0 border border-[var(--status-danger-border)]">
+                        PDF
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-[var(--text-primary)] text-xs">
+                          Offer_{candidate.name.replace(/\s+/g, '_')}.pdf
+                        </span>
+                        <span className="text-[10.5px] text-[var(--text-secondary)] font-mono">
+                          Prepared by {offerRes?.data?.preparedByName || '…'} • Status: {offerRes?.data?.status || 'Loading…'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadOffer}
+                      className="h-7.5 px-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer flex items-center gap-1 transition-colors shadow-2xs"
+                    >
+                      <Icon name="download" size="xs" />
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
+
+                  {offerRes?.data?.status === 'PendingApproval' && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-[var(--text-primary)]">Director Security PIN (6 digits)</label>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={offerApprovalPin}
+                        onChange={(e) => setOfferApprovalPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="••••••"
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-sm font-mono tracking-widest text-[var(--text-primary)] focus-ring-step"
+                      />
+                      <span className="text-[11px] text-[var(--text-secondary)]">Only a Director account can approve this — verified against the same PIN used for Director login.</span>
+                    </div>
+                  )}
+                  {offerRes?.data?.status === 'Approved' && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--status-success-bg)] border border-[var(--status-success-border)] text-[11px] font-semibold text-[var(--status-success-text)]">
+                      <Icon name="check-circle" size="xs" />
+                      <span>
+                        Approved by {offerRes.data.approvedByName || 'the Director'}
+                        {offerRes.data.approvedAt ? ` on ${new Date(offerRes.data.approvedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : ''}.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Footer Buttons */}
+              <div className="flex items-center justify-between pt-3 border-t border-[var(--border-soft)]">
+                <button
+                  type="button"
+                  onClick={() => setShowOfferModal(false)}
+                  className="h-8.5 px-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+
+                {offerRes?.data?.status !== 'Approved' && (
+                  <button
+                    type="submit"
+                    disabled={isGeneratingOffer || isApprovingOffer}
+                    className="h-8.5 px-4 rounded-lg bg-[var(--accent-indigo)] text-white text-xs font-bold hover:bg-[var(--accent-indigo-hover)] cursor-pointer shadow-2xs inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Icon name="check-circle" size="xs" />
+                    <span>
+                      {!offerLetterId
+                        ? isGeneratingOffer ? 'Generating…' : 'Generate Offer Letter'
+                        : isApprovingOffer ? 'Approving…' : 'Approve with PIN'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── 7. Assign Interviewer / Evaluator / Director Modal Dialog ─────────────────────── */}
+      <AnimatePresence>
+        {selectedAssignStage && (() => {
+          const isAssessmentRound =
+            selectedAssignStage.roundType === 'Assessment' ||
+            (selectedAssignStage.name.includes('Coding & Algorithm') && !selectedAssignStage.name.includes('F2F'));
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+              onClick={() => setSelectedAssignStage(null)}
+            >
+              <motion.form
+                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 6 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                onSubmit={handleSaveAssign}
+                onClick={(e) => e.stopPropagation()}
+                className="dialog-card rounded-[var(--radius-xl)] p-5 max-w-md w-full flex flex-col gap-4 relative overflow-hidden"
+              >
+                {/* Top Inset Highlight Catch */}
+                <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+
+                <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-3">
+                  <div className="flex flex-col">
+                    <h3 className="text-base font-bold text-[var(--text-primary)] font-heading">
+                      {selectedAssignStage.isDirectorRound
+                        ? 'Assign Director'
+                        : isAssessmentRound
+                          ? 'Assign Evaluator'
+                          : 'Assign Interviewer'}{' '}
+                      — {selectedAssignStage.name}
+                    </h3>
+                    <span className="text-xs text-[var(--text-secondary)] font-medium">Candidate: {candidate.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAssignStage(null)}
+                    className="p-1 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer transition-colors"
+                  >
+                    <Icon name="x" size="sm" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3 text-xs">
+                  <div>
+                    <label className="font-bold text-[var(--text-primary)] block mb-1">
+                      {selectedAssignStage.isDirectorRound
+                        ? 'Select Director (Exclusive Role)'
+                        : isAssessmentRound
+                          ? 'Select Evaluator (Technical Grader)'
+                          : 'Select Interviewer'}
+                    </label>
+                    <FormSelect
+                      value={assignedInterviewer}
+                      onChange={setAssignedInterviewer}
+                      options={selectedAssignStage.isDirectorRound ? directorOptions : interviewerOptions}
+                    />
+                  </div>
+
+                  {!isAssessmentRound ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-bold text-[var(--text-primary)] block mb-1">Date</label>
+                          <FormDatePicker
+                            value={assignDate}
+                            onChange={setAssignDate}
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-[var(--text-primary)] block mb-1">Time</label>
+                          <input
+                            type="time"
+                            value={assignTime}
+                            onChange={(e) => setAssignTime(e.target.value)}
+                            className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-mono text-xs focus-ring-step"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-[var(--text-primary)] block mb-1">Meeting Mode</label>
+                        <FormSelect
+                          value={assignMode}
+                          onChange={setAssignMode}
+                          options={meetingModeOptions}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-soft)]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAssignStage(null)}
+                    className="h-8.5 px-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isScheduling}
+                    className="h-8.5 px-4 rounded-lg bg-[var(--accent-indigo)] text-white text-xs font-bold hover:bg-[var(--accent-indigo-hover)] cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isScheduling
+                      ? 'Assigning…'
+                      : isAssessmentRound
+                        ? 'Assign Evaluator'
+                        : 'Assign & Send Invites'}
+                  </button>
+                </div>
+              </motion.form>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* ── 8. Submit Feedback / Director Final Decision Modal ───────────────── */}
+      <AnimatePresence>
+        {selectedFeedbackStage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setSelectedFeedbackStage(null)}
+          >
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              onSubmit={handleSaveFeedback}
+              onClick={(e) => e.stopPropagation()}
+              className="dialog-card rounded-[var(--radius-xl)] p-6 max-w-2xl w-full flex flex-col gap-5 max-h-[90vh] overflow-y-auto scrollbar-step relative overflow-hidden"
+            >
+              {/* Top Inset Highlight Catch */}
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+
+              <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[var(--status-info-bg)] text-[var(--status-info)] border border-[var(--status-info-border)] flex items-center justify-center shrink-0">
+                    <Icon name="award" size="sm" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--text-primary)] font-heading">
+                      {selectedFeedbackStage.isDirectorRound
+                        ? `Director Final Decision — ${selectedFeedbackStage.name}`
+                        : `Submit Feedback — ${selectedFeedbackStage.name}`}
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)] font-medium">
+                      Candidate: {candidate.name} • {selectedFeedbackStage.isDirectorRound ? 'Director' : 'Interviewer'}: {selectedFeedbackStage.interviewer || 'Assigned Evaluator'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedFeedbackStage(null)}
+                  className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+                  aria-label="Close scorecard feedback modal"
+                >
+                  <Icon name="x" size="sm" />
+                </button>
+              </div>
+
+              {selectedFeedbackStage.isDirectorRound ? (
+                <>
+                  {/* Decision Selection — 3 Choices for Director: Offer, Reject, On Hold */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-[var(--text-primary)]">Director Final Outcome</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDirectorDecision('offer')}
+                        className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'offer'
+                          ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)] shadow-2xs'
+                          : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
+                          }`}
+                      >
+                        <Icon name="check-circle" size="xs" />
+                        <span>Offer</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDirectorDecision('reject')}
+                        className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'reject'
+                          ? 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border-[var(--status-danger-border)] shadow-2xs'
+                          : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
+                          }`}
+                      >
+                        <Icon name="x-circle" size="xs" />
+                        <span>Reject</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDirectorDecision('hold')}
+                        className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'hold'
+                          ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border-[var(--status-warning-border)] shadow-2xs'
+                          : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
+                          }`}
+                      >
+                        <Icon name="pause-circle" size="xs" />
+                        <span>On Hold</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[var(--text-primary)]">Remarks & Detailed Rationale</label>
+                      <span className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-[var(--status-danger)]' : 'text-[var(--text-tertiary)]'}`}>
+                        {feedbackText.length} / 500 characters
+                      </span>
+                    </div>
+                    <textarea
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
+                      rows={4}
+                      maxLength={500}
+                      placeholder="Enter evaluation notes, technical observations, and final recommendations..."
+                      className="w-full p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring-step resize-none font-sans"
+                    />
+                  </div>
+                </>
+              ) : (!selectedFeedbackStage.interviewId && selectedFeedbackStage.roundType === 'Interview') ? (
+                /* No real Interview row exists for this round yet */
+                <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-[var(--status-warning-border)] bg-[var(--status-warning-bg)] text-center">
+                  <Icon name="alert-triangle" size="sm" className="text-[var(--status-warning-text)]" />
+                  <p className="text-xs font-semibold text-[var(--status-warning-text)]">No interview scheduled for this round yet</p>
+                  <p className="text-[11px] text-[var(--text-secondary)]">
+                    Use &ldquo;Schedule &amp; Assign Interviewer&rdquo; to schedule this round before submitting a scorecard — feedback needs a real interview record to attach to.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {myExistingScorecard && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 text-[11px] font-semibold text-[var(--accent-indigo)]">
+                      <Icon name="info" size="xs" />
+                      <span>
+                        You already submitted a scorecard on {new Date(myExistingScorecard.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} — resubmitting will replace it.
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Scorecard Ratings — Technical & Problem Solving */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {([
+                      ['Technical', scorecardTechnical, setScorecardTechnical],
+                      ['Problem Solving', scorecardProblemSolving, setScorecardProblemSolving],
+                    ] as const).map(([label, value, setValue]) => (
+                      <div key={label} className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[var(--text-primary)]">{label} Rating</label>
+                        <div className="grid grid-cols-5 gap-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => setValue(n)}
+                              className={`h-8 rounded-lg text-xs font-bold border transition-all cursor-pointer ${value === n
+                                ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-2xs'
+                                : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
+                                }`}
+                            >
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-[var(--text-primary)]">Recommendation Result</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setScorecardRecommendation('Pass')}
+                        className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${scorecardRecommendation === 'Pass' || scorecardRecommendation === 'Hire'
+                          ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)] shadow-2xs'
+                          : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
+                          }`}
+                      >
+                        <Icon name="check-circle" size="xs" />
+                        <span>Pass</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setScorecardRecommendation('Fail')}
+                        className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${scorecardRecommendation === 'Fail' || scorecardRecommendation === 'Reject'
+                          ? 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border-[var(--status-danger-border)] shadow-2xs'
+                          : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
+                          }`}
+                      >
+                        <Icon name="x-circle" size="xs" />
+                        <span>Fail</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-[var(--text-primary)]">Strengths</label>
+                      <textarea
+                        value={scorecardStrengths}
+                        onChange={(e) => setScorecardStrengths(e.target.value)}
+                        rows={3}
+                        placeholder="Key strengths observed..."
+                        className="w-full p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring-step resize-none font-sans"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-[var(--text-primary)]">Weaknesses</label>
+                      <textarea
+                        value={scorecardWeaknesses}
+                        onChange={(e) => setScorecardWeaknesses(e.target.value)}
+                        rows={3}
+                        placeholder="Areas of concern..."
+                        className="w-full p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring-step resize-none font-sans"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[var(--text-primary)]">Comments</label>
+                      <span className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-[var(--status-danger)]' : 'text-[var(--text-tertiary)]'}`}>
+                        {feedbackText.length} / 500 characters
+                      </span>
+                    </div>
+                    <textarea
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
+                      rows={3}
+                      maxLength={500}
+                      placeholder="Any additional evaluation notes..."
+                      className="w-full p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring-step resize-none font-sans"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-soft)]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedFeedbackStage(null)}
+                  className="h-8.5 px-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isScheduling}
-                  className="h-8.5 px-4 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={
+                    selectedFeedbackStage.roundType === 'Assessment'
+                      ? false
+                      : selectedFeedbackStage.isDirectorRound
+                        ? (directorDecision !== 'hold' && !selectedFeedbackStage.interviewId) || isPublishingDecision
+                        : !selectedFeedbackStage.interviewId || isSubmittingFeedback
+                  }
+                  className="h-8.5 px-4 rounded-lg bg-[var(--accent-indigo)] text-white text-xs font-bold hover:bg-[var(--accent-indigo-hover)] cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isScheduling
-                    ? 'Assigning…'
-                    : isAssessmentRound
-                      ? 'Assign Evaluator'
-                      : 'Assign & Send Invites'}
+                  {selectedFeedbackStage.isDirectorRound
+                    ? isPublishingDecision ? 'Publishing…' : 'Save Decision & Update Status'
+                    : isSubmittingFeedback
+                      ? 'Saving…'
+                      : 'Submit Scorecard'}
                 </button>
               </div>
-            </form>
-          </div>
-        );
-      })()}
-
-      {/* ── 8. Submit Feedback / Director Final Decision Modal ───────────────── */}
-      {selectedFeedbackStage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setSelectedFeedbackStage(null)}
-        >
-          <form
-            onSubmit={handleSaveFeedback}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 rounded-2xl p-5 max-w-lg w-full shadow-2xl flex flex-col gap-4"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex flex-col">
-                <h3 className="text-base font-bold text-slate-900 font-heading">
-                  {selectedFeedbackStage.isDirectorRound ? 'Director Final Decision' : 'Submit Feedback'} — {selectedFeedbackStage.name}
-                </h3>
-                <span className="text-xs text-slate-500 font-medium">
-                  Candidate: {candidate.name} • {selectedFeedbackStage.isDirectorRound ? 'Director' : 'Interviewer'}: {selectedFeedbackStage.interviewer || 'Unassigned'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedFeedbackStage(null)}
-                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <Icon name="x" size="sm" />
-              </button>
-            </div>
-
-            {selectedFeedbackStage.isDirectorRound ? (
-              <>
-                {/* Decision Selection — 3 Choices for Director: Offer, Reject, On Hold */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700">Director Final Outcome</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setDirectorDecision('offer')}
-                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'offer'
-                        ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                    >
-                      <Icon name="check-circle" size="xs" />
-                      <span>Offer</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDirectorDecision('reject')}
-                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'reject'
-                        ? 'bg-rose-500 text-white border-rose-600 shadow-2xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                    >
-                      <Icon name="x-circle" size="xs" />
-                      <span>Reject</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDirectorDecision('hold')}
-                      className={`h-9 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${directorDecision === 'hold'
-                        ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                    >
-                      <Icon name="pause-circle" size="xs" />
-                      <span>On Hold</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">Remarks & Detailed Rationale</label>
-                    <span className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-rose-600' : 'text-slate-400'}`}>
-                      {feedbackText.length} / 50 characters
-                    </span>
-                  </div>
-                  <textarea
-                    value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value.slice(0, 50))}
-                    rows={4}
-                    maxLength={50}
-                    placeholder="Enter evaluation notes, technical observations, and final recommendations..."
-                    className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
-                  />
-                </div>
-              </>
-            ) : (!selectedFeedbackStage.interviewId && selectedFeedbackStage.roundType === 'Interview') ? (
-              /* No real Interview row exists for this round yet */
-              <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-amber-300 bg-amber-50 text-center">
-                <Icon name="alert-triangle" size="sm" className="text-amber-500" />
-                <p className="text-xs font-semibold text-amber-800">No interview scheduled for this round yet</p>
-                <p className="text-[11px] text-amber-700">
-                  Use &ldquo;Schedule &amp; Assign Interviewer&rdquo; to schedule this round before submitting a scorecard — feedback needs a real interview record to attach to.
-                </p>
-              </div>
-            ) : (
-              <>
-                {myExistingScorecard && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-[11px] font-semibold text-blue-700">
-                    <Icon name="info" size="xs" />
-                    <span>
-                      You already submitted a scorecard on {new Date(myExistingScorecard.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} — resubmitting will replace it.
-                    </span>
-                  </div>
-                )}
-
-                {/* Scorecard Ratings — Technical & Problem Solving */}
-                <div className="grid grid-cols-2 gap-3">
-                  {([
-                    ['Technical', scorecardTechnical, setScorecardTechnical],
-                    ['Problem Solving', scorecardProblemSolving, setScorecardProblemSolving],
-                  ] as const).map(([label, value, setValue]) => (
-                    <div key={label} className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-slate-700">{label} Rating</label>
-                      <div className="grid grid-cols-5 gap-1">
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => setValue(n)}
-                            className={`h-8 rounded-lg text-xs font-bold border transition-all cursor-pointer ${value === n
-                              ? 'bg-blue-600 text-white border-blue-700 shadow-2xs'
-                              : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
-                              }`}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700">Recommendation Result</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setScorecardRecommendation('Pass')}
-                      className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${scorecardRecommendation === 'Pass' || scorecardRecommendation === 'Hire'
-                        ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                    >
-                      <Icon name="check-circle" size="xs" />
-                      <span>Pass</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setScorecardRecommendation('Fail')}
-                      className={`h-9 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${scorecardRecommendation === 'Fail' || scorecardRecommendation === 'Reject'
-                        ? 'bg-rose-500 text-white border-rose-600 shadow-2xs'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                    >
-                      <Icon name="x-circle" size="xs" />
-                      <span>Fail</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700">Strengths</label>
-                    <textarea
-                      value={scorecardStrengths}
-                      onChange={(e) => setScorecardStrengths(e.target.value)}
-                      rows={3}
-                      placeholder="Key strengths observed..."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-slate-700">Weaknesses</label>
-                    <textarea
-                      value={scorecardWeaknesses}
-                      onChange={(e) => setScorecardWeaknesses(e.target.value)}
-                      rows={3}
-                      placeholder="Areas of concern..."
-                      className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">Comments</label>
-                    <span className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-rose-600' : 'text-slate-400'}`}>
-                      {feedbackText.length} / 500 characters
-                    </span>
-                  </div>
-                  <textarea
-                    value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
-                    rows={3}
-                    maxLength={500}
-                    placeholder="Any additional evaluation notes..."
-                    className="w-full p-3 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none font-sans"
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setSelectedFeedbackStage(null)}
-                className="h-8.5 px-4 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={
-                  selectedFeedbackStage.roundType === 'Assessment'
-                    ? false
-                    : selectedFeedbackStage.isDirectorRound
-                      ? (directorDecision !== 'hold' && !selectedFeedbackStage.interviewId) || isPublishingDecision
-                      : !selectedFeedbackStage.interviewId || isSubmittingFeedback
-                }
-                className="h-8.5 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {selectedFeedbackStage.isDirectorRound
-                  ? isPublishingDecision ? 'Publishing…' : 'Save Decision & Update Status'
-                  : isSubmittingFeedback
-                    ? 'Saving…'
-                    : 'Submit Scorecard'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── 9. Edit Candidate Profile Modal Dialog ───────────────────────────── */}
-      {showEditProfileModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <form
-            onSubmit={handleSaveProfileEdit}
-            className="bg-white border border-slate-200 rounded-2xl p-5 max-w-3xl w-full shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto scrollbar-step"
+      <AnimatePresence>
+        {showEditProfileModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setShowEditProfileModal(false)}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 font-bold">
-                  <Icon name="pencil" size="xs" />
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              onSubmit={handleSaveProfileEdit}
+              onClick={(e) => e.stopPropagation()}
+              className="dialog-card rounded-[var(--radius-xl)] p-5 max-w-3xl w-full shadow-[var(--shadow-xl)] flex flex-col gap-4 max-h-[90vh] overflow-y-auto scrollbar-step relative overflow-hidden"
+            >
+              {/* Top Inset Highlight Catch */}
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+
+              <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] flex items-center justify-center shrink-0 font-bold border border-[var(--accent-indigo)]/30">
+                    <Icon name="pencil" size="xs" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h3 className="text-base font-bold text-[var(--text-primary)] font-heading">
+                      Edit Candidate Profile — {candidate.name}
+                    </h3>
+                    <span className="text-xs text-[var(--text-secondary)] font-medium">
+                      Update personal, professional, academic, and reference details below
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <h3 className="text-base font-bold text-slate-900 font-heading">
-                    Edit Candidate Profile — {candidate.name}
-                  </h3>
-                  <span className="text-xs text-slate-500 font-medium">
-                    Update personal, professional, academic, and reference details below
-                  </span>
+
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(false)}
+                  className="p-1 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer transition-colors"
+                >
+                  <Icon name="x" size="sm" />
+                </button>
+              </div>
+
+              {profileValidationToast && (
+                <div className="p-2.5 rounded-xl bg-[var(--status-danger-bg)] border border-[var(--status-danger-border)] text-[var(--status-danger-text)] text-xs font-semibold flex items-center gap-2">
+                  <Icon name="alert-triangle" size="xs" className="shrink-0" />
+                  <span>{profileValidationToast}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                {/* Personal Info */}
+                <div className="sm:col-span-2 font-bold text-[var(--accent-indigo)] uppercase tracking-wider text-[11px] font-mono border-b border-[var(--border-soft)] pb-1">
+                  Personal Information
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.name}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, name: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-semibold focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={editProfileForm.email}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, email: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Mobile Phone Number</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.phone}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Gender</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.gender}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, gender: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Date of Birth (DOB)</label>
+                  <input
+                    type="date"
+                    value={editProfileForm.dob}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, dob: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Hiring Location</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.location}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, location: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                {/* Professional Info */}
+                <div className="sm:col-span-2 font-bold text-[var(--accent-indigo)] uppercase tracking-wider text-[11px] font-mono border-b border-[var(--border-soft)] pb-1 mt-2">
+                  Professional Details
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Applied Position / Role</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.appliedFor}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, appliedFor: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Application Source</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.source}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, source: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Current Company</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.currentCompany}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, currentCompany: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Current Designation</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.currentDesignation}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, currentDesignation: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Total Experience</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.experience}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, experience: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Notice Period</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.noticePeriod}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, noticePeriod: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Current CTC</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.currentCtc}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, currentCtc: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Expected CTC</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.expectedCtc}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, expectedCtc: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                  />
+                </div>
+
+                {/* Education */}
+                <div className="sm:col-span-2 font-bold text-[var(--accent-indigo)] uppercase tracking-wider text-[11px] font-mono border-b border-[var(--border-soft)] pb-1 mt-2">
+                  Education & Academic Background
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Highest Degree / Qualification</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.education}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, education: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">College / University Name</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.college}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, college: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Graduation Passing Year</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.passingYear}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, passingYear: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Percentage / CGPA Marks</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.percentage}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, percentage: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                  />
+                </div>
+
+                {/* Reference Info */}
+                <div className="sm:col-span-2 font-bold text-[var(--accent-indigo)] uppercase tracking-wider text-[11px] font-mono border-b border-[var(--border-soft)] pb-1 mt-2">
+                  Reference & Verification Details
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Reference Type</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.refType}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, refType: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Name</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.refName}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, refName: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Employee ID</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.refEmployeeId}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, refEmployeeId: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Mobile Phone</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.refMobile}
+                    onChange={(e) => setEditProfileForm((p) => ({ ...p, refMobile: e.target.value }))}
+                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                  />
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowEditProfileModal(false)}
-                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <Icon name="x" size="sm" />
-              </button>
-            </div>
+              <div className="flex items-center justify-between pt-3 border-t border-[var(--border-soft)] mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(false)}
+                  className="h-8.5 px-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
 
-            {profileValidationToast && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
-                <Icon name="alert-triangle" size="xs" className="shrink-0" />
-                <span>{profileValidationToast}</span>
+                <button
+                  type="submit"
+                  className="h-8.5 px-4 rounded-lg bg-[var(--accent-indigo)] text-white text-xs font-bold hover:bg-[var(--accent-indigo-hover)] cursor-pointer shadow-2xs inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <Icon name="check-circle" size="xs" />
+                  <span>Save Profile Changes</span>
+                </button>
               </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-              {/* Personal Info */}
-              <div className="sm:col-span-2 font-bold text-slate-900 uppercase tracking-wider text-[11px] font-heading border-b border-slate-100 pb-1">
-                Personal Information
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={editProfileForm.name}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={editProfileForm.email}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, email: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Mobile Phone Number</label>
-                <input
-                  type="text"
-                  value={editProfileForm.phone}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, phone: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Gender</label>
-                <input
-                  type="text"
-                  value={editProfileForm.gender}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, gender: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Date of Birth (DOB)</label>
-                <input
-                  type="date"
-                  value={editProfileForm.dob}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, dob: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Hiring Location</label>
-                <input
-                  type="text"
-                  value={editProfileForm.location}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, location: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              {/* Professional Info */}
-              <div className="sm:col-span-2 font-bold text-slate-900 uppercase tracking-wider text-[11px] font-heading border-b border-slate-100 pb-1 mt-2">
-                Professional Details
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Applied Position / Role</label>
-                <input
-                  type="text"
-                  value={editProfileForm.appliedFor}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, appliedFor: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Application Source</label>
-                <input
-                  type="text"
-                  value={editProfileForm.source}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, source: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Current Company</label>
-                <input
-                  type="text"
-                  value={editProfileForm.currentCompany}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, currentCompany: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Current Designation</label>
-                <input
-                  type="text"
-                  value={editProfileForm.currentDesignation}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, currentDesignation: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Total Experience</label>
-                <input
-                  type="text"
-                  value={editProfileForm.experience}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, experience: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Notice Period</label>
-                <input
-                  type="text"
-                  value={editProfileForm.noticePeriod}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, noticePeriod: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Current CTC</label>
-                <input
-                  type="text"
-                  value={editProfileForm.currentCtc}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, currentCtc: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Expected CTC</label>
-                <input
-                  type="text"
-                  value={editProfileForm.expectedCtc}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, expectedCtc: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              {/* Education */}
-              <div className="sm:col-span-2 font-bold text-slate-900 uppercase tracking-wider text-[11px] font-heading border-b border-slate-100 pb-1 mt-2">
-                Education & Academic Background
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Highest Degree / Qualification</label>
-                <input
-                  type="text"
-                  value={editProfileForm.education}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, education: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">College / University Name</label>
-                <input
-                  type="text"
-                  value={editProfileForm.college}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, college: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Graduation Passing Year</label>
-                <input
-                  type="text"
-                  value={editProfileForm.passingYear}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, passingYear: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Percentage / CGPA Marks</label>
-                <input
-                  type="text"
-                  value={editProfileForm.percentage}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, percentage: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              {/* Reference Info */}
-              <div className="sm:col-span-2 font-bold text-slate-900 uppercase tracking-wider text-[11px] font-heading border-b border-slate-100 pb-1 mt-2">
-                Reference & Verification Details
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Reference Type</label>
-                <input
-                  type="text"
-                  value={editProfileForm.refType}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, refType: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Referrer Name</label>
-                <input
-                  type="text"
-                  value={editProfileForm.refName}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, refName: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Referrer Employee ID</label>
-                <input
-                  type="text"
-                  value={editProfileForm.refEmployeeId}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, refEmployeeId: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Referrer Mobile Phone</label>
-                <input
-                  type="text"
-                  value={editProfileForm.refMobile}
-                  onChange={(e) => setEditProfileForm((p) => ({ ...p, refMobile: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-2">
-              <button
-                type="button"
-                onClick={() => setShowEditProfileModal(false)}
-                className="h-8.5 px-4 rounded-lg border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="h-8.5 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
-              >
-                <Icon name="check-circle" size="xs" />
-                <span>Save Profile Changes</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Schedule & Send Assessment Test Modal ───────────────────────────────── */}
       {showScheduleTestModal && (
@@ -3112,75 +3281,91 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       )}
 
       {/* --- Document Preview Modal -------------------------------------- */}
-      {selectedDocPreview && (
-        <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 cursor-pointer"
-          onClick={() => setSelectedDocPreview(null)}
-        >
-          <div
-            className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xl max-w-xl w-full flex flex-col gap-4 cursor-default"
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {selectedDocPreview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 cursor-pointer"
+            onClick={() => setSelectedDocPreview(null)}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <span className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${selectedDocPreview.type === 'Profile Photo' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-600'
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="dialog-card rounded-[var(--radius-xl)] p-5 shadow-[var(--shadow-xl)] max-w-xl w-full flex flex-col gap-4 cursor-default relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top Inset Highlight Catch */}
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+
+              <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-3">
+                <div className="flex items-center gap-2">
+                  <span className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center border ${
+                    selectedDocPreview.type === 'Profile Photo'
+                      ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
+                      : 'bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border-[var(--status-danger-border)]'
                   }`}>
-                  {selectedDocPreview.type === 'Profile Photo' ? 'IMG' : 'PDF'}
-                </span>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm font-heading">{selectedDocPreview.name}</h3>
-                  <p className="text-[11px] text-slate-500">{selectedDocPreview.type} • {selectedDocPreview.size} • Attached {selectedDocPreview.date}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDocPreview(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <Icon name="x" size="xs" />
-              </button>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
-              {selectedDocPreview.type === 'Profile Photo' && candidate.avatar ? (
-                <img
-                  src={candidate.avatar}
-                  alt={selectedDocPreview.name}
-                  className="max-h-64 rounded-xl object-contain shadow-md border border-slate-200"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2.5">
-                  <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 border border-red-200 flex items-center justify-center font-bold text-sm">
-                    PDF
-                  </div>
-                  <span className="font-semibold text-slate-800 text-xs">{selectedDocPreview.name}</span>
-                  <span className="text-slate-500 text-[11.5px] max-w-sm">
-                    Verified candidate official document persisted in SQL Server database.
+                    {selectedDocPreview.type === 'Profile Photo' ? 'IMG' : 'PDF'}
                   </span>
+                  <div>
+                    <h3 className="font-bold text-[var(--text-primary)] text-sm font-heading">{selectedDocPreview.name}</h3>
+                    <p className="text-[11px] text-[var(--text-secondary)] font-mono tabular-figures">{selectedDocPreview.type} • {selectedDocPreview.size} • Attached {selectedDocPreview.date}</p>
+                  </div>
                 </div>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDocPreview(null)}
+                  className="p-1 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer transition-colors"
+                >
+                  <Icon name="x" size="xs" />
+                </button>
+              </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <button
-                type="button"
-                onClick={() => handleDownloadDocument(selectedDocPreview.name)}
-                className="h-8 px-3 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
-              >
-                <Icon name="download" size="xs" />
-                <span>Download File</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedDocPreview(null)}
-                className="h-8 px-4 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 cursor-pointer shadow-2xs"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+              <div className="bg-[var(--surface-2)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-6 flex flex-col items-center justify-center text-center min-h-[220px]">
+                {selectedDocPreview.type === 'Profile Photo' && candidate.avatar ? (
+                  <img
+                    src={candidate.avatar}
+                    alt={selectedDocPreview.name}
+                    className="max-h-64 rounded-xl object-contain shadow-md border border-[var(--border-default)]"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2.5">
+                    <div className="w-12 h-12 rounded-2xl bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center justify-center font-bold text-sm">
+                      PDF
+                    </div>
+                    <span className="font-semibold text-[var(--text-primary)] text-xs">{selectedDocPreview.name}</span>
+                    <span className="text-[var(--text-secondary)] text-[11.5px] max-w-sm">
+                      Verified candidate official document persisted in SQL Server database.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadDocument(selectedDocPreview.name)}
+                  className="h-8 px-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] text-xs font-semibold hover:bg-[var(--surface-hover)] cursor-pointer shadow-2xs inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <Icon name="download" size="xs" />
+                  <span>Download File</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDocPreview(null)}
+                  className="h-8 px-4 rounded-lg bg-[var(--accent-indigo)] text-white text-xs font-bold hover:bg-[var(--accent-indigo-hover)] cursor-pointer shadow-2xs transition-colors"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };

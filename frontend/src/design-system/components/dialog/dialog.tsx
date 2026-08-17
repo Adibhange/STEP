@@ -30,7 +30,7 @@ const DialogContent = React.forwardRef<
     <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 overflow-y-auto pointer-events-none">
       <DialogPrimitive.Content
         ref={ref}
-        className={`pointer-events-auto relative w-full max-w-lg rounded-[var(--radius-xl)] bg-[var(--surface-1)] p-xl border border-[var(--border-default)] shadow-[var(--shadow-xl)] ${className}`}
+        className={`pointer-events-auto relative w-full max-w-lg rounded-[var(--radius-xl)] dialog-card p-xl ${className}`}
         {...props}
       >
         {children}

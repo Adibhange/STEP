@@ -1,64 +1,60 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * STEP Enterprise Platform — Elevation Token System
+ * STEP Enterprise Platform — Elevation, Depth & Glassmorphism Token System
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Canonical home for all depth and elevation concerns:
- * • Shadow tokens     — box-shadow values by elevation level
- * • Backdrop blur     — blur values for glass/frosted surfaces
- * • Glass opacity     — fill opacity for translucent surfaces
- * • Overlay depth     — z-position and opacity of overlaid surfaces
- *
- * Never hardcode a shadow, blur, or glass value in a component.
- * All values reference the graphite single-theme foundation.
+ * Generated with UI/UX Pro Max Design Intelligence.
+ * Canonical home for all depth, shadow, glassmorphism, and ambient lighting:
+ * • Shadow tokens      — Precision box-shadow scales (0 muddy gray shadows)
+ * • Inset highlights   — 1px top-edge physical light catch on surfaces
+ * • Backdrop blur      — Gaussian blurs for frosted HUD panels & headers
+ * • Glass fills        — Translucent carbon/obsidian surface blends
+ * • Accent glows       — Radiant luminescence for badges & active states
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 :root {
 
   /* ─────────────────────────────────────────────────────────────────────────
-     SHADOW SCALE
-     Elevation 0 (flat) → Elevation 5 (floating command palette)
-     Optimised for the dark graphite foundation (#09090f).
-     Shadow colors use pure black alpha — never colored shadows.
+     SHADOW SCALE (Light Mode: Clean, Layered Ambient Diffusion)
+     Elevation 0 (flat) → Elevation 5 (floating command palette / modal)
   ───────────────────────────────────────────────────────────────────────── */
 
-  /** xs — subtle lift for micro components (chips, badges) */
-  --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.30);
+  /** xs — subtle lift for micro-components (chips, badges, pills) */
+  --shadow-xs:  0 1px 2px rgba(15, 23, 42, 0.04);
 
   /** sm — row hover, small cards, dropdown items */
-  --shadow-sm:  0 2px 6px rgba(0, 0, 0, 0.36);
+  --shadow-sm:  0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
 
   /** md — card resting state, popovers, tooltips */
-  --shadow-md:  0 6px 18px rgba(0, 0, 0, 0.42), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md:  0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
 
-  /** lg — drawers, side panels, large modals */
-  --shadow-lg:  0 14px 36px rgba(0, 0, 0, 0.50), 0 4px 8px rgba(0, 0, 0, 0.30);
+  /** lg — drawers, side panels, candidate quick-look dossier */
+  --shadow-lg:  0 12px 28px -4px rgba(15, 23, 42, 0.10), 0 4px 10px -2px rgba(15, 23, 42, 0.05);
 
-  /** xl — floating command palette, bottom sheets, entry card */
-  --shadow-xl:  0 28px 72px rgba(0, 0, 0, 0.60), 0 8px 20px rgba(0, 0, 0, 0.40);
+  /** xl — floating command palette (cmdk), bottom sheets */
+  --shadow-xl:  0 20px 40px -6px rgba(15, 23, 42, 0.12), 0 8px 16px -4px rgba(15, 23, 42, 0.06);
 
-  /** 2xl — deepest elevation, maximum premium depth */
-  --shadow-2xl: 0 48px 100px rgba(0, 0, 0, 0.70), 0 16px 40px rgba(0, 0, 0, 0.50);
+  /** 2xl — deepest elevation, maximum modal focus */
+  --shadow-2xl: 0 28px 64px -12px rgba(15, 23, 42, 0.20);
 
 
   /* ─────────────────────────────────────────────────────────────────────────
-     INSET HIGHLIGHTS
-     Simulates physical surface top-light catch.
-     Applied as inset box-shadow on elevated cards and panels.
+     INSET HIGHLIGHTS (Physical surface top-light catch)
   ───────────────────────────────────────────────────────────────────────── */
 
-  /** Standard top-edge highlight for cards */
-  --inset-highlight:      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  /** Subtle top-edge highlight for light surfaces */
+  --inset-highlight-subtle: inset 0 1px 0 rgba(255, 255, 255, 0.80);
 
-  /** Strong top-edge highlight for entry surfaces */
-  --inset-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 0.11);
+  /** Standard top-edge highlight for elevated cards */
+  --inset-highlight:        inset 0 1px 0 rgba(255, 255, 255, 1);
+
+  /** Strong top-edge highlight for active/selected panels */
+  --inset-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 1);
 
 
   /* ─────────────────────────────────────────────────────────────────────────
      BACKDROP BLUR SCALE
-     Used with backdrop-filter: blur(var(--blur-*))
-     Apply to glass/frosted panels only — not to opaque surfaces.
   ───────────────────────────────────────────────────────────────────────── */
 
   --blur-xs:   4px;
@@ -69,35 +65,72 @@
 
 
   /* ─────────────────────────────────────────────────────────────────────────
-     GLASS SURFACE FILLS
-     Opacity values for semi-transparent frosted panels.
+     GLASS SURFACE FILLS & BORDERS (Light Theme Baseline: Clean Crisp Solid)
   ───────────────────────────────────────────────────────────────────────── */
 
   /** Standard glass panel fill */
-  --glass-fill:        rgba(15, 17, 24, 0.82);
+  --glass-fill:         #ffffff;
 
-  /** Light glass fill for subtle floating elements */
-  --glass-fill-light:  rgba(15, 17, 24, 0.60);
+  /** Light glass fill for subtle floating filters & headers */
+  --glass-fill-subtle:  rgba(255, 255, 255, 0.90);
+  --glass-fill-light:   rgba(255, 255, 255, 0.90);
 
-  /** Heavy glass fill for prominent panels */
-  --glass-fill-heavy:  rgba(9, 9, 15, 0.92);
+  /** Heavy glass fill for sticky sidebars & drawers */
+  --glass-fill-heavy:   #ffffff;
+
+  /** Border for glass panels */
+  --glass-border:       rgba(15, 23, 42, 0.10);
 
 
   /* ─────────────────────────────────────────────────────────────────────────
-     RING / GLOW ELEVATIONS
-     For accent glows on interactive elements (focused inputs, primary buttons).
+     RADIANT ACCENT GLOWS
+  ───────────────────────────────────────────────────────────────────────── */
+
+  --glow-indigo:     0 0 20px rgba(99, 102, 241, 0.18);
+  --glow-emerald:    0 0 20px rgba(16, 185, 129, 0.18);
+  --glow-amber:      0 0 20px rgba(245, 158, 11, 0.18);
+  --glow-rose:       0 0 20px rgba(244, 63, 94, 0.18);
+
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     FOCUS RINGS
   ───────────────────────────────────────────────────────────────────────── */
 
   /** Standard accent ring — focus state on brand-colored elements */
-  --ring-accent:     0 0 0 3px rgba(99, 102, 241, 0.20);
+  --ring-accent:     0 0 0 3px rgba(99, 102, 241, 0.22);
+  --ring-accent-sm:  0 0 0 2px rgba(99, 102, 241, 0.18);
 
-  /** Strong accent ring — pressed primary button */
-  --ring-accent-sm:  0 0 0 2px rgba(99, 102, 241, 0.15);
+  /** Danger ring — destructive validation */
+  --ring-danger:     0 0 0 3px rgba(244, 63, 94, 0.22);
 
-  /** Danger ring — destructive input validation */
-  --ring-danger:     0 0 0 3px rgba(239, 68, 68, 0.15);
+  /** Warning ring — warning validation */
+  --ring-warning:    0 0 0 3px rgba(245, 158, 11, 0.22);
 
-  /** Warning ring — warning input validation */
-  --ring-warning:    0 0 0 3px rgba(245, 158, 11, 0.15);
+}
 
+/* ── Dark Mode Inset, Shadow & Glass Overrides (Solid Obsidian Architecture) */
+.dark,
+[data-theme="dark"] {
+  --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm:  0 2px 6px rgba(0, 0, 0, 0.40);
+  --shadow-md:  0 6px 18px rgba(0, 0, 0, 0.50), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-lg:  0 14px 36px rgba(0, 0, 0, 0.60), 0 4px 10px rgba(0, 0, 0, 0.35);
+  --shadow-xl:  0 28px 72px rgba(0, 0, 0, 0.70), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-2xl: 0 48px 100px rgba(0, 0, 0, 0.80), 0 16px 40px rgba(0, 0, 0, 0.55);
+
+  --inset-highlight-subtle: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --inset-highlight:        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --inset-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+
+  --glass-fill:         #0f1420;
+  --glass-fill-subtle:  rgba(15, 20, 32, 0.90);
+  --glass-fill-light:   rgba(15, 20, 32, 0.90);
+  --glass-fill-heavy:   #080b11;
+
+  --glass-border:       rgba(255, 255, 255, 0.10);
+
+  --glow-indigo:     0 0 20px rgba(99, 102, 241, 0.25);
+  --glow-emerald:    0 0 20px rgba(16, 185, 129, 0.25);
+  --glow-amber:      0 0 20px rgba(245, 158, 11, 0.25);
+  --glow-rose:       0 0 20px rgba(244, 63, 94, 0.25);
 }

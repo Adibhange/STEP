@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { KpiSection, CandidateWorkspace } from '@/features/dashboard';
+import { staggerContainer } from '@/design-system';
 
 /**
  * STEP Enterprise Dashboard Page
@@ -13,12 +15,18 @@ import { KpiSection, CandidateWorkspace } from '@/features/dashboard';
  */
 export default function DashboardPage() {
   return (
-    <div className="flex flex-col gap-3.5 p-3.5 sm:p-5">
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={staggerContainer}
+      className="flex flex-col gap-3.5 p-3.5 sm:p-5"
+    >
       {/* KPI Row */}
       <KpiSection />
 
       {/* Candidate workspace */}
       <CandidateWorkspace />
-    </div>
+    </motion.div>
   );
 }
+
