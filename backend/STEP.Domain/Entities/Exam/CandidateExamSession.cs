@@ -23,8 +23,14 @@ namespace STEP.Domain.Entities.Exam
         public int VacancyId { get; set; }
         public VacancyEntity Vacancy { get; set; } = null!;
 
-        public int VacancyQuestionPaperId { get; set; }
-        public VacancyQuestionPaper VacancyQuestionPaper { get; set; } = null!;
+        /// <summary>Explicit source: "StaticPaper" (V1) or "DynamicQuestionBank" (V2).</summary>
+        public string AssessmentSource { get; set; } = "DynamicQuestionBank";
+
+        public int? RoleHiringProfileId { get; set; }
+        public STEP.Domain.Entities.Master.RoleHiringProfile? RoleHiringProfile { get; set; }
+
+        public int? VacancyQuestionPaperId { get; set; }
+        public VacancyQuestionPaper? VacancyQuestionPaper { get; set; }
 
         public int? CandidatePipelineProgressId { get; set; }
         public CandidatePipelineProgress? CandidatePipelineProgress { get; set; }

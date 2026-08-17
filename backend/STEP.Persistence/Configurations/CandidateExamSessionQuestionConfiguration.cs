@@ -12,6 +12,8 @@ namespace STEP.Persistence.Configurations
             builder.HasKey(e => e.Id);
             builder.Property(e => e.Id).HasColumnName("CandidateExamSessionQuestionId");
 
+            builder.Property(e => e.SectionName).HasMaxLength(150);
+            builder.Property(e => e.SectionType).HasMaxLength(50);
             builder.Property(e => e.QuestionType).HasMaxLength(30).IsRequired();
             builder.Property(e => e.QuestionText).HasColumnType("nvarchar(max)").IsRequired();
             builder.Property(e => e.Marks).HasColumnType("decimal(5,2)");
@@ -22,7 +24,8 @@ namespace STEP.Persistence.Configurations
             builder.HasIndex(e => new { e.CandidateExamSessionId, e.DisplayOrder }).IsUnique();
 
             builder.HasOne(e => e.CandidateExamSession).WithMany(s => s.Questions).HasForeignKey(e => e.CandidateExamSessionId).OnDelete(DeleteBehavior.Cascade);
-            builder.HasOne(e => e.OriginalVacancyQuestion).WithMany().HasForeignKey(e => e.OriginalVacancyQuestionId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.OriginalVacancyQuestion).WithMany().HasForeignKey(e => e.OriginalVacancyQuestionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.OriginalMasterQuestion).WithMany().HasForeignKey(e => e.OriginalMasterQuestionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

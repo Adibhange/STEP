@@ -19,6 +19,7 @@ namespace STEP.Persistence.Configurations
             builder.Property(e => e.SnapshotVacancyCode).HasMaxLength(30).IsRequired();
             builder.Property(e => e.SnapshotPaperCode).HasMaxLength(30).IsRequired();
             builder.Property(e => e.SnapshotPaperTitle).HasMaxLength(150).IsRequired();
+            builder.Property(e => e.AssessmentSource).HasMaxLength(50).IsRequired().HasDefaultValue("DynamicQuestionBank");
             builder.Property(e => e.FrozenAssessmentMode).HasMaxLength(20).IsRequired();
             builder.Property(e => e.TestSource).HasMaxLength(20).IsRequired();
             builder.Property(e => e.FrozenIPAddress).HasMaxLength(50);
@@ -39,7 +40,8 @@ namespace STEP.Persistence.Configurations
 
             builder.HasOne(e => e.Candidate).WithMany().HasForeignKey(e => e.CandidateId).OnDelete(DeleteBehavior.Cascade);
             builder.HasOne(e => e.Vacancy).WithMany().HasForeignKey(e => e.VacancyId).OnDelete(DeleteBehavior.Restrict);
-            builder.HasOne(e => e.VacancyQuestionPaper).WithMany().HasForeignKey(e => e.VacancyQuestionPaperId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.RoleHiringProfile).WithMany().HasForeignKey(e => e.RoleHiringProfileId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.VacancyQuestionPaper).WithMany().HasForeignKey(e => e.VacancyQuestionPaperId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
             builder.HasOne(e => e.CandidatePipelineProgress).WithMany().HasForeignKey(e => e.CandidatePipelineProgressId).OnDelete(DeleteBehavior.Restrict);
             builder.HasOne(e => e.Evaluator).WithMany().HasForeignKey(e => e.EvaluatorId).OnDelete(DeleteBehavior.Restrict);
 

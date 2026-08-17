@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { MasterTable } from './MasterTable';
+import { RoleHiringProfilesManager } from './RoleHiringProfilesManager';
+import { QuestionBankManager } from './QuestionBankManager';
 import type { MasterRecord } from '@/types/master.types';
 import {
   useGetMasterDataByCategoryQuery,
@@ -26,6 +29,33 @@ export interface CategoryDef {
 export const CONFIG_CATEGORIES: CategoryDef[] = [
   // Recruitment Group
   {
+    key: 'hiringprofiles',
+    title: 'Assessment Templates',
+    icon: 'layout-template',
+    description: 'Reusable test templates & section rules — selected when creating a vacancy',
+    group: 'recruitment',
+    exampleName: 'Software Engineering Technical Track',
+    exampleCode: 'RULE-TECH-ENG',
+  },
+  {
+    key: 'questionbank',
+    title: 'Question Bank (V2)',
+    icon: 'file-stack',
+    description: 'Central tagged question repository across roles and formats',
+    group: 'recruitment',
+    exampleName: 'React Hook MCQs',
+    exampleCode: 'QB-RCT',
+  },
+  {
+    key: 'languages',
+    title: 'Programming Languages',
+    icon: 'code-2',
+    description: 'Assessment languages, compiler runtimes & candidate IDE domains',
+    group: 'recruitment',
+    exampleName: 'C# (.NET)',
+    exampleCode: 'LANG-CS',
+  },
+  {
     key: 'roles',
     title: 'Roles',
     icon: 'briefcase',
@@ -46,7 +76,7 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
   {
     key: 'employmenttypes',
     title: 'Employment Types',
-    icon: 'file-text',
+    icon: 'file-check',
     description: 'Full-time permanent, contract, internship',
     group: 'recruitment',
     exampleName: 'Full-Time Permanent',
@@ -62,22 +92,22 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
     exampleCode: 'MHQ',
   },
   {
-    key: 'testlocations',
-    title: 'Test Locations',
-    icon: 'clipboard-check',
-    description: 'Assessment test centers & online proctoring',
-    group: 'locations',
-    exampleName: 'Mumbai Center',
-    exampleCode: 'MCTR',
-  },
-  {
     key: 'experiencelevels',
-    title: 'Experience Levels',
+    title: 'Experience Levels (Legacy V1)',
     icon: 'trending-up',
-    description: 'Job experience level definitions',
+    description: 'Legacy fixed experience bands (superseded by dynamic Min/Max Years in V2 Hiring Profiles)',
     group: 'recruitment',
     exampleName: 'Senior (3-5 Years)',
     exampleCode: 'EXP-5',
+  },
+  {
+    key: 'testlocations',
+    title: 'Test Locations (Legacy V1)',
+    icon: 'map-pin',
+    description: 'Legacy physical test lab centers (superseded by dynamic online/offline drives in V2)',
+    group: 'locations',
+    exampleName: 'Mumbai Center',
+    exampleCode: 'MCTR',
   },
 ];
 
@@ -229,7 +259,7 @@ export const ConfigurationPanel: React.FC = () => {
   return (
     <div className="flex flex-col gap-4 w-full">
       {/* Category Navigation Bar */}
-      <div className="bg-[var(--surface-1)] border border-[var(--border-default)] p-2 rounded-[var(--radius-lg)] shadow-2xs flex items-center gap-2 overflow-x-auto scrollbar-step w-full">
+      <div className="bg-[var(--surface-1)] border border-[var(--border-default)] p-1.5 rounded-[var(--radius-lg)] shadow-2xs flex items-center gap-1.5 overflow-x-auto scrollbar-step w-full">
         {CONFIG_CATEGORIES.map((cat) => {
           const isActive = cat.key === activeCategoryKey;
           const count = cat.key === activeCategoryKey ? records.length : 0;
@@ -238,16 +268,25 @@ export const ConfigurationPanel: React.FC = () => {
               key={cat.key}
               type="button"
               onClick={() => setActiveCategoryKey(cat.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] text-[12.5px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                isActive
-                  ? 'bg-[var(--accent-indigo)] text-white shadow-2xs'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
-              }`}
+              className="relative flex items-center gap-2 px-3.5 py-2 rounded-[var(--radius-md)] text-[12.5px] font-bold transition-colors cursor-pointer whitespace-nowrap z-10"
             >
-              <Icon name={cat.icon as any} size="xs" />
-              <span>{cat.title}</span>
               {isActive && (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/20 text-white">
+                <motion.div
+                  layoutId="activeSettingsTabPill"
+                  className="absolute inset-0 rounded-[var(--radius-md)] bg-[var(--accent-indigo)] shadow-xs -z-1"
+                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                />
+              )}
+              <Icon
+                name={cat.icon as any}
+                size="xs"
+                className={`transition-colors ${isActive ? 'text-white' : 'text-[var(--text-tertiary)]'}`}
+              />
+              <span className={`transition-colors ${isActive ? 'text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}>
+                {cat.title}
+              </span>
+              {isActive && count > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-white/20 text-white">
                   {count}
                 </span>
               )}
@@ -268,22 +307,35 @@ export const ConfigurationPanel: React.FC = () => {
         </div>
       )}
 
-      {/* Master Data Table */}
-      {!isLoading && !isError && (
-        <div className="w-full">
-          <MasterTable
-            title={activeCategory.title}
-            description={activeCategory.description}
-            data={records}
-            exampleName={activeCategory.exampleName}
-            exampleCode={activeCategory.exampleCode}
-            onAdd={handleAddRecord}
-            onEdit={handleEditRecord}
-            onToggleStatus={handleToggleStatus}
-            onDelete={handleDeleteRecord}
-          />
-        </div>
-      )}
+      {/* Hiring Profiles, Question Bank or Master Data Table with Smooth Mount Animation */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeCategoryKey}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="w-full"
+        >
+          {activeCategoryKey === 'hiringprofiles' ? (
+            <RoleHiringProfilesManager />
+          ) : activeCategoryKey === 'questionbank' ? (
+            <QuestionBankManager />
+          ) : !isLoading && !isError ? (
+            <MasterTable
+              title={activeCategory.title}
+              description={activeCategory.description}
+              data={records}
+              exampleName={activeCategory.exampleName}
+              exampleCode={activeCategory.exampleCode}
+              onAdd={handleAddRecord}
+              onEdit={handleEditRecord}
+              onToggleStatus={handleToggleStatus}
+              onDelete={handleDeleteRecord}
+            />
+          ) : null}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

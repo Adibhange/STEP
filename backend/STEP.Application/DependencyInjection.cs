@@ -17,6 +17,7 @@ namespace STEP.Application
             services.AddAutoMapper(assembly);
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
             services.AddScoped<ICandidateAdvancementService, CandidateAdvancementService>();
+            services.AddScoped<IDynamicQuestionSampler, DynamicQuestionSampler>();
 
             return services;
         }

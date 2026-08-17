@@ -18,7 +18,9 @@ namespace STEP.Persistence.Configurations
             builder.HasOne(e => e.CandidateExamSessionQuestion).WithMany(q => q.Options)
                 .HasForeignKey(e => e.CandidateExamSessionQuestionId).OnDelete(DeleteBehavior.Cascade);
             builder.HasOne(e => e.OriginalVacancyQuestionOption).WithMany()
-                .HasForeignKey(e => e.OriginalVacancyQuestionOptionId).OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(e => e.OriginalVacancyQuestionOptionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.OriginalMasterQuestionOption).WithMany()
+                .HasForeignKey(e => e.OriginalMasterQuestionOptionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

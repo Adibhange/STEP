@@ -100,14 +100,16 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
       ? vacancyDetail.testLocations.join(', ')
       : vacancy.testLocation;
 
-  // Dynamic Tabs based on Drive Type (Direct Hiring gets 2 tabs: Overview & Specs, Assessment Paper)
+  // Dynamic Tabs based on Drive Type
   const TABS = isDirectHiring
     ? [
         { id: 'overview', label: 'Overview & Specs', icon: 'file-text' },
+        { id: 'automation', label: '⚡ V2 Automation', icon: 'zap' },
         { id: 'assessment-builder', label: 'Assessment & Question Paper', icon: 'clipboard-check' },
       ]
     : [
         { id: 'overview', label: 'Overview & QR Center', icon: 'grid' },
+        { id: 'automation', label: '⚡ V2 Automation', icon: 'zap' },
         { id: 'flow-versions', label: 'Pipeline Flow Versions', icon: 'bar-chart-2' },
         { id: 'assessment-builder', label: 'Assessment Builder & Excel', icon: 'clipboard-check' },
         { id: 'bulk-assignment', label: 'Candidates & Bulk Flow Assignment', icon: 'users' },
@@ -382,6 +384,75 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* V2 AUTONOMOUS RECRUITMENT CONTROLS */}
+          {activeTab === 'automation' && (
+            <div className="p-4 sm:p-6 space-y-6">
+              <div className="p-4 rounded-[var(--radius-xl)] bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 border border-[var(--border-default)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-extrabold text-[var(--text-primary)] font-heading flex items-center gap-2">
+                    <Icon name="zap" size="xs" className="text-amber-500" />
+                    <span>Autonomous Recruitment Engine Status</span>
+                  </h3>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+                    Zero-touch applicant screening, instant auto-grading, and automated interview stage movement.
+                  </p>
+                </div>
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Automation Active</span>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--surface-2)] border border-[var(--border-default)] space-y-1">
+                  <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono">Auto-Screening</span>
+                  <span className="text-base font-extrabold text-emerald-600 block">70% Pass Cutoff</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)]">Instant MCQ grading on submit</span>
+                </div>
+
+                <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--surface-2)] border border-[var(--border-default)] space-y-1">
+                  <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono">Stage Advancement</span>
+                  <span className="text-base font-extrabold text-[var(--text-primary)] block">Zero-Touch</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)]">Auto-moves to Interview Scheduled</span>
+                </div>
+
+                <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--surface-2)] border border-[var(--border-default)] space-y-1">
+                  <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono">Offer Pre-Drafting</span>
+                  <span className="text-base font-extrabold text-blue-600 block">Automated</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)]">Awaiting 1-Click Director PIN</span>
+                </div>
+              </div>
+
+              {/* Manual Override Controls */}
+              <div className="p-4 rounded-[var(--radius-xl)] bg-[var(--surface-2)] border border-[var(--border-default)] space-y-3">
+                <h4 className="text-xs font-bold text-[var(--text-primary)] uppercase font-mono">
+                  Recruiter Manual Overrides & Exception Handling
+                </h4>
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  You can intervene at any moment to override AI/automated scoring, manually change stages, or pause the pipeline.
+                </p>
+                <div className="flex items-center gap-3 flex-wrap pt-1">
+                  <button
+                    type="button"
+                    onClick={() => toast.success('Automation Paused', { description: 'Autonomous stage advancement is temporarily paused for this vacancy.' })}
+                    className="h-8.5 px-3.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--text-secondary)] transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Icon name="pause-circle" size="xs" />
+                    <span>Pause Automation</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toast.success('Objective Scores Re-calculated', { description: 'All pending candidate exams were re-graded against latest answer keys.' })}
+                    className="h-8.5 px-3.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--text-secondary)] transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Icon name="clipboard-check" size="xs" />
+                    <span>Re-grade Assessments</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

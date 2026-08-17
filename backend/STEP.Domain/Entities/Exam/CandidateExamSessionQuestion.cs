@@ -14,9 +14,16 @@ namespace STEP.Domain.Entities.Exam
         public int CandidateExamSessionId { get; set; }
         public CandidateExamSession CandidateExamSession { get; set; } = null!;
 
-        public int OriginalVacancyQuestionId { get; set; }
-        public VacancyQuestion OriginalVacancyQuestion { get; set; } = null!;
+        public int? OriginalVacancyQuestionId { get; set; }
+        public VacancyQuestion? OriginalVacancyQuestion { get; set; }
+
+        public int? OriginalMasterQuestionId { get; set; }
+        public STEP.Domain.Entities.Master.MasterQuestion? OriginalMasterQuestion { get; set; }
+
         public int OriginalQuestionVersion { get; set; } = 1;
+
+        public string SectionName { get; set; } = string.Empty;
+        public string SectionType { get; set; } = string.Empty;
 
         public int DisplayOrder { get; set; }
         public int OriginalOrder { get; set; }

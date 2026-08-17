@@ -70,6 +70,15 @@ import {
   Sun,
   Moon,
   Monitor,
+  Zap,
+  Sparkles,
+  Copy,
+  QrCode,
+  Share2,
+  LayoutTemplate,
+  Layers,
+  FileCheck,
+  FileStack,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -132,6 +141,11 @@ export type IconName =
   | 'trending-down'
   | 'bar-chart-2'
   | 'layout-dashboard'
+  | 'layout-template'
+  | 'layout'
+  | 'layers'
+  | 'file-check'
+  | 'file-stack'
   | 'user-cog'
   | 'log-out'
   | 'code-2'
@@ -147,7 +161,12 @@ export type IconName =
   | 'file-up'
   | 'sun'
   | 'moon'
-  | 'monitor';
+  | 'monitor'
+  | 'zap'
+  | 'sparkles'
+  | 'copy'
+  | 'qr-code'
+  | 'share';
 
 export const iconRegistry: Record<IconName, LucideIcon> = {
   'search': Search,
@@ -208,6 +227,11 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'trending-down': TrendingDown,
   'bar-chart-2': BarChart2,
   'layout-dashboard': LayoutDashboard,
+  'layout-template': LayoutTemplate,
+  'layout': LayoutTemplate,
+  'layers': Layers,
+  'file-check': FileCheck,
+  'file-stack': FileStack,
   'user-cog': UserCog,
   'log-out': LogOut,
   'code-2': Code2,
@@ -224,4 +248,9 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'sun': Sun,
   'moon': Moon,
   'monitor': Monitor,
+  'zap': Zap,
+  'sparkles': Sparkles,
+  'copy': Copy,
+  'qr-code': QrCode,
+  'share': Share2,
 };

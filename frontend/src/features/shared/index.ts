@@ -16,3 +16,6 @@ export type { ActivityFeedProps, ActivityItem } from './activity-feed/ActivityFe
 
 export { CustomSelect } from './select/CustomSelect';
 export type { CustomSelectProps, SelectOption } from './select/CustomSelect';
+
+export { TierBadge, getExperienceTierBadgeStyle } from './tier-badge/TierBadge';
+export type { TierBadgeProps } from './tier-badge/TierBadge';

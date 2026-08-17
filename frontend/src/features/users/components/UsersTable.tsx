@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/design-system';
 import { type UserItem } from '../types/user.types';
 
@@ -47,9 +48,27 @@ export const UsersTable: React.FC<UsersTableProps> = ({ users, isLoading, onEdit
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--border-default)] text-[var(--text-primary)] font-medium">
-            {users.map((user) => (
-              <tr key={user.id} className="hover:bg-[var(--surface-hover)] transition-colors">
+          <motion.tbody
+            className="divide-y divide-[var(--border-default)] text-[var(--text-primary)] font-medium"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
+            }}
+          >
+            <AnimatePresence mode="popLayout">
+              {users.map((user, idx) => (
+                <motion.tr
+                  key={user.id}
+                  layout
+                  variants={{
+                    hidden: { opacity: 0, y: 8 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+                  }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="hover:bg-[var(--surface-hover)] transition-colors"
+                >
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
@@ -71,11 +90,9 @@ export const UsersTable: React.FC<UsersTableProps> = ({ users, isLoading, onEdit
                       ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border-[var(--status-warning-border)]'
                       : user.role === 'HR'
                       ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
-                      : (user.role as string) === 'Administrator' || user.role === 'SuperAdmin'
-                      ? 'bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border-[var(--accent-violet)]/30'
                       : 'bg-[var(--accent-cyan-dim)] text-[var(--accent-cyan)] border-[var(--accent-cyan)]/30'
                   }`}>
-                    <Icon name={user.role === 'Director' ? 'shield' : 'user'} size="xs" />
+                    <Icon name={user.role === 'Director' ? 'shield' : user.role === 'HR' ? 'user' : 'users'} size="xs" />
                     <span>{user.role}</span>
                   </span>
                 </td>
@@ -99,10 +116,11 @@ export const UsersTable: React.FC<UsersTableProps> = ({ users, isLoading, onEdit
                   >
                     <Icon name="edit" size="xs" />
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+                  </td>
+                </motion.tr>
+              ))}
+            </AnimatePresence>
+          </motion.tbody>
         </table>
       </div>
     </div>

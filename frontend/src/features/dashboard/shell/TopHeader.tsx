@@ -37,15 +37,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
     setMounted(true);
   }, []);
 
-  const displayName = mounted && reduxUser?.name ? reduxUser.name : 'Administrator';
-  const displayEmail = mounted && reduxUser?.email ? reduxUser.email : 'admin@sthapatya.com';
-  const displayRole = mounted && reduxUser?.role ? reduxUser.role : 'System Administrator';
-  const avatarInitials = displayName
+  const displayName = reduxUser?.name || 'Administrator';
+  const displayEmail = reduxUser?.email || 'admin@sthapatya.com';
+  const displayRole = reduxUser?.role || 'System Administrator';
+  const avatarInitials = (displayName || 'Administrator')
     .split(' ')
     .map((w) => w[0])
+    .filter(Boolean)
     .join('')
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || 'A';
 
   const user: CurrentUser = {
     name: displayName,
@@ -281,14 +282,17 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
             aria-expanded={profileOpen}
             aria-haspopup="true"
           >
-            <div className="w-7.5 h-7.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-[12px] flex items-center justify-center shadow-xs">
+            <div
+              className="w-7.5 h-7.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-[12px] flex items-center justify-center shadow-xs"
+              suppressHydrationWarning
+            >
               {user.avatarInitials}
             </div>
-            <div className="hidden sm:flex flex-col text-left">
-              <span className="text-[12.5px] font-bold text-[var(--text-primary)] leading-none font-heading">
+            <div className="hidden sm:flex flex-col text-left" suppressHydrationWarning>
+              <span className="text-[12.5px] font-bold text-[var(--text-primary)] leading-none font-heading" suppressHydrationWarning>
                 {user.name}
               </span>
-              <span className="text-[10.5px] text-[var(--text-tertiary)] font-medium leading-tight">
+              <span className="text-[10.5px] text-[var(--text-tertiary)] font-medium leading-tight" suppressHydrationWarning>
                 {user.role}
               </span>
             </div>

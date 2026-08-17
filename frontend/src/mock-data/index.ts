@@ -9,4 +9,5 @@ export * from './interviews.mock';
 export * from './offers.mock';
 export * from './qrcodes.mock';
 export * from './reports.mock';
+export * from './blueprints.mock';
 export * from './mockDbService';

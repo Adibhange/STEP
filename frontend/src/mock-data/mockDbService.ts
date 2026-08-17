@@ -17,6 +17,7 @@ import {
   checkMockEligibility,
 } from './qrcodes.mock';
 import { computeMockRecruitmentFunnel } from './reports.mock';
+import { MOCK_QUESTION_BANK, type MockQuestionBankItem } from './questionBank.mock';
 import type { ApiEnvelope, MasterRecord, UserItem } from '@/store/services/api';
 
 const STORAGE_KEY = 'step_enterprise_mock_db_v1';
@@ -27,6 +28,7 @@ interface MockDbState {
   masterData: Record<string, MasterRecord[]>;
   vacancies: MockVacancy[];
   questionPapers: MockQuestionPaper[];
+  questionBank: MockQuestionBankItem[];
   candidates: MockCandidate[];
   examSessions: Record<string, any>;
   evaluations: Record<number, any>;
@@ -46,7 +48,24 @@ class MockDatabaseService {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          // Ensure newly added master categories (skills, languages) are populated
+          parsed.masterData = {
+            ...MOCK_MASTER_DATA,
+            ...(parsed.masterData || {}),
+          };
+          delete parsed.masterData.skills;
+          delete parsed.masterData.subjects;
+          parsed.masterData.languages = JSON.parse(JSON.stringify(MOCK_MASTER_DATA.languages));
+          for (const key of Object.keys(MOCK_MASTER_DATA)) {
+            if (!parsed.masterData[key] || parsed.masterData[key].length === 0) {
+              parsed.masterData[key] = JSON.parse(JSON.stringify(MOCK_MASTER_DATA[key]));
+            }
+          }
+          if (!parsed.questionBank || parsed.questionBank.length === 0) {
+            parsed.questionBank = JSON.parse(JSON.stringify(MOCK_QUESTION_BANK));
+          }
+          return parsed;
         }
       } catch (e) {
         console.warn('[MockDB] Could not load state from localStorage:', e);
@@ -59,6 +78,7 @@ class MockDatabaseService {
       masterData: JSON.parse(JSON.stringify(MOCK_MASTER_DATA)),
       vacancies: JSON.parse(JSON.stringify(MOCK_VACANCIES)),
       questionPapers: JSON.parse(JSON.stringify(MOCK_QUESTION_PAPERS)),
+      questionBank: JSON.parse(JSON.stringify(MOCK_QUESTION_BANK)),
       candidates: JSON.parse(JSON.stringify(MOCK_CANDIDATES)),
       examSessions: JSON.parse(JSON.stringify(MOCK_EXAM_SESSIONS)),
       evaluations: JSON.parse(JSON.stringify(MOCK_EVALUATION_SESSIONS)),
@@ -228,6 +248,127 @@ class MockDatabaseService {
         this.state.masterData[category] = list.filter((m) => String(m.id) !== String(id));
         this.saveState();
         return { data: this.envelope(true, 'Master record deleted') };
+      }
+
+      // ────────────────── V2 QUESTION BANK ──────────────────
+      if (url === '/v2/question-bank' && method === 'GET') {
+        let list = [...this.state.questionBank];
+        const { language, sectionType, experienceTier, difficulty, questionType, search } = params;
+        if (language && language !== 'All') {
+          list = list.filter((q) => q.language.toLowerCase() === language.toLowerCase());
+        }
+        if (sectionType && sectionType !== 'All') {
+          list = list.filter((q) => q.sectionType === sectionType);
+        }
+        const expFilter = experienceTier || difficulty;
+        if (expFilter && expFilter !== 'All') {
+          list = list.filter((q) => q.experienceTier === expFilter);
+        }
+        if (questionType && questionType !== 'All') {
+          list = list.filter((q) => q.questionType === questionType);
+        }
+        if (search && search.trim()) {
+          const qSearch = search.toLowerCase().trim();
+          list = list.filter(
+            (q) =>
+              q.questionText.toLowerCase().includes(qSearch) ||
+              (q.code && q.code.toLowerCase().includes(qSearch)) ||
+              q.language.toLowerCase().includes(qSearch)
+          );
+        }
+        return { data: this.envelope(list) };
+      }
+
+      if (url === '/v2/question-bank' && method === 'POST') {
+        const newId = this.state.questionBank.reduce((max, q) => Math.max(max, q.id), 0) + 1;
+        const newQuestion: MockQuestionBankItem = {
+          id: newId,
+          code: body.code || `QB-NEW-${newId.toString().padStart(2, '0')}`,
+          language: body.language || 'General Aptitude',
+          sectionType: body.sectionType || 'Aptitude',
+          questionType: body.questionType || 'SINGLE_CHOICE',
+          experienceTier: body.experienceTier || body.difficulty || 'Junior',
+          questionText: body.questionText || '',
+          marks: Number(body.marks) || 1,
+          sqlSchema: body.sqlSchema || null,
+          starterCode: body.starterCode || null,
+          testCases: body.testCases || null,
+          options: body.options || [],
+          isActive: body.isActive ?? true,
+          updatedAt: new Date().toISOString().split('T')[0],
+        };
+        this.state.questionBank.unshift(newQuestion);
+        this.saveState();
+        return { data: this.envelope(newQuestion, 'Question added successfully') };
+      }
+
+      if (url.startsWith('/v2/question-bank/') && method === 'PUT') {
+        const id = Number(url.split('/')[3]);
+        const idx = this.state.questionBank.findIndex((q) => q.id === id);
+        if (idx !== -1) {
+          this.state.questionBank[idx] = {
+            ...this.state.questionBank[idx],
+            ...body,
+            id,
+            updatedAt: new Date().toISOString().split('T')[0],
+          };
+          this.saveState();
+          return { data: this.envelope(this.state.questionBank[idx], 'Question updated successfully') };
+        }
+        return { error: { status: 404, data: this.errorEnvelope('Question not found', 404) } };
+      }
+
+      if (url.startsWith('/v2/question-bank/') && method === 'DELETE') {
+        const id = Number(url.split('/')[3]);
+        this.state.questionBank = this.state.questionBank.filter((q) => q.id !== id);
+        this.saveState();
+        return { data: this.envelope(true, 'Question deleted successfully') };
+      }
+
+      if (url === '/v2/question-bank/bulk-delete' && method === 'POST') {
+        const ids: number[] = body.questionIds || [];
+        const idSet = new Set(ids);
+        this.state.questionBank = this.state.questionBank.filter((q) => !idSet.has(q.id));
+        this.saveState();
+        return { data: this.envelope(true, `${ids.length} questions deleted successfully`) };
+      }
+
+      if (url === '/v2/question-bank/bulk-status' && method === 'POST') {
+        const ids: number[] = body.questionIds || [];
+        const isActive: boolean = body.isActive ?? true;
+        const idSet = new Set(ids);
+        this.state.questionBank.forEach((q) => {
+          if (idSet.has(q.id)) {
+            q.isActive = isActive;
+            q.updatedAt = new Date().toISOString().split('T')[0];
+          }
+        });
+        this.saveState();
+        return { data: this.envelope(true, `${ids.length} questions updated successfully`) };
+      }
+
+      if (url === '/v2/question-bank/bulk-import' && method === 'POST') {
+        const items: any[] = body.questions || [];
+        let nextId = this.state.questionBank.reduce((max, q) => Math.max(max, q.id), 0) + 1;
+        const importedList: MockQuestionBankItem[] = items.map((it: any) => ({
+          id: nextId++,
+          code: it.code || `QB-IMP-${nextId}`,
+          language: it.language || 'General Aptitude',
+          sectionType: it.sectionType || 'Aptitude',
+          questionType: it.questionType || 'SINGLE_CHOICE',
+          experienceTier: it.experienceTier || it.difficulty || 'Junior',
+          questionText: it.questionText || '',
+          marks: Number(it.marks) || 1,
+          sqlSchema: it.sqlSchema || null,
+          starterCode: it.starterCode || null,
+          testCases: it.testCases || null,
+          options: it.options || [],
+          isActive: true,
+          updatedAt: new Date().toISOString().split('T')[0],
+        }));
+        this.state.questionBank.unshift(...importedList);
+        this.saveState();
+        return { data: this.envelope(importedList, `${importedList.length} questions imported successfully`) };
       }
 
       // ────────────────── USERS ──────────────────
@@ -816,10 +957,187 @@ class MockDatabaseService {
         return { data: this.envelope(MOCK_QR_ANALYTICS[id] || MOCK_QR_ANALYTICS[1]) };
       }
 
-      // ────────────────── REPORTS ──────────────────
-      if (url === '/reports/recruitment-funnel' && method === 'GET') {
-        const funnel = computeMockRecruitmentFunnel(this.state.candidates, this.state.vacancies);
-        return { data: this.envelope(funnel) };
+      // ────────────────── V2 AUTONOMOUS RECRUITMENT ENGINE ──────────────────
+      if (url.startsWith('/v2/vacancies/roles/') && url.endsWith('/profiles') && method === 'GET') {
+        const parts = url.split('/').filter(Boolean);
+        const roleId = Number(parts[3]) || 1;
+        const roleName = this.state.masterData['roles']?.find((r) => String(r.id) === String(roleId))?.name || 'Software Engineer';
+        
+        const mockProfiles = [
+          {
+            id: roleId * 10 + 1,
+            masterRoleId: roleId,
+            roleName,
+            profileName: 'Fresher (0-1 Year)',
+            experienceLevelId: 1,
+            experienceLevelName: 'Fresher (0 Years)',
+            minExperienceYears: 0.0,
+            maxExperienceYears: 1.0,
+            questionPaperTemplateId: 1,
+            questionPaperTitle: `${roleName} Fundamentals Assessment (Fresher)`,
+            passingPercentage: 65.0,
+            pipelineFlowTemplateId: 1,
+            autoAdvanceOnPass: true,
+            autoRejectOnFail: true,
+            autoPrepareOfferOnFinalPass: true,
+            defaultBaseCTC: 450000,
+            isDefault: true,
+            isActive: true,
+          },
+          {
+            id: roleId * 10 + 2,
+            masterRoleId: roleId,
+            roleName,
+            profileName: 'Junior (1-2 Years)',
+            experienceLevelId: 2,
+            experienceLevelName: 'Junior (0-1 Year)',
+            minExperienceYears: 1.0,
+            maxExperienceYears: 2.5,
+            questionPaperTemplateId: 2,
+            questionPaperTitle: `${roleName} Core & Practical Assessment`,
+            passingPercentage: 70.0,
+            pipelineFlowTemplateId: 1,
+            autoAdvanceOnPass: true,
+            autoRejectOnFail: true,
+            autoPrepareOfferOnFinalPass: true,
+            defaultBaseCTC: 650000,
+            isDefault: false,
+            isActive: true,
+          },
+          {
+            id: roleId * 10 + 3,
+            masterRoleId: roleId,
+            roleName,
+            profileName: 'Mid-Level (2-4 Years)',
+            experienceLevelId: 3,
+            experienceLevelName: 'Mid-Level (1-3 Years)',
+            minExperienceYears: 2.5,
+            maxExperienceYears: 4.5,
+            questionPaperTemplateId: 3,
+            questionPaperTitle: `${roleName} Advanced Architecture & Problem Solving`,
+            passingPercentage: 75.0,
+            pipelineFlowTemplateId: 1,
+            autoAdvanceOnPass: true,
+            autoRejectOnFail: true,
+            autoPrepareOfferOnFinalPass: true,
+            defaultBaseCTC: 1100000,
+            isDefault: false,
+            isActive: true,
+          },
+        ];
+        return { data: this.envelope(mockProfiles, 'Hiring profile templates retrieved') };
+      }
+
+      if (url === '/v2/vacancies/instant-drive' && method === 'POST') {
+        const roleId = Number(body.masterRoleId) || 1;
+        const roleName = this.state.masterData['roles']?.find((r) => String(r.id) === String(roleId))?.name || 'Software Engineer';
+        const newId = this.state.vacancies.length + 1;
+        const code = `VAC-2026-${100 + newId}`;
+        const qrCodeStr = `WD-V2-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+        const newVac: MockVacancy = {
+          id: newId,
+          vacancyCode: code,
+          title: `${roleName} - ⚡ 1-Click Drive`,
+          role: roleName,
+          department: 'Production',
+          employmentType: 'Full-Time Permanent',
+          experience: '0-3 Years',
+          experienceYearsMin: 0,
+          experienceYearsMax: 3,
+          hiringLocation: 'Pune Center (Hinjawadi)',
+          testLocation: 'Pune Assessment Hub',
+          workMode: 'Onsite',
+          openingsCount: body.totalOpenings || 5,
+          positionsCount: body.totalOpenings || 5,
+          status: 'Open',
+          driveType: 'Walk-in Drive',
+          createdAt: new Date().toISOString().split('T')[0],
+          closingDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+          assignedRecruiter: 'AI Recruitment Engine',
+          hiringManager: 'Technical Director',
+          appliedCount: 0,
+          assessmentCount: 0,
+          interviewCount: 0,
+          offeredCount: 0,
+          joinedCount: 0,
+          pipelineFlows: [],
+        };
+
+        this.state.vacancies.unshift(newVac);
+        this.saveState();
+
+        const result = {
+          vacancyId: newId,
+          vacancyCode: code,
+          title: newVac.title,
+          profileName: 'Fresher (0-1 Year)',
+          departmentName: 'Production',
+          hiringLocationName: 'Pune Center',
+          totalOpenings: newVac.positionsCount,
+          minExperienceYears: 0,
+          maxExperienceYears: 3,
+          passingPercentage: 65,
+          questionPaperTitle: `${roleName} Assessment Paper`,
+          totalQuestions: 10,
+          durationMinutes: 30,
+          qrCodeId: newId * 100,
+          qrCodeString: qrCodeStr,
+          registrationUrl: `http://localhost:3000/apply/v2/${qrCodeStr}`,
+          qrCodeDataUrl: `/api/v2/qrcodes/vacancy/${newId}`,
+        };
+
+        return { data: this.envelope(result, '⚡ Autonomous recruitment drive launched successfully') };
+      }
+
+      if (url === '/v2/exams/temp-pass' && method === 'POST') {
+        const nextNum = Math.floor(1000 + Math.random() * 9000);
+        const code = `CAN-2026-${nextNum}`;
+        const pass = String(Math.floor(1000 + Math.random() * 9000));
+        const res = {
+          candidateCode: code,
+          passcode: pass,
+          candidateName: body.candidateName || 'Spot Candidate',
+          roleName: 'Software Engineer',
+          examUrl: `http://localhost:3000/exam/v2?code=${code}&pass=${pass}`,
+          expiresAtUtc: new Date(Date.now() + 24 * 3600000).toISOString(),
+          validityHours: 24,
+        };
+        return { data: this.envelope(res, 'Temporary spot exam pass generated') };
+      }
+
+      if (url === '/v2/exams/batch-answers' && method === 'POST') {
+        const count = Array.isArray(body.answers) ? body.answers.length : 1;
+        return {
+          data: this.envelope(
+            {
+              syncedCount: count,
+              serverSyncedAtUtc: new Date().toISOString(),
+              sessionStatus: 'InProgress',
+            },
+            'Offline answers synced'
+          ),
+        };
+      }
+
+      if (url.startsWith('/v2/exams/') && url.includes('/auto-grade-publish') && method === 'POST') {
+        const sessionId = Number(url.split('/')[3]) || 1;
+        return {
+          data: this.envelope(
+            {
+              candidateExamSessionId: sessionId,
+              resultStatus: 'Pass',
+              totalScore: 18,
+              totalMarks: 20,
+              percentage: 90,
+              advancedToNextRound: true,
+              nextRoundTitle: 'Technical Interview',
+              nextRoundExamPasscode: null,
+              candidateStatus: 'In-Progress',
+            },
+            'Assessment auto-evaluated and published'
+          ),
+        };
       }
 
       // Generic fallback

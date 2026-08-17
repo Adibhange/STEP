@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
 import { CreateVacancyModal } from './CreateVacancyModal';
 import { VacancyDetailDialog } from './VacancyDetailDialog';
+import { InstantDriveModalV2 } from './v2/InstantDriveModalV2';
 import type { VacancyItem } from '../types/vacancy.types';
 import {
   useGetVacanciesQuery,
@@ -33,6 +34,7 @@ export const VacanciesListView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [driveFilter, setDriveFilter] = useState<string>('All');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isInstantDriveOpen, setIsInstantDriveOpen] = useState(false);
   const [selectedVacancy, setSelectedVacancy] = useState<VacancyItem | null>(null);
 
   const apiVacancies: VacancyItem[] = useMemo(() => {
@@ -186,14 +188,25 @@ export const VacanciesListView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          className="h-9 px-4 flex items-center gap-1.5 rounded-full bg-[var(--accent-indigo)] text-[var(--text-on-accent)] text-[12.5px] font-bold hover:bg-[var(--accent-indigo-hover)] transition-all cursor-pointer shadow-2xs"
-        >
-          <Icon name="plus" size="xs" />
-          <span>Create Vacancy</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsInstantDriveOpen(true)}
+            className="h-9 px-4 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 via-indigo-600 to-indigo-700 hover:from-amber-600 hover:to-indigo-800 text-white text-[12.5px] font-bold transition-all cursor-pointer shadow-md hover:shadow-lg"
+          >
+            <Icon name="zap" size="xs" />
+            <span>⚡ 1-Click Drive (V2)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="h-9 px-3.5 flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] text-[12px] font-bold transition-all cursor-pointer"
+          >
+            <Icon name="plus" size="xs" />
+            <span>Manual Vacancy</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
@@ -366,6 +379,12 @@ export const VacanciesListView: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* 1-Click Instant Drive V2 Modal */}
+      <InstantDriveModalV2
+        isOpen={isInstantDriveOpen}
+        onClose={() => setIsInstantDriveOpen(false)}
+      />
 
       {/* Create Vacancy Wizard Modal */}
       <CreateVacancyModal

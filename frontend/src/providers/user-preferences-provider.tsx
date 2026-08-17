@@ -17,7 +17,7 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
 
   return (
     <UserPreferencesContext.Provider value={{ density, setDensity }}>
-      <div data-density={density}>{children}</div>
+      <div data-density={density} suppressHydrationWarning>{children}</div>
     </UserPreferencesContext.Provider>
   );
 };

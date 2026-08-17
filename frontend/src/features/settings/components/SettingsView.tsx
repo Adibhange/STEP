@@ -11,7 +11,7 @@ import { ConfigurationPanel } from './ConfigurationPanel';
  */
 export const SettingsView: React.FC = () => {
   return (
-    <div className="flex flex-col gap-5 p-4 sm:p-6 w-full max-w-[1400px] mx-auto">
+    <div className="flex flex-col gap-5 p-4 sm:p-6 w-full">
       {/* Page Title */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-extrabold text-[var(--text-primary)] font-heading tracking-tight">

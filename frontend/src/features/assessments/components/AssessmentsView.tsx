@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@/design-system";
 import { CandidateAssessmentEvaluationView } from "./CandidateAssessmentEvaluationView";
+import { TempExamLinkModalV2 } from "./v2/TempExamLinkModalV2";
 import { useGetCandidatesQuery } from "@/store/services/api";
 
 interface CandidateAssessmentRow {
@@ -24,6 +26,7 @@ export const AssessmentsView: React.FC = () => {
   const { data: candidatesRes, isLoading, isError } = useGetCandidatesQuery();
   const [selectedCandidate, setSelectedCandidate] =
     useState<CandidateAssessmentRow | null>(null);
+  const [isSpotModalOpen, setIsSpotModalOpen] = useState(false);
 
   const submissions: CandidateAssessmentRow[] = useMemo(() => {
     return (candidatesRes?.data || []).map((c: any, idx: number) => ({
@@ -59,18 +62,26 @@ export const AssessmentsView: React.FC = () => {
           </p>
         </div>
 
-        <a
-          href="/exam"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs transition-all shadow-sm flex items-center gap-1.5"
-        >
-          <Icon
-            name="external-link"
-            size="xs"
-          />
-          <span>Launch Proctored Exam Portal</span>
-        </a>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsSpotModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            <Icon name="zap" size="xs" />
+            <span>⚡ Spot Test Pass (V2)</span>
+          </button>
+
+          <a
+            href="/exam/v2"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs transition-all shadow-sm flex items-center gap-1.5"
+          >
+            <Icon name="external-link" size="xs" />
+            <span>Launch Offline Exam Portal (V2)</span>
+          </a>
+        </div>
       </div>
 
       {/* Submissions Directory Table */}
@@ -97,7 +108,15 @@ export const AssessmentsView: React.FC = () => {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-(--border-default) text-(--text-secondary)">
+            <motion.tbody
+              className="divide-y divide-(--border-default) text-(--text-secondary)"
+              initial="hidden"
+              animate="show"
+              variants={{
+                hidden: {},
+                show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
+              }}
+            >
               {isLoading && (
                 <tr>
                   <td
@@ -128,76 +147,84 @@ export const AssessmentsView: React.FC = () => {
                   </td>
                 </tr>
               )}
-              {!isLoading &&
-                !isError &&
-                submissions.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-(--surface-hover) transition-colors"
-                  >
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-(--text-primary)">
-                          {row.candidateName}
-                        </span>
-                        <span className="text-[11px] text-(--text-tertiary) font-mono">
-                          {row.candidateCode}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-(--text-primary)">
-                          {row.vacancyTitle}
-                        </span>
-                        <span className="text-[10.5px] text-(--text-tertiary) truncate max-w-xs">
-                          {row.paperTitle}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10.5px] font-bold ${row.testMode === "In Office" ? "bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30" : "bg-[var(--accent-cyan-dim)] text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30"}`}
-                      >
-                        {row.testMode}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold">
-                      <span>{row.attemptCount} Attempt</span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2 font-mono">
-                        <span className="font-extrabold text-[var(--status-success)]">
-                          {row.latestScore}
-                        </span>
+              {!isLoading && !isError && (
+                <AnimatePresence mode="popLayout">
+                  {submissions.map((row, idx) => (
+                    <motion.tr
+                      key={row.id}
+                      layout
+                      variants={{
+                        hidden: { opacity: 0, y: 8 },
+                        show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+                      }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      className="hover:bg-(--surface-hover) transition-colors"
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-(--text-primary)">
+                            {row.candidateName}
+                          </span>
+                          <span className="text-[11px] text-(--text-tertiary) font-mono">
+                            {row.candidateCode}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-(--text-primary)">
+                            {row.vacancyTitle}
+                          </span>
+                          <span className="text-[10.5px] text-(--text-tertiary) truncate max-w-xs">
+                            {row.paperTitle}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${row.status === "Passed" ? "bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]" : "bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)]"}`}
+                          className={`px-2 py-0.5 rounded text-[10.5px] font-bold ${row.testMode === "In Office" ? "bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30" : "bg-[var(--accent-cyan-dim)] text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30"}`}
                         >
-                          {row.status}
+                          {row.testMode}
                         </span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px]">
-                      <span>
-                        {row.proctoringWarnings} Tab Switch Warning
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCandidate(row)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-2xs"
-                      >
-                        <Icon
-                          name="eye"
-                          size="xs"
-                        />
-                        <span>View Answers & Scorecard</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold">
+                        <span>{row.attemptCount} Attempt</span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="font-extrabold text-[var(--status-success)]">
+                            {row.latestScore}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${row.status === "Passed" ? "bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]" : "bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)]"}`}
+                          >
+                            {row.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-[11px]">
+                        <span>
+                          {row.proctoringWarnings} Tab Switch Warning
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCandidate(row)}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-2xs"
+                        >
+                          <Icon
+                            name="eye"
+                            size="xs"
+                          />
+                          <span>View Answers & Scorecard</span>
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              )}
+            </motion.tbody>
           </table>
         </div>
       </div>
@@ -212,6 +239,12 @@ export const AssessmentsView: React.FC = () => {
           />
         </div>
       )}
+
+      {/* V2 Spot Test Pass Modal */}
+      <TempExamLinkModalV2
+        isOpen={isSpotModalOpen}
+        onClose={() => setIsSpotModalOpen(false)}
+      />
     </div>
   );
 };

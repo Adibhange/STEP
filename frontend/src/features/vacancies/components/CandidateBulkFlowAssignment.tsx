@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CandidateBulkItem } from '../types/vacancy.types';
@@ -217,7 +218,15 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
               <th className="py-3 px-4">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--border-default)] font-medium text-[var(--text-primary)]">
+          <motion.tbody
+            className="divide-y divide-[var(--border-default)] font-medium text-[var(--text-primary)]"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
+            }}
+          >
             {isLoading && (
               <tr>
                 <td colSpan={5} className="py-8 text-center text-xs text-[var(--text-tertiary)] font-mono">
@@ -236,7 +245,14 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
               paginatedCandidates.map((c) => {
                 const isSelected = selectedIds.includes(c.id);
                 return (
-                  <tr key={c.id} className={`hover:bg-[var(--surface-hover)] transition-colors ${isSelected ? 'bg-[var(--accent-indigo-dim)]' : ''}`}>
+                  <motion.tr
+                    key={c.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 8 },
+                      show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+                    }}
+                    className={`hover:bg-[var(--surface-hover)] transition-colors ${isSelected ? 'bg-[var(--accent-indigo-dim)]' : ''}`}
+                  >
                     <td className="py-3 px-4">
                       <input
                         type="checkbox"
@@ -288,10 +304,10 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
                         {c.status}
                       </span>
                     </td>
-                  </tr>
+                  </motion.tr>
                 );
               })}
-          </tbody>
+          </motion.tbody>
         </table>
 
         {/* Table Pagination Footer */}

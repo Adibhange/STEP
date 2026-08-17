@@ -8,8 +8,11 @@ namespace STEP.Domain.Entities.Exam
         public int CandidateExamSessionQuestionId { get; set; }
         public CandidateExamSessionQuestion CandidateExamSessionQuestion { get; set; } = null!;
 
-        public int OriginalVacancyQuestionOptionId { get; set; }
-        public VacancyQuestionOption OriginalVacancyQuestionOption { get; set; } = null!;
+        public int? OriginalVacancyQuestionOptionId { get; set; }
+        public VacancyQuestionOption? OriginalVacancyQuestionOption { get; set; }
+
+        public int? OriginalMasterQuestionOptionId { get; set; }
+        public STEP.Domain.Entities.Master.MasterQuestionOption? OriginalMasterQuestionOption { get; set; }
 
         public int DisplayOrder { get; set; }
         public int OriginalOrder { get; set; }

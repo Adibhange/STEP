@@ -2,7 +2,7 @@
  * STEP Enterprise Platform — Centralized User Feature Type Definitions
  */
 
-export type UserRole = 'SuperAdmin' | 'Director' | 'HR' | 'Interviewer' | 'Candidate';
+export type UserRole = 'Director' | 'HR' | 'Interviewer';
 
 export type UserStatus = 'Active' | 'Inactive' | 'Pending';
 
