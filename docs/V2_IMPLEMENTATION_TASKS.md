@@ -17,35 +17,38 @@
 
 ---
 
-## Phase 1: Frontend Implementation (Current Active Focus — Frontend First)
+## Phase 1: Frontend Implementation (COMPLETED & UI FROZEN)
 
 | Task ID | Component / View | Frontend Deliverable | Backend Dependency | Status | Notes |
 |---|---|---|---|---|---|
-| `V2-FE-001` | `RoleHiringProfilesManager.tsx` | Role search for 50+ designations, profile tier cards, edit modal | `FEAT-V2-01` | **READY FOR REVIEW** | 50+ role search & Framer Motion |
-| `V2-FE-002` | `RoleAssessmentSectionRuleBuilder` | Section composition editor (Question count, difficulty, tags, time, language) | `FEAT-V2-01` | **READY FOR REVIEW** | Integrated in Profile Modal |
-| `V2-FE-003` | `PoolStatusIndicator` | Visual banner showing `Pool: Ready ✓ (Need: N / Available: M)` | `FEAT-V2-01` | **READY FOR REVIEW** | Real-time pool validation badge |
-| `V2-FE-004` | `QuestionBankManager.tsx` | Central Question Bank management UI (Tags, MCQs, SQL, Coding, Bulk Actions, Excel .xlsx Template) | `FEAT-V2-02` | **READY FOR REVIEW** | Question bank explorer & bulk tooling complete |
-| `V2-FE-005` | `InstantDriveModalV2.tsx` | 1-Click Drive Launch modal with pool verification & QR generator | `FEAT-V2-03` | **READY FOR REVIEW** | 1-Click Drive modal |
-| `V2-FE-006` | `TempExamLinkModalV2.tsx` | 24-hour Spot Test Pass token generator for invited candidates | `FEAT-V2-03` | **READY FOR REVIEW** | Spot pass modal |
-| `V2-FE-007` | `CandidateExamPortalV2.tsx` | Multi-section exam portal with MCQ, SQL, Coding IDE, offline buffer | `FEAT-V2-04` | **READY FOR REVIEW** | Candidate test portal |
-| `V2-FE-008` | `ApplyV2Page` (`/apply/v2/[code]`) | Candidate fast-track mobile registration page for instant drives | `FEAT-V2-03` | **READY FOR REVIEW** | Live candidate landing page |
+| `V2-FE-001` | `RoleHiringProfilesManager.tsx` | Role search for 50+ designations, profile tier cards, edit modal | `FEAT-V2-01` | **COMPLETED & APPROVED** | 50+ role search & Framer Motion |
+| `V2-FE-002` | `RoleAssessmentSectionRuleBuilder` | Section composition editor (Question count, difficulty, tags, time, language) | `FEAT-V2-01` | **COMPLETED & APPROVED** | Integrated in Profile Modal |
+| `V2-FE-003` | `PoolStatusIndicator` | Visual banner showing `Pool: Ready ✓ (Need: N / Available: M)` | `FEAT-V2-01` | **COMPLETED & APPROVED** | Real-time pool validation badge |
+| `V2-FE-004` | `QuestionBankManager.tsx` | Central Question Bank management UI (Tags, MCQs, SQL, Coding, Bulk Actions, Excel .xlsx Template) | `FEAT-V2-02` | **COMPLETED & APPROVED** | Question bank explorer & bulk tooling complete |
+| `V2-FE-005` | `InstantDriveModalV2.tsx` | 1-Click Drive Launch modal with pool verification, dual recruitment model toggle, custom selects, & full-width action button | `FEAT-V2-03` | **COMPLETED & APPROVED** | 1-Click Drive modal |
+| `V2-FE-006` | `TempExamLinkModalV2.tsx` | 24-hour Spot Test Pass token generator for invited candidates | `FEAT-V2-03` | **COMPLETED & APPROVED** | Spot pass modal |
+| `V2-FE-007` | `CandidateExamPortalV2.tsx` | Multi-section exam portal with MCQ, SQL, Coding IDE, offline buffer, anti-cheat, 30s transition modal | `FEAT-V2-04` | **COMPLETED & APPROVED** | Approved candidate test portal |
+| `V2-FE-008` | `ApplyV2Page` (`/apply/v2/[code]`) | Candidate fast-track mobile registration page for instant drives | `FEAT-V2-03` | **COMPLETED & APPROVED** | Live candidate landing page |
+| `V2-FE-009` | `VacancyDetailDialog.tsx` | Vacancy Hiring Hub with Overview, QR Hub / Direct Link, 10-item Paginated Candidates Roster & Canonical Progress Modal | `FEAT-V2-03` | **COMPLETED & APPROVED** | Unified Vacancy Detail modal |
+| `V2-FE-010` | Centralized Motion System | `elasticDialogVariant`, `dialogBackdropVariant`, and theme-aware `--overlay` token across all modals | `N/A` | **COMPLETED & APPROVED** | Elastic spring bloom with smooth exit curves |
 
 ---
 
-## Phase 2: Backend Requirements Capture (Living Contract)
+## Phase 2: Backend Requirements & Implementation Specification
 
 | Task ID | Feature Contract | Target Living Document | Status | Notes |
 |---|---|---|---|---|
-| `V2-REQ-001` | Hiring Profiles & Section Rules API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-01`) | **DOCUMENTED** | DTOs, validations & SPs specified |
-| `V2-REQ-002` | Central Question Bank API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-02`) | **DOCUMENTED** | Tagging & option schema specified |
-| `V2-REQ-003` | 1-Click Drive & QR API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-03`) | **DOCUMENTED** | Atomic drive creation specified |
-| `V2-REQ-004` | Dynamic Sampler & Snapshot API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-04`) | **DOCUMENTED** | Deterministic seeding specified |
-| `V2-REQ-005` | Batch Sync & Auto-Grading API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-05`) | **DOCUMENTED** | Idempotent sync specified |
+| `V2-REQ-001` | Section Timing & Anti-Cheat Validation Rules | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-06`) | **DOCUMENTED** | Sequential locking, 30s transition modal, 3 tab warnings limit |
+| `V2-REQ-002` | Hiring Profiles & Section Rules API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-01`) | **DOCUMENTED** | DTOs, validations & SPs specified |
+| `V2-REQ-003` | Central Question Bank API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-02`) | **DOCUMENTED** | Tagging & option schema specified |
+| `V2-REQ-004` | 1-Click Drive & QR API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-03`) | **DOCUMENTED** | Atomic drive creation specified |
+| `V2-REQ-005` | Dynamic Sampler & Snapshot API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-04`) | **DOCUMENTED** | Deterministic seeding specified |
+| `V2-REQ-006` | Batch Sync & Auto-Grading API | `docs/V2_BACKEND_REQUIREMENTS.md` (`FEAT-V2-05`) | **DOCUMENTED** | Idempotent sync & sandbox scoring specified |
 
 ---
 
 ## Phase 3: Backend Implementation (.NET 10 Clean Architecture)
-*(To be executed only after Frontend UI workflows are reviewed and approved)*
+*(Ready for live database execution)*
 
 | Task ID | Feature | Backend Deliverables | Database Dependency | Status | Notes |
 |---|---|---|---|---|---|

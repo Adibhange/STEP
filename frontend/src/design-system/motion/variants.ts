@@ -121,3 +121,66 @@ export const scalePopVariant: Variants = {
     },
   },
 };
+
+/**
+ * Next-Level Elastic Blooming Spring variant for enterprise modals & dialogs
+ * Features harmonic spring overshoot, visual center-point blooming, and exit retract.
+ */
+export const elasticDialogVariant: Variants = {
+  hidden: {
+    opacity: 0,
+    scale: 0.88,
+    y: -20,
+  },
+  show: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 360,
+      damping: 22,
+      mass: 0.7,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.90,
+    y: 12,
+    transition: {
+      duration: 0.2,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+
+/**
+ * Smooth hardware-accelerated backdrop fade for dialog overlays
+ */
+export const dialogBackdropVariant: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { duration: 0.22, ease: [0.0, 0.0, 0.2, 1] },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.2, ease: [0.4, 0.0, 1, 1] },
+  },
+};
+
+/**
+ * Staggered content flourish variant for dialog headers, tabs, and body sections
+ */
+export const dialogContentBlossomVariant: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.22,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+

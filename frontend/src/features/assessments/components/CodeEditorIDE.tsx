@@ -73,25 +73,25 @@ export const CodeEditorIDE: React.FC<CodeEditorIDEProps> = ({
   const displayLanguage = language || (questionType === 'SQL' ? 'SQL Server' : 'JavaScript / TypeScript');
 
   return (
-    <div className="flex-1 flex flex-col rounded-xl border border-slate-300 bg-white shadow-xs overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 transition-all mt-2 min-h-[280px] sm:min-h-[320px]">
+    <div className="flex-1 flex flex-col rounded-2xl border border-border-default bg-surface-1 shadow-sm overflow-hidden focus-within:border-border-focus focus-within:ring-2 focus-within:ring-border-focus/20 transition-all mt-2 min-h-[280px] sm:min-h-[320px]">
       {/* STEP Clean Responsive Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 bg-slate-50 border-b border-slate-200 text-xs select-none">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 px-3.5 py-2.5 bg-surface-2 border-b border-border-soft text-xs select-none">
         {/* Left: Title & Dynamic Language Badge */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 min-w-0">
-          <span className="p-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <span className="p-1 rounded-lg bg-accent-indigo-dim text-accent-indigo border border-border-soft shrink-0">
             <Icon name={questionType === 'SQL' ? 'file-text' : 'code-2'} size="xs" />
           </span>
-          <span className="font-bold font-heading text-slate-800 text-xs sm:text-sm truncate">
+          <span className="font-bold font-heading text-text-primary text-xs sm:text-sm truncate">
             {title || (questionType === 'SQL' ? 'SQL Query Solution' : 'Code Solution')}
           </span>
-          <span className="px-2 sm:px-2.5 py-0.5 rounded-full bg-slate-200/70 text-slate-700 font-mono text-[10px] sm:text-[11px] font-semibold border border-slate-300 whitespace-nowrap">
+          <span className="px-2.5 py-0.5 rounded-full bg-surface-3 text-text-secondary font-mono text-[10px] sm:text-[11px] font-semibold border border-border-soft whitespace-nowrap">
             {displayLanguage}
           </span>
         </div>
 
         {/* Right: Auto-Saved Status Indicator */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] sm:text-[11px] text-emerald-700 font-mono font-bold flex items-center gap-1 bg-emerald-50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md border border-emerald-200 whitespace-nowrap">
+          <span className="text-[10px] sm:text-[11px] text-status-success-text font-mono font-bold flex items-center gap-1 bg-status-success-bg px-2.5 py-1 rounded-lg border border-status-success-border whitespace-nowrap">
             <Icon name="check-circle" size="xs" />
             <span>Auto-Saved</span>
           </span>
@@ -103,13 +103,13 @@ export const CodeEditorIDE: React.FC<CodeEditorIDEProps> = ({
         {/* Line Numbers Gutter */}
         <div
           ref={gutterRef}
-          className="w-9 sm:w-11 select-none font-mono text-[11px] sm:text-xs py-3 pr-1.5 sm:pr-2.5 text-right bg-slate-50 text-slate-400 border-r border-slate-200 overflow-hidden shrink-0 font-medium"
+          className="w-9 sm:w-11 select-none font-mono text-[11px] sm:text-xs py-3 pr-1.5 sm:pr-2.5 text-right bg-surface-2 text-text-tertiary border-r border-border-soft overflow-hidden shrink-0 font-medium"
         >
           {Array.from({ length: lineCount }, (_, i) => (
             <div
               key={i + 1}
               className={`leading-relaxed ${
-                cursorPos.line === i + 1 ? 'text-blue-600 font-bold bg-blue-50 rounded-xs' : ''
+                cursorPos.line === i + 1 ? 'text-accent-indigo font-bold bg-accent-indigo-dim rounded-xs' : ''
               }`}
             >
               {i + 1}
@@ -132,7 +132,7 @@ export const CodeEditorIDE: React.FC<CodeEditorIDEProps> = ({
           spellCheck={false}
           autoCapitalize="none"
           autoComplete="off"
-          className="flex-1 w-full p-2.5 sm:p-3 font-mono text-[11px] sm:text-xs text-slate-900 bg-slate-950/5 focus:bg-white outline-none leading-relaxed resize-none scrollbar-thin overflow-y-auto whitespace-pre tab-2 transition-colors"
+          className="flex-1 w-full p-2.5 sm:p-3 font-mono text-[11px] sm:text-xs text-text-primary bg-surface-1 focus:bg-surface-1 outline-none leading-relaxed resize-none scrollbar-step overflow-y-auto whitespace-pre tab-2 transition-colors"
           placeholder={
             questionType === 'SQL'
               ? '-- Write your SQL query solution here...'
@@ -142,9 +142,9 @@ export const CodeEditorIDE: React.FC<CodeEditorIDEProps> = ({
       </div>
 
       {/* Responsive Bottom Status Bar */}
-      <div className="flex items-center justify-between px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-50 border-t border-slate-200 text-[10px] sm:text-[11px] font-mono text-slate-500 select-none overflow-x-auto whitespace-nowrap scrollbar-none">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-surface-2 border-t border-border-soft text-[10px] sm:text-[11px] font-mono text-text-tertiary select-none overflow-x-auto whitespace-nowrap scrollbar-none">
         <div className="flex items-center gap-2 sm:gap-3">
-          <span className="font-semibold text-slate-700">
+          <span className="font-semibold text-text-secondary">
             Ln {cursorPos.line}, Col {cursorPos.col}
           </span>
           <span>•</span>
@@ -154,8 +154,8 @@ export const CodeEditorIDE: React.FC<CodeEditorIDEProps> = ({
         </div>
 
         <div className="hidden sm:flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          <span className="text-slate-600 font-medium">Candidate Submission Field</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-status-success" />
+          <span className="text-text-secondary font-medium">Candidate Submission Field</span>
         </div>
       </div>
     </div>

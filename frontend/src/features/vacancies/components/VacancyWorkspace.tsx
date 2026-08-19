@@ -4,9 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/design-system';
 import { WorkspaceHeader, type WorkspaceHeaderTab } from '@/features/shared/workspace-header/WorkspaceHeader';
-import { PipelineFlowVersions } from './PipelineFlowVersions';
-import { AssessmentPatternBuilder } from './AssessmentPatternBuilder';
-import { CandidateBulkFlowAssignment } from './CandidateBulkFlowAssignment';
+import { VacancyCandidatesTab } from './v2/VacancyCandidatesTab';
 import type { VacancyItem } from '../types/vacancy.types';
 
 interface VacancyWorkspaceProps {
@@ -14,10 +12,8 @@ interface VacancyWorkspaceProps {
 }
 
 const TABS: WorkspaceHeaderTab[] = [
-  { id: 'overview', label: 'Overview & QR Center', icon: 'grid', badge: 'Flagship' },
-  { id: 'flow-versions', label: 'Pipeline Flow Versions', icon: 'bar-chart-2' },
-  { id: 'assessment-builder', label: 'Assessment Builder & Excel', icon: 'clipboard-check' },
-  { id: 'bulk-assignment', label: 'Candidates & Bulk Flow Assignment', icon: 'users', badge: 142 },
+  { id: 'overview', label: 'Overview & QR Hub', icon: 'grid', badge: 'Flagship' },
+  { id: 'candidates', label: 'Candidates', icon: 'users', badge: 128 },
 ];
 
 /**
@@ -238,14 +234,8 @@ export const VacancyWorkspace: React.FC<VacancyWorkspaceProps> = ({ vacancy }) =
           </div>
         )}
 
-        {/* 2. PIPELINE FLOW VERSIONS TAB */}
-        {activeTab === 'flow-versions' && <PipelineFlowVersions vacancyId={vacancy.id} />}
-
-        {/* 3. ASSESSMENT BUILDER & EXCEL TAB */}
-        {activeTab === 'assessment-builder' && <AssessmentPatternBuilder vacancyId={Number(vacancy.id)} />}
-
-        {/* 4. CANDIDATES & BULK FLOW ASSIGNMENT TAB */}
-        {activeTab === 'bulk-assignment' && <CandidateBulkFlowAssignment vacancyId={vacancy.id} vacancyTitle={vacancy.title} />}
+        {/* 2. CANDIDATES TAB */}
+        {activeTab === 'candidates' && <VacancyCandidatesTab vacancy={vacancy} />}
       </main>
     </div>
   );

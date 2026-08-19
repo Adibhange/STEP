@@ -55,6 +55,8 @@ export interface ExamQuestionData {
   timeAllowedMinutes: number | null;
   programmingLanguage: string | null;
   sqlSchema: string | null;
+  codeTemplate?: string | null;
+  starterCode?: string | null;
   maxWordCount: number | null;
   options: ExamOptionData[];
   submittedAnswerText: string | null;

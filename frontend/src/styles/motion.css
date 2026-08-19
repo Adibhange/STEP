@@ -178,6 +178,111 @@
   100% { transform: scale(1); }
 }
 
+@keyframes step-card-entrance {
+  0%   { opacity: 0; transform: translateY(18px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes step-question-slide {
+  0%   { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes step-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45); }
+  50%       { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+}
+
+@keyframes step-pop {
+  0%   { transform: scale(0.8); }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ANIMATION UTILITY CLASSES
+───────────────────────────────────────────────────────────────────────── */
+.animate-step-fade-in {
+  animation: step-fade-in 350ms var(--ease-out) both;
+}
+
+.animate-step-zoom-in {
+  animation: step-zoom-in 350ms var(--ease-spring) both;
+}
+
+.animate-step-card-entrance {
+  animation: step-card-entrance 400ms var(--ease-spring) both;
+}
+
+.animate-step-question-slide {
+  animation: step-question-slide 300ms var(--ease-out) both;
+}
+
+.animate-step-pop {
+  animation: step-pop 250ms var(--ease-spring) both;
+}
+
+.animate-step-slide-up {
+  animation: step-slide-in-up 350ms var(--ease-out) both;
+}
+
+.animate-step-slide-down {
+  animation: step-slide-in-down 350ms var(--ease-out) both;
+}
+
+.animate-step-bounce-in {
+  animation: step-bounce-in 400ms var(--ease-spring) both;
+}
+
+.animate-step-shake {
+  animation: step-shake 300ms var(--ease-out);
+}
+
+.animate-step-pulse {
+  animation: step-pulse 2s infinite ease-in-out;
+}
+
+.animate-step-glow-pulse {
+  animation: step-glow-pulse 2s infinite ease-in-out;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ELASTIC BLOOMING SPRING MODAL (Single Source of Truth for Dialogs)
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes step-modal-elastic-bloom {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.88);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes step-modal-elastic-exit {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(15px) scale(0.92);
+  }
+}
+
+.animate-step-modal-elastic {
+  transform-origin: 50% 40%;
+  animation: step-modal-elastic-bloom 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  box-shadow: 0 25px 70px -15px rgba(99, 102, 241, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+
 
 /* ─────────────────────────────────────────────────────────────────────────
    REDUCED MOTION — WCAG 2.1 AAA Compliance

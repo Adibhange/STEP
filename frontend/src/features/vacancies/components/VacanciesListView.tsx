@@ -192,10 +192,10 @@ export const VacanciesListView: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsInstantDriveOpen(true)}
-            className="h-9 px-4 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 via-indigo-600 to-indigo-700 hover:from-amber-600 hover:to-indigo-800 text-white text-[12.5px] font-bold transition-all cursor-pointer shadow-md hover:shadow-lg"
+            className="h-9 px-4 flex items-center gap-1.5 rounded-full bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
           >
             <Icon name="zap" size="xs" />
-            <span>⚡ 1-Click Drive (V2)</span>
+            <span>1-Click Drive (V2)</span>
           </button>
 
           <button

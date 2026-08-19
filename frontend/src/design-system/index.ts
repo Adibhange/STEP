@@ -226,6 +226,9 @@ export {
   tactilePopItemVariant,
   fadeSlideUpVariant,
   scalePopVariant,
+  elasticDialogVariant,
+  dialogBackdropVariant,
+  dialogContentBlossomVariant,
 } from './motion/variants';
 
 // UI Utilities & Ref Helpers

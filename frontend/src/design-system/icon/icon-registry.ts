@@ -79,6 +79,7 @@ import {
   Layers,
   FileCheck,
   FileStack,
+  RotateCw,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -87,6 +88,8 @@ export type IconName =
   | 'x'
   | 'close'
   | 'check'
+  | 'refresh'
+  | 'rotate-cw'
   | 'chevron-down'
   | 'chevron-up'
   | 'chevron-left'
@@ -253,4 +256,6 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'copy': Copy,
   'qr-code': QrCode,
   'share': Share2,
+  'refresh': RotateCw,
+  'rotate-cw': RotateCw,
 };

@@ -861,21 +861,27 @@ Effective passing percentage = `PassingPercentageOverride ?? AssessmentBlueprint
 **`CreateInstantDriveCommand`**:
 ```json
 {
-  "masterRoleId": 1,
-  "assessmentBlueprintId": 2,
+  "roleId": 1,
+  "profileId": 2,
+  "driveType": "Walk-in Drive",
   "departmentId": 2,
   "hiringLocationId": 1,
   "totalOpenings": 10,
-  "walkinDriveDate": "2026-08-25"
+  "walkinDate": "2026-08-25"
 }
 ```
+> **Backend Property Binding Aliases**: The backend command handler natively binds both property conventions:
+> - `roleId` $\leftrightarrow$ `masterRoleId`
+> - `profileId` $\leftrightarrow$ `assessmentBlueprintId` $\leftrightarrow$ `roleHiringProfileId`
+> - `walkinDate` $\leftrightarrow$ `walkinDriveDate`
+> - `driveType`: `'Walk-in Drive'` (default, with QR generation & Round 1 Aptitude Elimination) or `'Direct / Sourced Hiring'` (direct candidate portal link, Round 1 HR Screening is Auto-Passed).
 
 **`InstantDriveResultData`**:
 ```json
 {
   "vacancyId": 105,
   "vacancyCode": "VAC-2026-105",
-  "title": "Full Stack React Developer - ⚡ 1-Click Drive",
+  "title": "Full Stack React Developer - 1-Click Drive",
   "profileName": "Software Engineering Technical Track",
   "departmentName": "Engineering",
   "hiringLocationName": "Pune Assessment Center",
@@ -916,9 +922,19 @@ Effective passing percentage = `PassingPercentageOverride ?? AssessmentBlueprint
 
 #### SP: `sp_V2_CreateInstantDrive`
 - Validates blueprint pool availability
-- Creates `Vacancy` (with `AssessmentBlueprintId`)
-- Creates `VacancyPipelineFlow` with 3 rounds: Round 1 (Assessment), Round 2 (Technical Interview), Round 3 (Managerial Interview)
-- Creates `QRCode` with unique code and registration URL
+- Creates `Vacancy` (with `AssessmentBlueprintId` and `DriveType`)
+- Creates `VacancyPipelineFlow` with standardized 4 rounds:
+  - **Walk-in Drive Track** (`DriveType = 'Walk-in Drive'`):
+    1. `Round 1`: **Aptitude Assessment (Elimination Round)** — Candidates who fail (< 70%) are eliminated and locked from taking technical tests.
+    2. `Round 2`: **Technical Assessment (Coding / SQL / Tech MCQs)** — Unlocked only after clearing Round 1 Aptitude.
+    3. `Round 3`: **Technical Interview** — Evaluator panel / live code interview.
+    4. `Round 4`: **Managerial & HR Interview / Offer Generation** — 1-Click Director PIN approval.
+  - **Direct / Sourced Hiring Track** (`DriveType = 'Direct / Sourced Hiring'`):
+    1. `Round 1`: **HR Sourcing & Screening** — Auto-Passed on invite (pre-screened resume).
+    2. `Round 2`: **Technical Spot Assessment** — 24-hour Spot Test Pass.
+    3. `Round 3`: **Technical Interview** — Evaluator panel.
+    4. `Round 4`: **Offer Generation** — 1-Click Director PIN approval.
+- Creates `QRCode` with unique code and registration URL (for Walk-in drives) or Direct Screening Link (for Direct Sourced hiring)
 - Returns `@NewVacancyId`, `@NewQRCodeId` (both SCOPE_IDENTITY outputs)
 
 ---
@@ -987,6 +1003,56 @@ Effective passing percentage = `PassingPercentageOverride ?? AssessmentBlueprint
 - Calculate total score and sectional scores
 - Set `ResultStatus = 'Pass'` or `'Fail'` based on effective passing percentage
 - If pass → call candidate advancement logic (set `CandidateStatus` to next round)
+
+---
+
+### [FEAT-V2-06] Section Timing Engine & Anti-Cheat Validation Rules
+
+#### 1. Dynamic Section Timing State Machine (Zero Hardcoded Times)
+* **Time Derivation Rule**: Section duration is dynamically derived by summing `CandidateExamSessionQuestion.TimeAllowedMinutes` for all questions in that section, OR from `RoleAssessmentSectionRule.AllocatedMinutes`. Total exam duration is the sum across all sections.
+* **Sequential Section Locking**:
+  - When Section $K$ completes (via manual progression or timer expiry), Section $K$ is permanently added to `LockedSectionIdsCsv`.
+  - **No Backtracking**: Candidates cannot navigate back to any previously locked section ($\le K$). Any API attempt to submit answers for locked sections is rejected with `403 Forbidden` (`ERR_SECTION_LOCKED`).
+* **30-Second Section Transition Dialog**:
+  - When a section times out or is completed, the frontend displays a 30-second transition dialog modal with an auto-countdown and an explicit *"Start Immediately"* action.
+  - When the 30s countdown reaches 0 or the candidate clicks *"Start Immediately"*, Section $K+1$ begins.
+* **Auto-Submission on Total Expiration**:
+  - When `TotalTimeLeftSeconds <= 0` or the final section concludes, the exam session is automatically marked as `AutoSubmitted` and pending answers are saved.
+
+#### 2. Security & Anti-Cheat Validation Rules
+* **Tab Switch / Focus Loss Limit (3 Max Warnings)**:
+  - Every `visibilitychange` (tab switch) or window blur event increments `TabSwitchWarningCount`.
+  - Violations 1 & 2 return warning alerts to the candidate.
+  - On the **3rd violation**, the session is immediately terminated with `Status = 'TerminatedForCheating'`, all sections are locked, and an audit entry is written to `ExamProctoringLogs`.
+* **Fullscreen Integrity & Exit Logging**:
+  - Every exit from fullscreen is logged to `ExamProctoringLogs` with timestamp, client IP, and user-agent.
+  - The UI does not expose any back/exit buttons in the top HUD to prevent accidental fullscreen breaks.
+* **Multi-Tab Prevention**:
+  - Simultaneous active instances of the same session in different browser tabs or windows are immediately locked with `ERR_MULTI_TAB_DETECTED`.
+
+#### 3. Automated Grading Engine & Scoring Rules
+* **Single Choice MCQ**:
+  $$\text{Score} = \begin{cases} \text{Marks}, & \text{if selected option is correct} \\ 0, & \text{otherwise} \end{cases}$$
+* **Multiple Choice MCQ (Proportional Scoring)**:
+  $$\text{Score} = \max\left(0, \frac{\text{Correct Selected} - \text{Wrong Selected}}{\text{Total Correct Options}} \times \text{Marks}\right)$$
+* **SQL Query Sandbox**:
+  - Executes candidate query in sandbox SQL database.
+  - Compares syntax, row count, projected column names, and row data values against the expected reference dataset.
+* **Coding Challenge Sandbox**:
+  - Executes code against public and hidden test cases with timeout (2s) and memory constraints.
+  $$\text{Score} = \left(\frac{\text{Passed Test Cases}}{\text{Total Test Cases}}\right) \times \text{Marks}$$
+
+#### 4. Complete Validation & Error Handling Matrix
+
+| Error Code | HTTP Status | Trigger Condition | Candidate / UI Action |
+|---|:---:|---|---|
+| `ERR_INVALID_CREDENTIALS` | `401 Unauthorized` | Invalid Candidate Code or Passcode | Shows login error message |
+| `ERR_EXAM_EXPIRED` | `400 Bad Request` | Spot test pass created $> 24\text{h}$ ago | Prompts candidate to contact HR for new pass |
+| `ERR_EXAM_ALREADY_SUBMITTED` | `400 Bad Request` | Session already marked Submitted | Shows completion certificate / result screen |
+| `ERR_SECTION_LOCKED` | `403 Forbidden` | Candidate attempts to post answer to locked section | Rejects update; refreshes active section |
+| `ERR_MAX_TAB_SWITCH_EXCEEDED`| `403 Forbidden` | 3rd tab-switch violation recorded | Locks exam, terminates session, logs audit trail |
+| `ERR_MULTI_TAB_DETECTED` | `409 Conflict` | Same session opened in 2 separate browser tabs | Locks duplicate tab with anti-cheat banner |
+| `ERR_POOL_DEFICIT` | `422 Unprocessable` | Question Bank has fewer active questions than rule requires | Displays deficit warning in Admin/HR Drive Modal |
 
 ---
 

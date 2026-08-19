@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/design-system';
 
 interface ExamSubmissionModalProps {
@@ -20,80 +21,99 @@ export const ExamSubmissionModal: React.FC<ExamSubmissionModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  if (!isOpen) return null;
-
   const unansweredCount = Math.max(0, totalQuestions - answeredCount);
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer font-sans"
-      onClick={onCancel}
-    >
-      <div
-        className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] shadow-2xl w-full max-w-md p-6 flex flex-col gap-4 cursor-default animate-in fade-in zoom-in duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3 text-emerald-600">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-200">
-            <Icon name="check-circle" size="md" />
-          </div>
-          <div>
-            <h3 className="text-base font-extrabold text-[var(--text-primary)] font-heading leading-tight">
-              Submit Assessment?
-            </h3>
-            <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-              Confirm early submission of your answers.
-            </p>
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border-default)] space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--text-tertiary)]">Total Questions:</span>
-            <span className="font-bold text-[var(--text-primary)]">{totalQuestions}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-emerald-700 font-semibold">Answered:</span>
-            <span className="font-bold text-emerald-700">{answeredCount}</span>
-          </div>
-          {unansweredCount > 0 && (
-            <div className="flex items-center justify-between text-amber-700 font-semibold">
-              <span>Unanswered:</span>
-              <span className="font-bold">{unansweredCount}</span>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer font-sans"
+          onClick={onCancel}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 15 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+            className="bg-surface-1 border border-border-default rounded-3xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4 cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 text-status-success-text">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 20, delay: 0.05 }}
+                className="w-10 h-10 rounded-2xl bg-status-success-bg flex items-center justify-center shrink-0 border border-status-success-border"
+              >
+                <Icon name="check-circle" size="md" />
+              </motion.div>
+              <div>
+                <h3 className="text-base font-extrabold text-text-primary font-heading leading-tight">
+                  Submit Assessment?
+                </h3>
+                <p className="text-[12px] text-text-tertiary mt-0.5">
+                  Confirm early submission of your answers.
+                </p>
+              </div>
             </div>
-          )}
-        </div>
 
-        <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
-          Once submitted, your answers will be locked for grading and cannot be modified. Are you sure you want to finish?
-        </p>
+            <div className="p-3.5 rounded-2xl bg-surface-2 border border-border-default space-y-2 text-xs font-mono">
+              <div className="flex items-center justify-between">
+                <span className="text-text-tertiary">Total Questions:</span>
+                <span className="font-bold text-text-primary">{totalQuestions}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-status-success-text font-semibold">Answered:</span>
+                <span className="font-bold text-status-success-text">{answeredCount}</span>
+              </div>
+              {unansweredCount > 0 && (
+                <div className="flex items-center justify-between text-status-warning-text font-semibold">
+                  <span>Unanswered:</span>
+                  <span className="font-bold">{unansweredCount}</span>
+                </div>
+              )}
+            </div>
 
-        <div className="grid grid-cols-2 gap-3 pt-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isSubmitting}
-            className="h-10 rounded-lg text-xs font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] transition-all cursor-pointer disabled:opacity-50"
-          >
-            Return to Test
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={isSubmitting}
-            className="h-10 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md hover:from-emerald-700 hover:to-teal-700 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <>
-                <Icon name="spinner" size="xs" className="animate-spin" />
-                <span>Submitting...</span>
-              </>
-            ) : (
-              <span>Confirm Submit</span>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Once submitted, your answers will be locked for grading and cannot be modified. Are you sure you want to finish?
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={onCancel}
+                disabled={isSubmitting}
+                className="h-10 rounded-xl text-xs font-bold bg-surface-2 text-text-secondary border border-border-default hover:bg-surface-3 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Return to Test
+              </motion.button>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={onConfirm}
+                disabled={isSubmitting}
+                className="h-10 rounded-xl text-xs font-bold bg-status-success text-text-on-accent shadow-md hover:opacity-90 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Icon name="spinner" size="xs" className="animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <span>Confirm Submit</span>
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

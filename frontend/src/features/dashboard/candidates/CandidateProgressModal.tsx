@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Icon } from '@/design-system';
+import { Icon, elasticDialogVariant, dialogBackdropVariant } from '@/design-system';
 import type { DashboardCandidate } from '../types/dashboard.types';
 import { getCandidateFlowStages } from './candidateFlowData';
 
@@ -30,52 +30,61 @@ export const CandidateProgressModal: React.FC<CandidateProgressModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!candidate || !isOpen) return null;
+  // Cache candidate ref for smooth exit animation
+  const lastCandidateRef = React.useRef(candidate);
+  if (candidate) {
+    lastCandidateRef.current = candidate;
+  }
+  const activeCandidate = candidate || lastCandidateRef.current;
 
-  const stages = getCandidateFlowStages(candidate);
+  const stages = activeCandidate ? getCandidateFlowStages(activeCandidate) : [];
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs"
-          aria-hidden="true"
-        />
+      {isOpen && activeCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 isolate">
+          {/* Backdrop */}
+          <motion.div
+            key="backdrop"
+            variants={dialogBackdropVariant}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            onClick={onClose}
+            className="fixed inset-0 bg-[var(--overlay)] backdrop-blur-xs transform-gpu"
+            aria-hidden="true"
+          />
 
-        {/* Centered Modal Card */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 8 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-2xl bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[90vh]"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="progress-modal-title"
-        >
+          {/* Centered Modal Card with Elastic Blooming Spring Bounce */}
+          <motion.div
+            key="dialog"
+            variants={elasticDialogVariant}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            style={{ transformOrigin: '50% 40%' }}
+            className="relative w-full max-w-2xl bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl shadow-[0_25px_70px_-15px_rgba(99,102,241,0.22),0_0_0_1px_rgba(255,255,255,0.06)] z-10 overflow-hidden flex flex-col max-h-[90vh] transform-gpu"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="progress-modal-title"
+          >
           {/* Header */}
           <div className="px-5 py-4 bg-[var(--surface-2)] border-b border-[var(--border-default)] flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold text-sm flex items-center justify-center shrink-0 border border-[var(--accent-indigo)]/30">
-                {candidate.name.split(' ').map((w) => w[0]).join('')}
+                {activeCandidate.name.split(' ').map((w) => w[0]).join('')}
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 id="progress-modal-title" className="font-extrabold text-sm sm:text-base text-[var(--text-primary)] font-heading truncate">
-                    {candidate.name}
+                    {activeCandidate.name}
                   </h3>
                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-secondary)] border border-[var(--border-default)]">
-                    {candidate.code}
+                    {activeCandidate.code}
                   </span>
                 </div>
                 <span className="text-xs text-[var(--text-secondary)] truncate">
-                  {candidate.role} • {candidate.experience || `${candidate.experienceYears} Yrs`} • {candidate.hiringLocation}
+                  {activeCandidate.role} • {activeCandidate.experience || `${activeCandidate.experienceYears} Yrs`} • {activeCandidate.hiringLocation}
                 </span>
               </div>
             </div>
@@ -98,7 +107,7 @@ export const CandidateProgressModal: React.FC<CandidateProgressModalProps> = ({
                 Hiring Pipeline Delivery Tracker
               </span>
               <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
-                Current Stage: <strong className="text-[var(--status-warning)]">{candidate.currentRound}</strong>
+                Current Stage: <strong className="text-[var(--status-warning)]">{activeCandidate.currentRound}</strong>
               </span>
             </div>
 
@@ -218,7 +227,7 @@ export const CandidateProgressModal: React.FC<CandidateProgressModalProps> = ({
               type="button"
               onClick={() => {
                 onClose();
-                onNavigateToProfile(String(candidate.id));
+                onNavigateToProfile(String(activeCandidate.id));
               }}
               className="px-4 py-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo)] text-white text-xs font-bold hover:bg-[var(--accent-indigo-hover)] transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
             >
@@ -228,6 +237,7 @@ export const CandidateProgressModal: React.FC<CandidateProgressModalProps> = ({
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 };
