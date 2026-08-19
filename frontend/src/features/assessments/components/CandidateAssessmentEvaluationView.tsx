@@ -17,6 +17,15 @@ export interface CandidateAssessmentEvaluationViewProps {
   vacancyTitle?: string;
   /** The Assessment-round exam session to review — null/undefined if the candidate has none yet. */
   candidateExamSessionId?: number | null;
+  assessmentRounds?: Array<{
+    id: number;
+    roundNumber: number;
+    roundTitle: string;
+    roundType: string;
+    candidateExamSessionId: number | null;
+    status: string;
+    scoreObtained?: number | null;
+  }>;
   onBack?: () => void;
   onClose?: () => void;
   onFinalizeScore?: (finalScore: number, finalPercentage: number, status: 'Passed' | 'Failed') => void;
@@ -40,17 +49,28 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
   candidateCode = 'CND-2026',
   vacancyTitle = 'Assessment Evaluation',
   candidateExamSessionId,
+  assessmentRounds = [],
   onBack,
   onClose,
   onFinalizeScore,
 }) => {
   const router = useRouter();
 
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(candidateExamSessionId ?? null);
+
+  useEffect(() => {
+    if (candidateExamSessionId) {
+      setActiveSessionId(candidateExamSessionId);
+    }
+  }, [candidateExamSessionId]);
+
+  const querySessionId = activeSessionId ?? candidateExamSessionId ?? 0;
+
   const {
     data: evalRes,
     isLoading,
     isError,
-  } = useGetExamEvaluationQuery(candidateExamSessionId ?? 0, { skip: !candidateExamSessionId });
+  } = useGetExamEvaluationQuery(querySessionId, { skip: !querySessionId });
   const [evaluateAnswerApi, { isLoading: isSavingAnswer }] = useEvaluateAnswerMutation();
   const [publishResultApi, { isLoading: isPublishing }] = usePublishAssessmentResultMutation();
 
@@ -231,7 +251,8 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
           </div>
         </div>
 
-        {/* Real session status badge — replaces the old fictional multi-attempt tab switcher */}
+
+        {/* Real session status badge */}
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-mono text-[var(--text-tertiary)]">{evaluation.paperTitle}</span>
           <span

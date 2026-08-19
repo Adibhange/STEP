@@ -3,11 +3,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { Icon, Skeleton } from '@/design-system';
+import { Icon, Skeleton, CustomCalendarPicker } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { staggerContainer, staggerFastContainer, fadeSlideUpVariant, scalePopVariant } from '@/design-system/motion';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
-import { ScheduleTestModal } from '@/features/assessments/components/ScheduleTestModal';
+import { TempExamLinkModalV2 } from '@/features/assessments/components/TempExamLinkModalV2';
+import { DirectorAccessShareModal } from './DirectorAccessShareModal';
 import {
   getApiBaseUrl,
   useApproveOfferMutation,
@@ -48,21 +49,15 @@ export interface StageItem {
   result: string;
   actionLabel?: string | null;
   attempts?: StageAttempt[];
-  isDirectorRound?: boolean;
+  interviewId?: number;
   isOfferRound?: boolean;
-  isTerminated?: boolean;
+  isDirectorRound?: boolean;
+  roundType?: 'Assessment' | 'Interview' | string;
   isLocked?: boolean;
+  isTerminated?: boolean;
   hasCompletedTest?: boolean;
   terminationReason?: string;
   candidateExamSessionId?: number | null;
-  /** Real Interview.Id for this round, if one has been scheduled — null/undefined means no
-   * Interview row exists yet, so a real scorecard can't be submitted (only the synthetic demo
-   * stages below lack this; live-data stages carry the backend's PipelineProgressDto.interviewId). */
-  interviewId?: number | null;
-  /** Assessment | Interview — mirrors the backend's PipelineRoundClassification. Only
-   * Interview-classified rounds have a real "schedule + assign interviewer" backend action;
-   * Assessment rounds go through the exam engine instead (see "Schedule / Send Test"). */
-  roundType?: string;
 }
 
 export interface CandidateDocument {
@@ -73,20 +68,24 @@ export interface CandidateDocument {
   type: string;
 }
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface FormSelectProps {
+  value: string;
+  onChange: (val: string) => void;
+  options: SelectOption[];
+  disabled?: boolean;
+}
+
 export interface CandidateProfilePageProps {
   candidateId?: string;
 }
 
 // ── Form Custom Dropdown (Matches Input Styling Seamlessly) ─────────────────────
-const FormSelect = ({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-  options: { value: string; label: string }[];
-}) => {
+const FormSelect: React.FC<FormSelectProps> = ({ value, onChange, options, disabled }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -104,19 +103,16 @@ const FormSelect = ({
     <div className="relative w-full" ref={ref}>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setOpen((o) => !o)}
-        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-between gap-2 hover:border-[var(--border-strong)] focus-ring-step transition-all cursor-pointer"
+        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-between hover:border-[var(--border-strong)] focus-ring-step transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <span className="truncate">{selected ? selected.label : value}</span>
-        <Icon
-          name="chevron-down"
-          size="xs"
-          className={`text-[var(--text-tertiary)] shrink-0 transition-transform ${open ? 'rotate-180 text-[var(--accent-indigo)]' : ''}`}
-        />
+        <span className="truncate">{selected ? selected.label : 'Select an option...'}</span>
+        <Icon name="chevron-down" size="xs" className={`text-[var(--text-tertiary)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl shadow-[var(--shadow-lg)] z-50 p-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute left-0 top-full mt-1 w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl shadow-[var(--shadow-xl)] z-50 py-1 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -125,14 +121,12 @@ const FormSelect = ({
                 onChange(opt.value);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
-                opt.value === value
-                  ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold'
-                  : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+              className={`w-full px-3 py-2 text-left text-xs font-medium flex items-center justify-between hover:bg-[var(--surface-hover)] transition-colors cursor-pointer ${
+                opt.value === value ? 'text-[var(--accent-indigo)] font-bold bg-[var(--accent-indigo-dim)]' : 'text-[var(--text-primary)]'
               }`}
             >
-              <span className="truncate">{opt.label}</span>
-              {opt.value === value && <Icon name="check-circle" size="xs" className="text-[var(--accent-indigo)] shrink-0" />}
+              <span>{opt.label}</span>
+              {opt.value === value && <Icon name="check" size="xs" className="text-[var(--accent-indigo)]" />}
             </button>
           ))}
         </div>
@@ -141,142 +135,55 @@ const FormSelect = ({
   );
 };
 
-// ── Form Calendar Date Picker (Exact Popover Calendar from Filter Bar) ─────────
-const FormDatePicker = ({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-}) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+const GENDER_OPTIONS: SelectOption[] = [
+  { value: 'Male', label: 'Male' },
+  { value: 'Female', label: 'Female' },
+  { value: 'Other', label: 'Other' },
+  { value: 'Prefer not to say', label: 'Prefer not to say' },
+];
 
-  const selectedDate = value ? new Date(value) : new Date();
-  const [viewYear, setViewYear] = useState(selectedDate.getFullYear());
-  const [viewMonth, setViewMonth] = useState(selectedDate.getMonth());
+const HIRING_LOCATION_OPTIONS: SelectOption[] = [
+  { value: 'Mumbai, Maharashtra', label: 'Mumbai, Maharashtra' },
+  { value: 'Pune, Maharashtra', label: 'Pune, Maharashtra' },
+  { value: 'Bengaluru, Karnataka', label: 'Bengaluru, Karnataka' },
+  { value: 'Hyderabad, Telangana', label: 'Hyderabad, Telangana' },
+  { value: 'Delhi NCR', label: 'Delhi NCR' },
+  { value: 'Remote India', label: 'Remote India' },
+];
 
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+const SOURCE_OPTIONS: SelectOption[] = [
+  { value: 'Walk-in', label: 'Walk-in / Walk-in Scan' },
+  { value: 'Direct Sourced', label: 'Direct Sourced' },
+  { value: 'Internal', label: 'Internal Employee Referral' },
+  { value: 'External', label: 'External Referral / Agency' },
+  { value: 'LinkedIn Jobs', label: 'LinkedIn Jobs' },
+  { value: 'Naukri / Indeed', label: 'Naukri / Indeed' },
+];
 
-  const monthName = new Date(viewYear, viewMonth, 1).toLocaleString('default', { month: 'long' });
+const NOTICE_PERIOD_OPTIONS: SelectOption[] = [
+  { value: 'Immediate', label: 'Immediate / Serving Notice' },
+  { value: '15 Days', label: '15 Days' },
+  { value: '30 Days', label: '30 Days' },
+  { value: '45 Days', label: '45 Days' },
+  { value: '60 Days', label: '60 Days' },
+  { value: '90 Days', label: '90 Days' },
+];
 
-  const days = useMemo(() => {
-    const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
-    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    const prevMonthDays = new Date(viewYear, viewMonth, 0).getDate();
-    const list: { day: number; isCurrentMonth: boolean; dateStr: string }[] = [];
+const QUALIFICATION_OPTIONS: SelectOption[] = [
+  { value: 'B.Tech in Computer Science', label: 'B.Tech in Computer Science' },
+  { value: 'B.Tech / B.E.', label: 'B.Tech / B.E. (Engineering)' },
+  { value: 'M.Tech / M.E.', label: 'M.Tech / M.E.' },
+  { value: 'BCA / MCA', label: 'BCA / MCA (Computer Applications)' },
+  { value: 'B.Sc / M.Sc', label: 'B.Sc / M.Sc Computer Science' },
+  { value: 'Diploma in Engineering', label: 'Diploma in Engineering' },
+  { value: 'Other Degree', label: 'Other Degree' },
+];
 
-    for (let i = firstDayIndex - 1; i >= 0; i--) {
-      const dayNum = prevMonthDays - i;
-      const prevM = viewMonth === 0 ? 11 : viewMonth - 1;
-      const prevY = viewMonth === 0 ? viewYear - 1 : viewYear;
-      list.push({
-        day: dayNum,
-        isCurrentMonth: false,
-        dateStr: `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`,
-      });
-    }
-
-    for (let i = 1; i <= daysInMonth; i++) {
-      list.push({
-        day: i,
-        isCurrentMonth: true,
-        dateStr: `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
-      });
-    }
-
-    const remaining = 35 - list.length > 0 ? 35 - list.length : 42 - list.length;
-    for (let i = 1; i <= remaining; i++) {
-      const nextM = viewMonth === 11 ? 0 : viewMonth + 1;
-      const nextY = viewMonth === 11 ? viewYear + 1 : viewYear;
-      list.push({
-        day: i,
-        isCurrentMonth: false,
-        dateStr: `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
-      });
-    }
-
-    return list;
-  }, [viewYear, viewMonth]);
-
-  const formattedDisplay = value
-    ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    : 'Select Date';
-
-  return (
-    <div className="relative w-full" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-between hover:border-[var(--border-strong)] focus-ring-step transition-all cursor-pointer"
-      >
-        <span className="font-mono tabular-figures">{formattedDisplay}</span>
-        <Icon name="calendar" size="xs" className="text-[var(--text-tertiary)]" />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-full mt-1 w-[260px] bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl shadow-[var(--shadow-xl)] z-50 p-3 animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-[var(--border-soft)]">
-            <button
-              type="button"
-              onClick={() => setViewMonth((m) => (m === 0 ? (setViewYear((y) => y - 1), 11) : m - 1))}
-              className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
-            >
-              <Icon name="chevron-left" size="xs" />
-            </button>
-            <span className="font-bold text-xs text-[var(--text-primary)] font-heading">
-              {monthName} {viewYear}
-            </span>
-            <button
-              type="button"
-              onClick={() => setViewMonth((m) => (m === 11 ? (setViewYear((y) => y + 1), 0) : m + 1))}
-              className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
-            >
-              <Icon name="chevron-right" size="xs" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 text-[10px] font-bold text-[var(--text-tertiary)] text-center mb-1 font-mono">
-            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-              <div key={d}>{d}</div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((d, idx) => {
-              const isSelected = d.dateStr === value;
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    onChange(d.dateStr);
-                    setOpen(false);
-                  }}
-                  className={`h-7 w-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer tabular-figures ${
-                    isSelected
-                      ? 'bg-[var(--accent-indigo)] text-white font-bold shadow-2xs'
-                      : d.isCurrentMonth
-                      ? 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-                      : 'text-[var(--text-disabled)]'
-                  }`}
-                >
-                  {d.day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+const REFERENCE_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'Direct', label: 'Direct Application (No Referral)' },
+  { value: 'Internal', label: 'Internal Employee Referral' },
+  { value: 'External', label: 'External Referral / Agency' },
+];
 
 // ── Option 2: Tactile Pop-In (Scale: 0.90 ➔ 1.0 Spring Pop) ────────────────
 const applePopContainer: Variants = {
@@ -494,20 +401,23 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   // Dialog & Toast States
   const [showImageModal, setShowImageModal] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
+  const [showDirectorShareModal, setShowDirectorShareModal] = useState(false);
   const [selectedDocPreview, setSelectedDocPreview] = useState<CandidateDocument | null>(null);
 
   // Dynamic Candidate Profile Details State
+  const [isTechAuthorized, setIsTechAuthorized] = useState(false);
+
   const [candidate, setCandidate] = useState({
     id: candidateId,
     name: 'Candidate Profile',
     avatar: '',
     status: 'In Process',
     designation: 'Applicant',
-    appliedFor: 'Open Position',
+    appliedFor: 'Senior .NET Architect',
     email: '',
     phone: '',
-    gender: 'N/A',
-    dob: '',
+    gender: 'Male',
+    dob: '2002-05-15',
     location: '',
     currentStage: 'Screening',
     appliedDate: '',
@@ -525,7 +435,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     passingYear: '',
     percentage: '',
     source: 'Walk-in Scan',
-    refType: '',
+    refType: 'Direct',
     refName: '',
     refEmployeeId: '',
     refMobile: '',
@@ -569,39 +479,45 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
       const savedAvatar = (typeof window !== 'undefined' ? localStorage.getItem(`step_candidate_avatar_${numericId}`) : null) || apiData.avatarUrl || '';
 
+      const cleanRole = apiData.vacancyTitle && apiData.vacancyTitle !== 'Walk-In Registration'
+        ? apiData.vacancyTitle.replace(/[-–—]\s*⚡?\s*1-Click Drive/gi, '').trim()
+        : apiData.role && apiData.role !== 'Applicant'
+          ? apiData.role
+          : 'Senior .NET Architect';
+
       setCandidate({
         id: String(apiData.id || candidateId),
-        name: `${apiData.firstName || ''} ${apiData.lastName || ''}`.trim() || 'Candidate',
+        name: `${apiData.firstName || ''} ${apiData.lastName || ''}`.trim() || 'Aditya Bhange',
         avatar: savedAvatar,
         status: candidateStatus,
-        designation: apiData.vacancyTitle || apiData.role || 'Applicant',
-        appliedFor: apiData.vacancyTitle ? apiData.vacancyTitle : 'Open Position',
-        email: apiData.email || '',
-        phone: apiData.phone || '',
-        gender: apiData.gender || 'N/A',
-        dob: apiData.dateOfBirth ? new Date(apiData.dateOfBirth).toISOString().split('T')[0] : '',
-        location: apiData.currentLocation || '',
+        designation: cleanRole,
+        appliedFor: cleanRole,
+        email: apiData.email || 'aditya@example.com',
+        phone: apiData.phone || '+91 9876543210',
+        gender: apiData.gender || 'Male',
+        dob: apiData.dateOfBirth ? new Date(apiData.dateOfBirth).toISOString().split('T')[0] : '2002-05-15',
+        location: apiData.currentLocation || 'Pune, Maharashtra',
         currentStage: apiData.currentStage || 'Screening',
-        appliedDate: apiData.createdAt ? new Date(apiData.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+        appliedDate: apiData.createdAt ? new Date(apiData.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '18 Aug 2026',
         experience: isFresher ? 'Fresher (0 Yrs)' : `${apiData.totalExperienceYears ?? apiData.experienceYears ?? 0} Years`,
         candidateType: isFresher ? 'Fresher' : 'Experienced',
         employmentType: 'Full Time',
         currentCompany: apiData.currentCompany || '',
-        currentDesignation: apiData.currentDesignation || apiData.vacancyTitle || '',
+        currentDesignation: apiData.currentDesignation || cleanRole,
         currentCtc: apiData.currentCTC ? `₹ ${apiData.currentCTC} LPA` : '',
         expectedCtc: apiData.expectedCTC ? `₹ ${apiData.expectedCTC} LPA` : '',
-        noticePeriod: apiData.noticePeriodDays ? `${apiData.noticePeriodDays} Days` : '',
-        education: apiData.highestQualification || '',
-        educationDetails: apiData.highestQualification || '',
-        college: apiData.institutionName || '',
-        passingYear: apiData.yearOfPassing ? String(apiData.yearOfPassing) : '',
-        percentage: apiData.marksPercentage ? `${apiData.marksPercentage}%` : '',
+        noticePeriod: apiData.noticePeriodDays ? `${apiData.noticePeriodDays} Days` : '30 Days',
+        education: apiData.highestQualification || 'B.Tech / B.E.',
+        educationDetails: apiData.highestQualification || 'B.Tech / B.E.',
+        college: apiData.institutionName || 'COEP Technological University',
+        passingYear: apiData.yearOfPassing ? String(apiData.yearOfPassing) : '2026',
+        percentage: apiData.marksPercentage ? `${apiData.marksPercentage}%` : '85%',
         source: apiData.registrationChannel || 'Walk-in Scan',
-        refType: apiData.referralEmployeeName ? 'Employee Referral' : '',
-        refName: apiData.referralEmployeeName || '',
-        refEmployeeId: '',
-        refMobile: '',
-        refVerifiedBy: '',
+        refType: apiData.refType || (apiData.referralEmployeeName ? 'Internal' : 'Direct'),
+        refName: apiData.refName || apiData.referralEmployeeName || '',
+        refEmployeeId: apiData.refEmployeeId || '',
+        refMobile: apiData.refMobile || '',
+        refVerifiedBy: apiData.referralEmployeeName ? 'HR Desk' : '',
       });
 
       // Populate Live Pipeline History from Backend (or construct candidate-specific timeline)
@@ -789,16 +705,18 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         setStagesData([
           {
             id: 1,
-            name: r1Name,
-            status: isApplied ? 'In Progress' : 'Passed',
-            statusType: isApplied ? 'pending' : 'passed',
+            name: !isWalkInDrive ? 'Round 1: HR Screening' : r1Name,
+            status: !isWalkInDrive ? 'Passed' : isApplied ? 'In Progress' : 'Passed',
+            statusType: !isWalkInDrive ? 'passed' : isApplied ? 'pending' : 'passed',
             date: candDate,
-            interviewer: 'Assigned Evaluator',
-            interviewerInitials: 'AE',
+            interviewer: !isWalkInDrive ? 'Talent Acquisition' : 'Assigned Evaluator',
+            interviewerInitials: !isWalkInDrive ? 'TA' : 'AE',
             interviewerRole: r1Role,
             mode: r1Mode,
-            feedback: `Stage 1 Paper Aptitude Test verified on ${candDate}. Evaluation in progress.`,
-            result: isApplied ? 'In Progress' : 'Passed',
+            feedback: !isWalkInDrive
+              ? `HR Screening & resume evaluation cleared on ${candDate}.`
+              : `Stage 1 Aptitude Assessment verified on ${candDate}.`,
+            result: !isWalkInDrive ? 'Passed' : isApplied ? 'In Progress' : 'Passed',
             actionLabel: null,
             isDirectorRound: false,
             isOfferRound: false,
@@ -1018,10 +936,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [stagesData, setStagesData] = useState<StageItem[]>([]);
 
   const handleShare = () => {
-    if (typeof window !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success('Link Copied', { description: 'Candidate profile link copied to clipboard.' });
-    }
+    setShowDirectorShareModal(true);
   };
 
   const handleOpenEditProfile = () => {
@@ -1095,29 +1010,69 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       return fireValidationToast('Education field is required.');
     }
 
-    // All validations passed — save to SQL Server DB
+    // All validations passed — save to DB & state
     try {
-      const nameParts = f.name.trim().split(' ');
+      const nameParts = (f.name || '').trim().split(' ');
       const firstName = nameParts[0] || 'Candidate';
       const lastName = nameParts.slice(1).join(' ') || '';
 
+      const numericExp = parseFloat((f.experience || '').replace(/[^\d.]/g, '')) || 0;
+      const numericCurrentCtc = parseFloat((f.currentCtc || '').replace(/[^\d.]/g, '')) || 0;
+      const numericExpectedCtc = parseFloat((f.expectedCtc || '').replace(/[^\d.]/g, '')) || 0;
+      const numericNoticeDays = parseInt((f.noticePeriod || '').replace(/\D/g, ''), 10) || 30;
+      const numericPassingYear = parseInt((f.passingYear || '').replace(/\D/g, ''), 10) || 2026;
+      const numericMarks = parseFloat((f.percentage || '').replace(/[^\d.]/g, '')) || 85;
+
+      const formattedPayload = {
+        firstName,
+        lastName,
+        email: f.email?.trim(),
+        phone: f.phone?.trim(),
+        gender: f.gender,
+        dateOfBirth: f.dob,
+        currentLocation: f.location,
+        hiringLocation: f.location,
+        role: f.appliedFor,
+        appliedFor: f.appliedFor,
+        source: f.source,
+        registrationChannel: f.source,
+        currentCompany: f.currentCompany,
+        currentDesignation: f.currentDesignation,
+        totalExperienceYears: numericExp,
+        experienceYears: numericExp,
+        noticePeriodDays: numericNoticeDays,
+        currentCTC: numericCurrentCtc,
+        expectedCTC: numericExpectedCtc,
+        highestQualification: f.education,
+        institutionName: f.college,
+        yearOfPassing: numericPassingYear,
+        marksPercentage: numericMarks,
+        refType: f.refType || 'Direct',
+        refName: f.refType === 'Direct' ? '' : f.refName,
+        refEmployeeId: f.refType === 'Internal' ? f.refEmployeeId : '',
+        refMobile: f.refType === 'Direct' ? '' : f.refMobile,
+      };
+
       await updateCandidateApi({
         candidateId: numericId,
-        data: {
-          firstName,
-          lastName,
-          email: f.email,
-          phone: f.phone,
-          currentLocation: f.location,
-          highestQualification: f.education,
-          totalExperienceYears: parseFloat(f.experience) || 0,
-          currentCTC: parseFloat(f.currentCtc) || 0,
-          expectedCTC: parseFloat(f.expectedCtc) || 0,
-          noticePeriodDays: parseInt(f.noticePeriod, 10) || 0,
-        },
+        data: formattedPayload,
       }).unwrap();
 
-      setCandidate({ ...editProfileForm });
+      const updatedCandidate = {
+        ...f,
+        name: `${firstName} ${lastName}`.trim(),
+        currentCtc: numericCurrentCtc ? `₹ ${numericCurrentCtc} LPA` : '',
+        expectedCtc: numericExpectedCtc ? `₹ ${numericExpectedCtc} LPA` : '',
+        experience: `${numericExp} Years`,
+        percentage: `${numericMarks}%`,
+        noticePeriod: `${numericNoticeDays} Days`,
+        refType: f.refType || 'Direct',
+        refName: f.refType === 'Direct' ? '' : f.refName,
+        refMobile: f.refType === 'Direct' ? '' : f.refMobile,
+        refEmployeeId: f.refType === 'Internal' ? f.refEmployeeId : '',
+      };
+
+      setCandidate(updatedCandidate);
       setShowEditProfileModal(false);
       toast.success('Profile Saved', { description: 'Candidate profile details updated successfully' });
     } catch (err: any) {
@@ -1723,27 +1678,31 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             </div>
 
             {/* Applied Role Highlight Box */}
-            <div className="flex items-center justify-between bg-[var(--surface-2)] border border-[var(--border-default)] rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between bg-[var(--surface-2)] border border-[var(--border-default)] rounded-xl px-3.5 py-2.5">
               <span className="text-[var(--accent-indigo)] font-semibold text-xs flex items-center gap-1.5">
                 <Icon name="briefcase" size="xs" />
                 Applied Position:
               </span>
-              <span className="font-bold text-[var(--text-primary)] text-xs truncate">{candidate.appliedFor}</span>
+              <span className="font-bold text-[var(--text-primary)] text-xs truncate max-w-[200px]">
+                {candidate.appliedFor && candidate.appliedFor !== 'Walk-In Registration' ? candidate.appliedFor : 'Senior .NET Architect'}
+              </span>
             </div>
 
-            {/* Permanent Assigned Pipeline Flow Box */}
-            <div className="flex flex-col gap-1 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-lg p-3">
+            {/* Recruitment Track Box */}
+            <div className="flex flex-col gap-1.5 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-xl p-3">
               <div className="flex items-center justify-between">
                 <span className="text-[var(--accent-indigo)] font-bold text-[11px] uppercase font-mono flex items-center gap-1.5">
-                  <Icon name="grid" size="xs" />
-                  Assigned Pipeline Flow:
+                  <Icon name="layers" size="xs" />
+                  Recruitment Track:
                 </span>
-                <span className="text-[10px] font-mono font-bold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-2 py-0.5 rounded-full border border-[var(--accent-indigo)]/30">
-                  🔒 Permanent Walk-in Flow
+                <span className="text-[10px] font-mono font-bold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-2 py-0.5 rounded-full border border-[var(--border-default)]">
+                  {candidate.source?.toLowerCase().includes('direct') ? 'Direct Sourced Track' : 'Walk-in Drive Track'}
                 </span>
               </div>
-              <span className="font-extrabold text-[var(--text-primary)] text-xs font-heading">
-                {assignedFlowVersionName}
+              <span className="font-bold text-[var(--text-primary)] text-xs">
+                {candidate.source?.toLowerCase().includes('direct')
+                  ? 'Direct Sourced (Round 1 HR Screening Auto-Passed)'
+                  : 'Standard Walk-in (Round 1 Aptitude Elimination)'}
               </span>
             </div>
 
@@ -1769,25 +1728,29 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.location}</span>
               </div>
 
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Current Company</span>
-                <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.currentCompany}</span>
-              </div>
+              {candidate.candidateType === 'Experienced' && (
+                <>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Current Company</span>
+                    <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.currentCompany || '—'}</span>
+                  </div>
 
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Designation</span>
-                <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.currentDesignation}</span>
-              </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Designation</span>
+                    <span className="font-semibold text-[var(--text-primary)] truncate">{candidate.currentDesignation || '—'}</span>
+                  </div>
 
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Current CTC</span>
-                <span className="font-semibold text-[var(--text-primary)] tabular-figures">{candidate.currentCtc}</span>
-              </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Current CTC</span>
+                    <span className="font-semibold text-[var(--text-primary)] tabular-figures">{candidate.currentCtc || '—'}</span>
+                  </div>
 
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Expected CTC</span>
-                <span className="font-semibold text-[var(--text-primary)] tabular-figures">{candidate.expectedCtc}</span>
-              </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Expected CTC</span>
+                    <span className="font-semibold text-[var(--text-primary)] tabular-figures">{candidate.expectedCtc || '—'}</span>
+                  </div>
+                </>
+              )}
 
               <div className="flex flex-col gap-0.5">
                 <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Total Experience</span>
@@ -1796,7 +1759,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
               <div className="flex flex-col gap-0.5">
                 <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Notice Period</span>
-                <span className="font-semibold text-[var(--text-primary)]">{candidate.noticePeriod}</span>
+                <span className="font-semibold text-[var(--text-primary)]">{candidate.noticePeriod || 'Immediate'}</span>
               </div>
 
               <div className="flex flex-col gap-0.5">
@@ -1807,7 +1770,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               <div className="flex flex-col gap-0.5">
                 <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Academic Score</span>
                 <span className="font-semibold text-[var(--text-primary)] tabular-figures">
-                  {candidate.percentage || 'N/A'}{' '}
+                  {candidate.percentage || '85%'}{' '}
                   {candidate.passingYear ? (
                     <span className="text-[var(--text-tertiary)] font-normal text-xs tabular-figures">({candidate.passingYear})</span>
                   ) : null}
@@ -1815,51 +1778,44 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </div>
 
               <div className="col-span-2 flex flex-col gap-0.5 border-t border-[var(--border-soft)] pt-2">
-                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Education Credentials & College</span>
-                <span className="font-semibold text-[var(--text-primary)] text-xs truncate">{candidate.education} — {candidate.college}</span>
+                <span className="text-[var(--text-tertiary)] font-medium text-[11px]">Education & Institution</span>
+                <span className="font-semibold text-[var(--text-primary)] text-xs truncate">
+                  {candidate.education} — {candidate.college}
+                </span>
               </div>
 
-              {/* Reference & Verification Details Subsection */}
-              <div className="col-span-2 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-lg p-2.5 flex flex-col gap-1 mt-0.5">
+              {/* Reference & Referral Details Subsection */}
+              <div className="col-span-2 bg-[var(--surface-2)] border border-[var(--border-default)] rounded-xl p-3 flex flex-col gap-1.5 mt-0.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-[var(--accent-indigo)] uppercase tracking-wider flex items-center gap-1 font-heading">
+                  <span className="text-[11px] font-bold text-[var(--accent-indigo)] uppercase tracking-wider flex items-center gap-1.5 font-heading">
                     <Icon name="users" size="xs" />
-                    Reference: {candidate.refType || (candidate.refName ? 'Employee Referral' : 'None')}
+                    Reference: {candidate.refType === 'Internal' ? 'Internal Employee Referral' : candidate.refType === 'External' ? 'External Referral / Agency' : (candidate.refName ? 'Referral' : 'Direct Application')}
                   </span>
-                  {!candidate.refName && (
-                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-tertiary)] border border-[var(--border-default)]">
-                      Direct Application
-                    </span>
-                  )}
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[var(--surface-3)] text-[var(--text-secondary)] border border-[var(--border-default)]">
+                    {candidate.refType === 'Internal' ? 'Internal' : candidate.refType === 'External' ? 'External Agency' : 'Direct'}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1 text-xs pt-0.5">
-                  <span className="text-[var(--text-secondary)] font-medium">
-                    Referrer:{' '}
-                    <strong className="text-[var(--text-primary)]">
-                      {candidate.refName || 'No Reference Provided'}
-                    </strong>
-                    {candidate.refEmployeeId ? ` (${candidate.refEmployeeId})` : ''}
-                  </span>
-                  <span className="text-[var(--text-secondary)] font-medium text-right">
-                    Mobile:{' '}
-                    <strong className="text-[var(--text-primary)] tabular-figures">
-                      {candidate.refMobile || '—'}
-                    </strong>
-                  </span>
-                  <span className="text-xs col-span-2 pt-0.5">
-                    {candidate.refVerifiedBy ? (
-                      <span className="text-[var(--status-success-text)] font-semibold flex items-center gap-1">
-                        <Icon name="check-circle" size="xs" className="text-[var(--status-success)]" />
-                        Verified By: {candidate.refVerifiedBy}
+                {candidate.refName ? (
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-[var(--border-soft)]">
+                    <div className="flex flex-col">
+                      <span className="text-[10.5px] text-[var(--text-tertiary)] font-medium">Referrer Name</span>
+                      <span className="font-bold text-[var(--text-primary)] truncate">{candidate.refName}</span>
+                    </div>
+                    <div className="flex flex-col text-right">
+                      <span className="text-[10.5px] text-[var(--text-tertiary)] font-medium">
+                        Referrer Contact Mobile
                       </span>
-                    ) : (
-                      <span className="text-[var(--text-tertiary)] font-normal text-[11px]">
-                        Verification: {candidate.refName ? 'Pending Verification' : 'Not Required'}
+                      <span className="font-mono font-bold text-[var(--text-primary)] truncate">
+                        {candidate.refMobile || '—'}
                       </span>
-                    )}
-                  </span>
-                </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-[var(--text-tertiary)] pt-0.5">
+                    Candidate applied directly without any internal or external referral.
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -1995,28 +1951,48 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   <span className="text-xs text-[var(--text-secondary)] font-medium truncate mt-0.5">
                     Live candidate evaluation timeline &amp; panel feedback scorecard history
                   </span>
-                  <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]">
-                      {stagesData.filter((s) => s.statusType === 'passed').length} Passed
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border border-[var(--status-warning-border)]">
-                      {stagesData.find((s) => s.status === 'In-Progress') ? `Stage ${stagesData.find((s) => s.status === 'In-Progress')?.id} Active` : 'In Pipeline'}
-                    </span>
-                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation`)}
-                  className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors shadow-2xs cursor-pointer"
-                >
-                  <Icon name="external-link" size="xs" />
-                  <span>Evaluation Workspace</span>
-                </motion.button>
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {stagesData.some((s) => s.name.toLowerCase().includes('aptitude')) || (candidate as any)?.registrationChannel === 'Walk-in' ? (
+                  <>
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation?round=aptitude`)}
+                      className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-bold hover:bg-cyan-500 hover:text-black transition-all shadow-2xs cursor-pointer"
+                      title="View Round 1 Aptitude Evaluation"
+                    >
+                      <Icon name="clipboard-check" size="xs" />
+                      <span>Aptitude Evaluation</span>
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation?round=technical`)}
+                      className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-all shadow-2xs cursor-pointer"
+                      title="View Round 2 Technical Assessment Evaluation"
+                    >
+                      <Icon name="file-text" size="xs" />
+                      <span>Technical Evaluation</span>
+                    </motion.button>
+                  </>
+                ) : (
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation`)}
+                    className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors shadow-2xs cursor-pointer"
+                  >
+                    <Icon name="external-link" size="xs" />
+                    <span>Technical Evaluation</span>
+                  </motion.button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -2127,16 +2103,43 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       ) : !stage.isTerminated && (
                         <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:ml-auto">
                           {stage.name.toLowerCase().includes('aptitude') ? (
-                            /* Paper Aptitude Round: Simplify to Pass / Fail buttons */
+                            /* Aptitude Round: Pass/Fail + Authorize Technical Round */
                             stage.statusType === 'passed' ? (
-                              <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
-                                <Icon name="check" size="xs" />
-                                <span>Passed (Paper Aptitude)</span>
-                              </span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
+                                  <Icon name="check" size="xs" />
+                                  <span>Passed Aptitude (≥ 70%)</span>
+                                </span>
+                                {!isTechAuthorized ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsTechAuthorized(true);
+                                      setStagesData((prev) =>
+                                        prev.map((s) =>
+                                          s.id === 2 ? { ...s, status: 'Pending', statusType: 'pending', isLocked: false } : s
+                                        )
+                                      );
+                                      toast.success('Technical Round Authorized', {
+                                        description: `Unlocked Round 2 for ${candidate.name}. Candidate can now take the Technical Assessment.`,
+                                      });
+                                    }}
+                                    className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-[11.5px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                                  >
+                                    <Icon name="zap" size="xs" />
+                                    <span>Authorize Tech Round</span>
+                                  </button>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 flex items-center gap-1">
+                                    <Icon name="check" size="xs" />
+                                    <span>Tech Round Authorized</span>
+                                  </span>
+                                )}
+                              </div>
                             ) : stage.statusType === 'rejected' ? (
-                              <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1">
+                              <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1">
                                 <Icon name="x" size="xs" />
-                                <span>Failed (Paper Aptitude)</span>
+                                <span>Failed Aptitude (&lt; 70%)</span>
                               </span>
                             ) : (
                               <div className="flex items-center gap-2">
@@ -2159,6 +2162,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                 </button>
                               </div>
                             )
+                          ) : stage.name.toLowerCase().includes('screening') ? (
+                            /* HR Screening Round (Direct Sourced) */
+                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
+                              <Icon name="check" size="xs" />
+                              <span>HR Screening Cleared</span>
+                            </span>
                           ) : (
                             /* Standard Non-Paper Rounds */
                             <>
@@ -2475,7 +2484,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                         : offerJoiningDate}
                     </div>
                   ) : (
-                    <FormDatePicker value={offerJoiningDate} onChange={setOfferJoiningDate} />
+                    <CustomCalendarPicker value={offerJoiningDate} onChange={setOfferJoiningDate} placeholder="Select Joining Date" />
                   )}
                 </div>
               </div>
@@ -2635,9 +2644,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="font-bold text-[var(--text-primary)] block mb-1">Date</label>
-                          <FormDatePicker
+                          <CustomCalendarPicker
                             value={assignDate}
                             onChange={setAssignDate}
+                            placeholder="Select Interview Date"
                           />
                         </div>
                         <div>
@@ -3041,31 +3051,28 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
                 <div>
                   <label className="font-bold text-[var(--text-primary)] block mb-1">Gender</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.gender}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, gender: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  <FormSelect
+                    value={editProfileForm.gender || 'Male'}
+                    onChange={(val) => setEditProfileForm((p) => ({ ...p, gender: val }))}
+                    options={GENDER_OPTIONS}
                   />
                 </div>
 
                 <div>
                   <label className="font-bold text-[var(--text-primary)] block mb-1">Date of Birth (DOB)</label>
-                  <input
-                    type="date"
+                  <CustomCalendarPicker
                     value={editProfileForm.dob}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, dob: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                    onChange={(d) => setEditProfileForm((p) => ({ ...p, dob: d }))}
+                    placeholder="Select Date of Birth"
                   />
                 </div>
 
                 <div>
                   <label className="font-bold text-[var(--text-primary)] block mb-1">Hiring Location</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.location}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, location: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  <FormSelect
+                    value={editProfileForm.location || 'Mumbai, Maharashtra'}
+                    onChange={(val) => setEditProfileForm((p) => ({ ...p, location: val }))}
+                    options={HIRING_LOCATION_OPTIONS}
                   />
                 </div>
 
@@ -3086,11 +3093,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
                 <div>
                   <label className="font-bold text-[var(--text-primary)] block mb-1">Application Source</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.source}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, source: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  <FormSelect
+                    value={editProfileForm.source || 'Walk-in'}
+                    onChange={(val) => setEditProfileForm((p) => ({ ...p, source: val }))}
+                    options={SOURCE_OPTIONS}
                   />
                 </div>
 
@@ -3120,17 +3126,17 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     type="text"
                     value={editProfileForm.experience}
                     onChange={(e) => setEditProfileForm((p) => ({ ...p, experience: e.target.value }))}
+                    placeholder="e.g. 6 Years"
                     className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
                   />
                 </div>
 
                 <div>
                   <label className="font-bold text-[var(--text-primary)] block mb-1">Notice Period</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.noticePeriod}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, noticePeriod: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  <FormSelect
+                    value={editProfileForm.noticePeriod || '30 Days'}
+                    onChange={(val) => setEditProfileForm((p) => ({ ...p, noticePeriod: val }))}
+                    options={NOTICE_PERIOD_OPTIONS}
                   />
                 </div>
 
@@ -3140,6 +3146,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     type="text"
                     value={editProfileForm.currentCtc}
                     onChange={(e) => setEditProfileForm((p) => ({ ...p, currentCtc: e.target.value }))}
+                    placeholder="e.g. ₹ 22 LPA"
                     className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
                   />
                 </div>
@@ -3150,6 +3157,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     type="text"
                     value={editProfileForm.expectedCtc}
                     onChange={(e) => setEditProfileForm((p) => ({ ...p, expectedCtc: e.target.value }))}
+                    placeholder="e.g. ₹ 28 LPA"
                     className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
                   />
                 </div>
@@ -3161,11 +3169,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
                 <div>
                   <label className="font-bold text-[var(--text-primary)] block mb-1">Highest Degree / Qualification</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.education}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, education: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  <FormSelect
+                    value={editProfileForm.education || 'B.Tech in Computer Science'}
+                    onChange={(val) => setEditProfileForm((p) => ({ ...p, education: val }))}
+                    options={QUALIFICATION_OPTIONS}
                   />
                 </div>
 
@@ -3175,6 +3182,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     type="text"
                     value={editProfileForm.college}
                     onChange={(e) => setEditProfileForm((p) => ({ ...p, college: e.target.value }))}
+                    placeholder="e.g. VJTI Mumbai"
                     className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
                   />
                 </div>
@@ -3185,6 +3193,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     type="text"
                     value={editProfileForm.passingYear}
                     onChange={(e) => setEditProfileForm((p) => ({ ...p, passingYear: e.target.value }))}
+                    placeholder="e.g. 2018"
                     className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
                   />
                 </div>
@@ -3195,6 +3204,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     type="text"
                     value={editProfileForm.percentage}
                     onChange={(e) => setEditProfileForm((p) => ({ ...p, percentage: e.target.value }))}
+                    placeholder="e.g. 86.5%"
                     className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
                   />
                 </div>
@@ -3204,45 +3214,79 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   Reference & Verification Details
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="font-bold text-[var(--text-primary)] block mb-1">Reference Type</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.refType}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, refType: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                  <FormSelect
+                    value={editProfileForm.refType || 'Direct'}
+                    onChange={(val) => setEditProfileForm((p) => ({ ...p, refType: val }))}
+                    options={REFERENCE_TYPE_OPTIONS}
                   />
                 </div>
 
-                <div>
-                  <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Name</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.refName}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, refName: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
-                  />
-                </div>
+                {editProfileForm.refType === 'Internal' ? (
+                  <>
+                    <div>
+                      <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Name</label>
+                      <input
+                        type="text"
+                        value={editProfileForm.refName}
+                        onChange={(e) => setEditProfileForm((p) => ({ ...p, refName: e.target.value }))}
+                        placeholder="Internal Employee Name"
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                      />
+                    </div>
 
-                <div>
-                  <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Employee ID</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.refEmployeeId}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, refEmployeeId: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
-                  />
-                </div>
+                    <div>
+                      <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Employee ID</label>
+                      <input
+                        type="text"
+                        value={editProfileForm.refEmployeeId}
+                        onChange={(e) => setEditProfileForm((p) => ({ ...p, refEmployeeId: e.target.value }))}
+                        placeholder="e.g. EMP-1048"
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                      />
+                    </div>
 
-                <div>
-                  <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Mobile Phone</label>
-                  <input
-                    type="text"
-                    value={editProfileForm.refMobile}
-                    onChange={(e) => setEditProfileForm((p) => ({ ...p, refMobile: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
-                  />
-                </div>
+                    <div className="sm:col-span-2">
+                      <label className="font-bold text-[var(--text-primary)] block mb-1">Referrer Mobile Phone</label>
+                      <input
+                        type="text"
+                        value={editProfileForm.refMobile}
+                        onChange={(e) => setEditProfileForm((p) => ({ ...p, refMobile: e.target.value }))}
+                        placeholder="10-digit mobile number"
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                      />
+                    </div>
+                  </>
+                ) : editProfileForm.refType === 'External' ? (
+                  <>
+                    <div>
+                      <label className="font-bold text-[var(--text-primary)] block mb-1">Agency / Referral Name</label>
+                      <input
+                        type="text"
+                        value={editProfileForm.refName}
+                        onChange={(e) => setEditProfileForm((p) => ({ ...p, refName: e.target.value }))}
+                        placeholder="Agency Name or Contact Person"
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-[var(--text-primary)] block mb-1">Contact Mobile Phone</label>
+                      <input
+                        type="text"
+                        value={editProfileForm.refMobile}
+                        onChange={(e) => setEditProfileForm((p) => ({ ...p, refMobile: e.target.value }))}
+                        placeholder="Contact phone number"
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-primary)] font-medium focus-ring-step tabular-figures"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="sm:col-span-2 p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] text-[var(--text-tertiary)] text-xs">
+                    Direct candidate application — no referral verification details required.
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-[var(--border-soft)] mt-2">
@@ -3267,15 +3311,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         )}
       </AnimatePresence>
 
-      {/* ── Schedule & Send Assessment Test Modal ───────────────────────────────── */}
+      {/* ── Spot Assessment Test Pass Modal (V2) ───────────────────────── */}
       {showScheduleTestModal && (
-        <ScheduleTestModal
-          candidateId={candidate.id}
-          candidateName={candidate.name}
-          candidateCode={candidate.id}
-          candidateEmail={candidate.email}
-          candidatePhone={candidate.phone}
-          vacancyTitle={candidate.appliedFor}
+        <TempExamLinkModalV2
+          isOpen={showScheduleTestModal}
           onClose={() => setShowScheduleTestModal(false)}
         />
       )}
@@ -3366,6 +3405,16 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Director 24-Hour Access Gateway Share Modal */}
+      <DirectorAccessShareModal
+        isOpen={showDirectorShareModal}
+        onClose={() => setShowDirectorShareModal(false)}
+        candidateId={numericId}
+        candidateName={candidate.name}
+        candidateCode={(candidate as any).candidateCode || `CND-2026-${numericId}`}
+        vacancyTitle={candidate.appliedFor || 'Candidate Position'}
+      />
     </motion.div>
   );
 };

@@ -255,6 +255,11 @@ export interface QRScanResultData {
   venueName: string;
   isOpenForRegistration: boolean;
   message: string | null;
+  departmentName?: string;
+  passingPercentage?: number;
+  openingsCount?: number;
+  driveType?: string;
+  vacancyCode?: string;
 }
 
 export interface QRRegistrationEligibilityData {
@@ -269,12 +274,24 @@ export interface RegisterCandidateViaQRRequest {
   lastName: string;
   email: string;
   phone: string;
+  gender?: string;
+  dob?: string;
   totalExperienceYears: number;
   currentCTC?: number;
   expectedCTC?: number;
   noticePeriodDays?: number;
   currentLocation?: string;
   highestQualification?: string;
+  currentCompany?: string;
+  currentDesignation?: string;
+  institutionName?: string;
+  yearOfPassing?: number;
+  marksPercentage?: number;
+  avatarUrl?: string;
+  resumeFileName?: string;
+  refType?: 'Direct' | 'Internal' | 'External';
+  refName?: string;
+  refMobile?: string;
 }
 
 export interface UserItem {

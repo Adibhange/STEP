@@ -8,6 +8,7 @@ import {
   type TempExamPassData,
 } from '@/store/services/api';
 import { useAppDispatch, notifySuccess, notifyError } from '@/store';
+import { getAppOrigin } from '@/lib/utils/url-helper';
 
 interface TempExamLinkModalV2Props {
   isOpen: boolean;
@@ -70,9 +71,17 @@ export const TempExamLinkModalV2: React.FC<TempExamLinkModalV2Props> = ({
     }
   };
 
+  const resolvedExamUrl = React.useMemo(() => {
+    if (!passData) return '';
+    if (passData.candidateCode && passData.passcode) {
+      return `${getAppOrigin()}/exam?code=${passData.candidateCode}&pass=${passData.passcode}`;
+    }
+    return passData.examUrl || '';
+  }, [passData]);
+
   const handleCopy = () => {
-    if (passData?.examUrl) {
-      navigator.clipboard.writeText(passData.examUrl);
+    if (resolvedExamUrl) {
+      navigator.clipboard.writeText(resolvedExamUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
       dispatch(notifySuccess({ title: 'Copied', description: 'Exam link copied to clipboard.' }));
@@ -233,7 +242,7 @@ export const TempExamLinkModalV2: React.FC<TempExamLinkModalV2Props> = ({
                   <input
                     type="text"
                     readOnly
-                    value={passData.examUrl}
+                    value={resolvedExamUrl}
                     className="flex-1 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-mono text-[var(--text-primary)] select-all outline-none"
                   />
                   <button

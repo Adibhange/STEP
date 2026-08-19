@@ -28,6 +28,7 @@ export interface DashboardCandidate {
   experience: string;
   experienceYears?: number;
   source: CandidateSource;
+  registrationChannel?: 'Walk-in' | 'Direct' | 'Portal' | string;
   stage: CandidateStage;
   currentRound: string;
   assignedInterviewer: string;

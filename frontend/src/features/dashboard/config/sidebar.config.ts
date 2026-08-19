@@ -1,15 +1,12 @@
 /**
- * STEP Enterprise Platform — Sidebar Navigation Configuration (Phase 1 Frozen)
+ * STEP Enterprise Platform — Sidebar Navigation Configuration (V2 Architecture)
  *
- * Architecture Freeze Policy:
  * 3 logical sections: RECRUITMENT, ANALYTICS, ADMINISTRATION.
- * No standalone database tables (Candidates, Walk-in Drives, Interview Schedule, Masters) in top-level sidebar.
  */
 
 export type NavItemId =
   | 'dashboard'
   | 'vacancies'
-  | 'question-papers'
   | 'assessments'
   | 'reports'
   | 'users'
@@ -39,13 +36,6 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Vacancies',
     href: '/dashboard/vacancies',
     icon: 'briefcase',
-    section: 'recruitment',
-  },
-  {
-    id: 'question-papers',
-    label: 'Question Papers',
-    href: '/dashboard/question-papers',
-    icon: 'file-text',
     section: 'recruitment',
   },
   {

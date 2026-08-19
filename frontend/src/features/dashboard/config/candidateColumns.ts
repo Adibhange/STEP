@@ -17,6 +17,7 @@
 export type CandidateColumnId =
   | 'avatar'
   | 'candidate'
+  | 'driveType'
   | 'email'
   | 'role'
   | 'experience'
@@ -54,6 +55,16 @@ export const CANDIDATE_COLUMNS: ColumnDef[] = [
     align: 'left',
     sortable: true,
     hideable: false,
+  },
+  {
+    id: 'driveType',
+    label: 'Drive Type',
+    shortLabel: 'Track',
+    minWidth: 120,
+    align: 'left',
+    sortable: true,
+    hideable: true,
+    defaultHidden: false,
   },
   {
     id: 'email',
@@ -95,9 +106,9 @@ export const CANDIDATE_COLUMNS: ColumnDef[] = [
   },
   {
     id: 'assignedInterviewer',
-    label: 'Assigned Interviewer',
+    label: 'Interviewer',
     shortLabel: 'Interviewer',
-    minWidth: 125,
+    minWidth: 140,
     align: 'left',
     sortable: true,
     hideable: true,

@@ -107,6 +107,59 @@ export const candidatesApi = stepApi.injectEndpoints({
       }),
       invalidatesTags: ['Candidates', 'Interviews'],
     }),
+    generateDirectorAccessLink: builder.mutation<
+      ApiEnvelope<{
+        token: string;
+        accessUrl: string;
+        expiresAt: string;
+        candidateName: string;
+        candidateCode: string;
+        vacancyTitle: string;
+        isExisting?: boolean;
+      }>,
+      { candidateId: number; regenerate?: boolean }
+    >({
+      query: ({ candidateId, regenerate }) => ({
+        url: `/candidates/${candidateId}/director-access-link`,
+        method: 'POST',
+        body: { regenerate },
+      }),
+      invalidatesTags: ['Candidates'],
+    }),
+    getDirectorAccessGatewayInfo: builder.query<
+      ApiEnvelope<{
+        valid: boolean;
+        token: string;
+        candidateId: number;
+        candidateName: string;
+        candidateCode: string;
+        vacancyTitle: string;
+        currentStage?: string;
+        createdAt: string;
+        expiresAt: string;
+        isExpired: boolean;
+        remainingMinutes: number;
+      }>,
+      string
+    >({
+      query: (token) => `/candidates/director-access/${token}`,
+    }),
+    verifyDirectorGatewayPin: builder.mutation<
+      ApiEnvelope<{
+        accessToken: string;
+        refreshToken: string;
+        user: any;
+        candidateId: number;
+        redirectUrl: string;
+      }>,
+      { token: string; pin: string }
+    >({
+      query: ({ token, pin }) => ({
+        url: '/candidates/director-access/verify-pin',
+        method: 'POST',
+        body: { token, pin },
+      }),
+    }),
   }),
   overrideExisting: false,
 });
@@ -122,4 +175,8 @@ export const {
   useDeleteCandidateDocumentMutation,
   useScheduleCandidateTestMutation,
   useEvaluateCandidateStageMutation,
+  useGenerateDirectorAccessLinkMutation,
+  useGetDirectorAccessGatewayInfoQuery,
+  useVerifyDirectorGatewayPinMutation,
 } = candidatesApi;
+

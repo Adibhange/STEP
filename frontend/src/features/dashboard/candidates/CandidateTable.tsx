@@ -201,6 +201,23 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
           </td>
         );
 
+      case 'driveType': {
+        const isDirect = candidate.registrationChannel === 'Direct' || candidate.source === 'HomeTest';
+        return (
+          <td key={col.id} className={cellPadding}>
+            {isDirect ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/25 whitespace-nowrap shadow-2xs">
+                Direct
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 whitespace-nowrap shadow-2xs">
+                Walk-in
+              </span>
+            )}
+          </td>
+        );
+      }
+
       case 'email':
         return (
           <td key={col.id} className={cellPadding}>
@@ -322,23 +339,24 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
   return (
     <div className="w-full overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-step">
       <table
-        className="w-full min-w-[1080px] border-collapse table-fixed"
+        className="w-full min-w-[1500px] border-collapse table-fixed"
         aria-label="Candidates"
         role="grid"
       >
         <colgroup>
           {columns.map((col) => {
-            let widthStyle = 'auto';
-            if (col.id === 'avatar') widthStyle = '48px';
-            else if (col.id === 'candidate') widthStyle = '12%';
-            else if (col.id === 'email') widthStyle = '13%';
-            else if (col.id === 'role') widthStyle = '14%';
-            else if (col.id === 'experience') widthStyle = '6.5%';
-            else if (col.id === 'currentRound') widthStyle = '8.5%';
-            else if (col.id === 'assignedInterviewer') widthStyle = '12%';
-            else if (col.id === 'hiringLocation') widthStyle = '9.5%';
-            else if (col.id === 'testLocation') widthStyle = '9.5%';
-            else if (col.id === 'appliedDate') widthStyle = '8%';
+            let widthStyle = '140px';
+            if (col.id === 'avatar') widthStyle = '46px';
+            else if (col.id === 'candidate') widthStyle = '170px';
+            else if (col.id === 'driveType') widthStyle = '115px';
+            else if (col.id === 'email') widthStyle = '180px';
+            else if (col.id === 'role') widthStyle = '180px';
+            else if (col.id === 'experience') widthStyle = '95px';
+            else if (col.id === 'currentRound') widthStyle = '130px';
+            else if (col.id === 'assignedInterviewer') widthStyle = '160px';
+            else if (col.id === 'hiringLocation') widthStyle = '140px';
+            else if (col.id === 'testLocation') widthStyle = '140px';
+            else if (col.id === 'appliedDate') widthStyle = '110px';
             else if (col.id === 'actions') widthStyle = '135px';
 
             return <col key={col.id} style={{ width: widthStyle }} />;
@@ -353,25 +371,25 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
               const isCandidate = col.id === 'candidate';
               const isActions = col.id === 'actions';
               const paddingClass = isAvatar
-                ? 'pl-3.5 pr-2.5 py-2 md:py-2.5 w-12 text-center'
+                ? 'pl-3.5 pr-2 py-2 md:py-2.5 w-[46px] text-center'
                 : isCandidate
                 ? 'pl-2.5 pr-3 py-2 md:py-2.5 text-left'
                 : isActions
                 ? 'pl-1 pr-3.5 sm:pr-4 py-2 md:py-2.5 text-right w-[135px]'
-                : 'px-2 xl:px-2.5 py-2 md:py-2.5 text-left';
+                : 'px-2.5 py-2 md:py-2.5 text-left';
 
               return (
                 <th
                   key={col.id}
                   scope="col"
-                  className={`${paddingClass} text-[10px] md:text-[10.5px] xl:text-[11px] font-bold text-[var(--text-secondary)] font-heading uppercase tracking-[0.05em] whitespace-nowrap select-none
+                  className={`${paddingClass} text-[10px] md:text-[10.5px] xl:text-[11px] font-bold text-[var(--text-secondary)] font-heading uppercase tracking-[0.05em] whitespace-nowrap select-none overflow-hidden
                     ${col.sortable ? 'cursor-pointer hover:text-[var(--text-primary)] transition-colors' : ''}
                     ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}`}
                   aria-sort={col.sortable ? 'none' : undefined}
                   title={col.label}
                 >
-                  <span className="inline-flex items-center gap-1">
-                    <span>{col.label}</span>
+                  <span className="inline-flex items-center gap-1 max-w-full overflow-hidden">
+                    <span className="truncate">{col.label}</span>
                     {col.sortable && (
                       <Icon name="chevrons-up-down" size="xs" className="opacity-40 shrink-0" />
                     )}

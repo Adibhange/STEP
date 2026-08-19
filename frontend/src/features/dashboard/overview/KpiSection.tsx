@@ -3,24 +3,81 @@
 import React from 'react';
 import { MetricGrid } from '../shared/MetricGrid';
 import { type KpiItem } from '@/features/dashboard/types/dashboard.types';
-import { useGetRecruitmentFunnelQuery } from '@/store/services/api';
+import {
+  useGetRecruitmentFunnelQuery,
+  useGetCandidatesQuery,
+} from '@/store/services/api';
 
 /**
  * STEP Enterprise KpiSection
  *
  * Renders the KPI metric grid for the dashboard overview.
- * Sourced 100% dynamically from backend recruitment funnel API.
+ * Sourced dynamically from recruitment funnel API and live candidate datasets.
  */
 export const KpiSection: React.FC = () => {
-  const { data: funnelResponse, isLoading } = useGetRecruitmentFunnelQuery();
+  const { data: funnelResponse, isLoading: isFunnelLoading } = useGetRecruitmentFunnelQuery();
+  const { data: candidatesResponse, isLoading: isCandidatesLoading } = useGetCandidatesQuery();
 
   const dynamicKpiData: KpiItem[] = React.useMemo(() => {
     const f = funnelResponse?.data;
+    const candidates = candidatesResponse?.data || [];
+
+    const totalCount = f?.totalCandidates ?? f?.totalApplications ?? candidates.length;
+
+    const screeningCount =
+      f?.appliedCount ??
+      candidates.filter((c: any) => {
+        const stage = (c.currentStage || c.status || '').toLowerCase();
+        return stage.includes('screen') || stage.includes('applied') || stage.includes('register');
+      }).length;
+
+    const interviewCount =
+      f?.inProgressCount ??
+      candidates.filter((c: any) => {
+        const stage = (c.currentStage || c.status || '').toLowerCase();
+        return (
+          stage.includes('interview') ||
+          stage.includes('assess') ||
+          stage.includes('director') ||
+          stage.includes('round') ||
+          stage.includes('tech')
+        );
+      }).length;
+
+    const offeredCount =
+      f?.offeredCount ??
+      candidates.filter((c: any) => {
+        const status = (c.status || c.currentStage || '').toLowerCase();
+        return status.includes('offer');
+      }).length;
+
+    const onHoldCount =
+      f?.withdrawnCount ??
+      f?.onHoldCount ??
+      candidates.filter((c: any) => {
+        const status = (c.status || c.currentStage || '').toLowerCase();
+        return status.includes('hold') || status.includes('withdraw');
+      }).length;
+
+    const rejectedCount =
+      f?.rejectedCount ??
+      candidates.filter((c: any) => {
+        const status = (c.status || c.currentStage || '').toLowerCase();
+        return status.includes('reject');
+      }).length;
+
+    const hiredCount =
+      f?.joinedCount ??
+      candidates.filter((c: any) => {
+        const status = (c.status || c.currentStage || '').toLowerCase();
+        return status.includes('hire') || status.includes('join');
+      }).length;
+
     return [
       {
         id: 'total',
         title: 'Total Candidates',
-        count: f?.totalCandidates ?? f?.totalApplications ?? 0,
+        count: totalCount,
         trend: 0,
         trendLabel: 'total',
         subMetric: 'Active Candidates',
@@ -31,7 +88,7 @@ export const KpiSection: React.FC = () => {
       {
         id: 'screening',
         title: 'Screening',
-        count: f?.appliedCount ?? f?.assessmentPassed ?? 0,
+        count: screeningCount,
         trend: 0,
         trendLabel: 'applied',
         subMetric: 'Applications Received',
@@ -42,7 +99,7 @@ export const KpiSection: React.FC = () => {
       {
         id: 'in-interview',
         title: 'In Interview',
-        count: f?.inProgressCount ?? f?.interviewCleared ?? 0,
+        count: interviewCount,
         trend: 0,
         trendLabel: 'in progress',
         subMetric: 'Pipeline Active',
@@ -53,7 +110,7 @@ export const KpiSection: React.FC = () => {
       {
         id: 'offered',
         title: 'Offered',
-        count: f?.offeredCount ?? f?.offersIssued ?? 0,
+        count: offeredCount,
         trend: 0,
         trendLabel: 'offered',
         subMetric: 'Offers Extended',
@@ -64,7 +121,7 @@ export const KpiSection: React.FC = () => {
       {
         id: 'on-hold',
         title: 'On Hold',
-        count: f?.withdrawnCount ?? f?.onHoldCount ?? 0,
+        count: onHoldCount,
         trend: 0,
         trendLabel: 'withdrawn',
         subMetric: 'Withdrawn / Hold',
@@ -75,7 +132,7 @@ export const KpiSection: React.FC = () => {
       {
         id: 'rejected',
         title: 'Rejected',
-        count: f?.rejectedCount ?? 0,
+        count: rejectedCount,
         trend: 0,
         trendLabel: 'archived',
         subMetric: 'Rejected Candidates',
@@ -86,7 +143,7 @@ export const KpiSection: React.FC = () => {
       {
         id: 'hired',
         title: 'Hired',
-        count: f?.joinedCount ?? f?.offeredCount ?? 0,
+        count: hiredCount,
         trend: 0,
         trendLabel: 'joined',
         subMetric: 'Joined Candidates',
@@ -95,7 +152,9 @@ export const KpiSection: React.FC = () => {
         bgToken: '--accent-green-dim',
       },
     ];
-  }, [funnelResponse]);
+  }, [funnelResponse, candidatesResponse]);
+
+  const isLoading = isFunnelLoading && isCandidatesLoading;
 
   if (isLoading) {
     return (

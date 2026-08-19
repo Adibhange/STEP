@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/design-system';
 import { WorkspaceHeader, type WorkspaceHeaderTab } from '@/features/shared/workspace-header/WorkspaceHeader';
-import { VacancyCandidatesTab } from './v2/VacancyCandidatesTab';
+import { VacancyCandidatesTab } from './VacancyCandidatesTab';
 import type { VacancyItem } from '../types/vacancy.types';
 
 interface VacancyDetailViewProps {

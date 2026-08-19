@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 import { useGetCandidateByIdQuery } from '@/store/services/api';
 import { Icon } from '@/design-system';
@@ -9,6 +9,7 @@ import { Icon } from '@/design-system';
 export default function CandidateAssessmentEvaluationPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const idParam = (params?.id as string) || '';
   const candidateId = Number(idParam);
 
@@ -42,12 +43,28 @@ export default function CandidateAssessmentEvaluationPage() {
     );
   }
 
-  // The most recent Assessment-round pipeline entry is what this screen evaluates — a candidate
-  // may have multiple rounds (Assessment, Interview, ...); only Assessment rounds have an exam
-  // session to review here.
-  const assessmentRound = [...candidate.pipelineProgress]
-    .reverse()
-    .find((p: any) => p.roundType === 'Assessment' && p.candidateExamSessionId);
+  // Find all assessment rounds (e.g. Aptitude & Technical)
+  const assessmentRounds = (candidate.pipelineProgress || []).filter(
+    (p: any) => p.roundType === 'Assessment' && p.candidateExamSessionId
+  );
+
+  const sessionParam = searchParams?.get('session');
+  const roundParam = searchParams?.get('round');
+
+  let targetSessionId: number | null = null;
+  if (sessionParam) {
+    targetSessionId = Number(sessionParam);
+  } else if (roundParam === 'aptitude') {
+    const apt = assessmentRounds.find((r: any) => r.roundTitle?.toLowerCase().includes('aptitude'));
+    targetSessionId = apt?.candidateExamSessionId ?? null;
+  } else if (roundParam === 'technical') {
+    const tech = assessmentRounds.find((r: any) => !r.roundTitle?.toLowerCase().includes('aptitude'));
+    targetSessionId = tech?.candidateExamSessionId ?? null;
+  }
+
+  if (!targetSessionId && assessmentRounds.length > 0) {
+    targetSessionId = assessmentRounds[0].candidateExamSessionId;
+  }
 
   return (
     <CandidateAssessmentEvaluationView
@@ -55,7 +72,8 @@ export default function CandidateAssessmentEvaluationPage() {
       candidateName={`${candidate.firstName} ${candidate.lastName}`.trim()}
       candidateCode={candidate.candidateCode}
       vacancyTitle={candidate.vacancyTitle}
-      candidateExamSessionId={assessmentRound?.candidateExamSessionId ?? null}
+      candidateExamSessionId={targetSessionId}
+      assessmentRounds={assessmentRounds}
       onBack={handleBack}
     />
   );

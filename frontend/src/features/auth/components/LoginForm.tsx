@@ -7,10 +7,11 @@ import React, {
   useRef,
   useId,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Icon } from '@/design-system';
 import { useAppDispatch, setCredentials, notifySuccess, notifyError, notifyInfo } from '@/store';
 import { useLoginMutation, useDirectorPinLoginMutation, type ApiEnvelope, type AuthResultData } from '@/store/services/api';
+import { useGetDirectorAccessGatewayInfoQuery } from '@/store/services/api';
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   const body = (err as { data?: Partial<ApiEnvelope<unknown>> } | undefined)?.data;
@@ -113,7 +114,7 @@ interface DirectorKeypadProps {
 
 const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComplete, masked = false, error }) => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = Array.from({ length: 6 }, (_, i) => value[i] || '');
+  const digits = Array.from({ length: 4 }, (_, i) => value[i] || '');
 
   const handleDigitChange = (index: number, digitVal: string) => {
     const cleaned = digitVal.replace(/\D/g, '');
@@ -122,28 +123,42 @@ const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComp
     newDigits[index] = cleaned.slice(-1);
     const newValue = newDigits.join('');
     onChange(newValue);
-    if (cleaned && index < 5) inputRefs.current[index + 1]?.focus();
+    if (cleaned && index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
+    if (newValue.length === 4) {
+      onComplete(newValue);
+    }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') { e.preventDefault(); onComplete(value); }
-    else if (e.key === 'Backspace') { if (!digits[index] && index > 0) inputRefs.current[index - 1]?.focus(); }
-    else if (e.key === 'ArrowLeft' && index > 0) inputRefs.current[index - 1]?.focus();
-    else if (e.key === 'ArrowRight' && index < 5) inputRefs.current[index + 1]?.focus();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (value.length >= 4) onComplete(value);
+    } else if (e.key === 'Backspace') {
+      if (!digits[index] && index > 0) inputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
     if (!pasted) return;
     onChange(pasted);
-    const targetIdx = Math.min(pasted.length, 5);
+    const targetIdx = Math.min(pasted.length, 3);
     inputRefs.current[targetIdx]?.focus();
+    if (pasted.length === 4) {
+      onComplete(pasted);
+    }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(4px, 2.5vw, 12px)', margin: '10px 0', width: '100%', maxWidth: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(8px, 3vw, 16px)', margin: '10px 0', width: '100%', maxWidth: '100%' }}>
         {digits.map((digit, idx) => {
           const isFilled = Boolean(digit);
           return (
@@ -160,18 +175,18 @@ const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComp
               onPaste={handlePaste}
               aria-label={`PIN Digit ${idx + 1}`}
               style={{
-                width: 'clamp(36px, 11vw, 52px)',
-                height: 'clamp(44px, 13vw, 58px)',
+                width: 'clamp(46px, 14vw, 62px)',
+                height: 'clamp(54px, 16vw, 68px)',
                 flexShrink: 1,
-                minWidth: '32px',
+                minWidth: '42px',
                 textAlign: 'center',
                 fontFamily: 'var(--font-mono, monospace)',
-                fontSize: 'clamp(18px, 5vw, 24px)',
+                fontSize: 'clamp(22px, 6vw, 28px)',
                 fontWeight: 800,
                 color: 'var(--text-primary)',
                 background: isFilled ? 'var(--surface-3)' : 'var(--input-bg)',
                 border: `1.5px solid ${error ? 'var(--status-danger)' : isFilled ? 'var(--accent-indigo)' : 'var(--border-default)'}`,
-                borderRadius: '14px',
+                borderRadius: '16px',
                 boxShadow: error ? '0 0 0 4px var(--status-danger-bg)' : isFilled ? '0 0 0 3px var(--accent-indigo-dim)' : 'var(--shadow-sm)',
                 outline: 'none',
                 transition: 'all 150ms ease',
@@ -188,10 +203,30 @@ const DirectorKeypad: React.FC<DirectorKeypadProps> = ({ value, onChange, onComp
 export const LoginForm: React.FC = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Short link: /?d=[token]
+  const directorShortToken = searchParams?.get('d') || '';
+
+  // Fetch gateway info when a director token is present in the URL
+  const { data: gatewayInfoRes } = useGetDirectorAccessGatewayInfoQuery(directorShortToken, {
+    skip: !directorShortToken,
+  });
+  const gatewayInfo = gatewayInfoRes?.data;
+
+  // Derived values from gateway info — used to show candidate context on the PIN face
+  const targetCandidateName = gatewayInfo?.candidateName || '';
+  const targetCandidateCode = gatewayInfo?.candidateCode || '';
+  const targetVacancyTitle = gatewayInfo?.vacancyTitle || '';
+  const redirectParam = gatewayInfo?.candidateId ? `/dashboard/candidates/${gatewayInfo.candidateId}` : '';
+  const isDirectorLink = Boolean(directorShortToken);
+  const isLinkExpired = gatewayInfo?.isExpired ?? false;
+  const linkRemainingMinutes = gatewayInfo?.remainingMinutes ?? 0;
+
   const [login] = useLoginMutation();
   const [directorPinLogin] = useDirectorPinLoginMutation();
   const [spotlightPos, setSpotlightPos] = useState({ x: 0, y: 0 });
-  const [mode, setMode] = useState<AuthMode>('standard');
+  const [mode, setMode] = useState<AuthMode>(isDirectorLink ? 'director' : 'standard');
 
   const emailId = useId();
   const passwordId = useId();
@@ -216,6 +251,11 @@ export const LoginForm: React.FC = () => {
     setMode(next);
     if (next === 'standard') setPin('');
   }, []);
+
+  // Auto-flip to director tab when short token is in URL
+  useEffect(() => {
+    if (isDirectorLink) setMode('director');
+  }, [isDirectorLink]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -273,7 +313,7 @@ export const LoginForm: React.FC = () => {
         })
       );
       dispatch(notifySuccess({ title: 'Welcome back', description: 'Redirecting to your workspace…' }));
-      router.push('/dashboard');
+      router.push(redirectParam || '/dashboard');
     } catch (err) {
       triggerShake();
       dispatch(notifyError({ title: 'Authentication Failed', description: extractErrorMessage(err, 'Invalid email or password.') }));
@@ -284,9 +324,9 @@ export const LoginForm: React.FC = () => {
 
   const handlePinComplete = useCallback(
     async (v: string) => {
-      if (v.length < 6) {
+      if (v.length < 4) {
         triggerShake();
-        dispatch(notifyError({ title: 'Invalid PIN', description: 'Please enter all 6 digits of your security PIN.' }));
+        dispatch(notifyError({ title: 'Invalid PIN', description: 'Please enter your 4-digit security PIN.' }));
         return;
       }
       setLoading(true);
@@ -305,16 +345,19 @@ export const LoginForm: React.FC = () => {
             },
           })
         );
-        dispatch(notifySuccess({ title: 'Director clearance verified', description: 'Accessing governance workspace…' }));
-        router.push('/dashboard');
+        dispatch(notifySuccess({
+          title: 'Director clearance verified',
+          description: redirectParam ? 'Opening candidate review workspace…' : 'Accessing governance workspace…',
+        }));
+        router.push(redirectParam || '/dashboard');
       } catch (err) {
         triggerShake();
-        dispatch(notifyError({ title: 'Invalid PIN', description: extractErrorMessage(err, 'Invalid Director security PIN.') }));
+        dispatch(notifyError({ title: 'Invalid PIN', description: extractErrorMessage(err, 'Invalid Director security PIN (e.g. 1234).') }));
       } finally {
         setLoading(false);
       }
     },
-    [dispatch, router, directorPinLogin]
+    [dispatch, router, directorPinLogin, redirectParam]
   );
 
   const handleForgot = () => {
@@ -513,11 +556,88 @@ export const LoginForm: React.FC = () => {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.035em', lineHeight: 1.15, margin: 0 }}>Director access.</h1>
-                <p style={{ fontSize: '15.5px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>Enter your 6-digit security PIN to continue.</p>
+                <p style={{ fontSize: '15.5px', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>Enter your 4-digit security PIN to continue.</p>
               </div>
             </header>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
+              {targetCandidateName && (
+                <div
+                  style={{
+                    width: '100%',
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: '14px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '10px',
+                        background: 'var(--accent-indigo-dim)',
+                        color: 'var(--accent-indigo)',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        border: '1px solid rgba(99,102,241,0.25)',
+                      }}
+                    >
+                      {targetCandidateName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Review Candidate: {targetCandidateName}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {targetCandidateCode} {targetVacancyTitle ? `• ${targetVacancyTitle}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontFamily: 'monospace',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      background: isLinkExpired ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)',
+                      color: isLinkExpired ? '#ef4444' : '#10b981',
+                      border: `1px solid ${isLinkExpired ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isLinkExpired ? 'Expired' : `${linkRemainingMinutes < 60 ? `${linkRemainingMinutes}m` : `${Math.round(linkRemainingMinutes / 60)}h`} left`}
+                  </span>
+                </div>
+              )}
+                {isLinkExpired && (
+                  <div
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      background: 'rgba(239,68,68,0.07)',
+                      border: '1px solid rgba(239,68,68,0.25)',
+                      fontSize: '12px',
+                      color: '#ef4444',
+                      fontWeight: 500,
+                    }}
+                  >
+                    ⚠️ This Director access link has expired. Please ask HR to generate a new one.
+                  </div>
+                )}
+
               <button className="self-start inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
                 onClick={() => switchMode('standard')}>
                 <Icon name="arrow-left" size="xs" /><span>Standard Sign In</span>

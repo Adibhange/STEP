@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Icon } from '@/design-system';
-import { CodeEditorIDE } from '../CodeEditorIDE';
-import { ExamSubmissionModal } from '../ExamSubmissionModal';
+import { CodeEditorIDE } from './CodeEditorIDE';
+import { ExamSubmissionModal } from './ExamSubmissionModal';
 import {
   useStartExamSessionMutation,
   useSaveExamAnswerBatchV2Mutation,

@@ -9,7 +9,7 @@ import {
   dialogContentBlossomVariant,
 } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
-import { VacancyCandidatesTab } from './v2/VacancyCandidatesTab';
+import { VacancyCandidatesTab } from './VacancyCandidatesTab';
 import type { VacancyItem } from '../types/vacancy.types';
 import {
   useGetVacancyByIdQuery,

@@ -28,9 +28,12 @@
 | `V2-FE-005` | `InstantDriveModalV2.tsx` | 1-Click Drive Launch modal with pool verification, dual recruitment model toggle, custom selects, & full-width action button | `FEAT-V2-03` | **COMPLETED & APPROVED** | 1-Click Drive modal |
 | `V2-FE-006` | `TempExamLinkModalV2.tsx` | 24-hour Spot Test Pass token generator for invited candidates | `FEAT-V2-03` | **COMPLETED & APPROVED** | Spot pass modal |
 | `V2-FE-007` | `CandidateExamPortalV2.tsx` | Multi-section exam portal with MCQ, SQL, Coding IDE, offline buffer, anti-cheat, 30s transition modal | `FEAT-V2-04` | **COMPLETED & APPROVED** | Approved candidate test portal |
-| `V2-FE-008` | `ApplyV2Page` (`/apply/v2/[code]`) | Candidate fast-track mobile registration page for instant drives | `FEAT-V2-03` | **COMPLETED & APPROVED** | Live candidate landing page |
+| `V2-FE-008` | `ApplyPage` (`/apply/[code]`) | Candidate fast-track registration portal for instant walk-in drives & direct apply | `FEAT-V2-03` | **COMPLETED & APPROVED** | Canonical candidate landing page |
 | `V2-FE-009` | `VacancyDetailDialog.tsx` | Vacancy Hiring Hub with Overview, QR Hub / Direct Link, 10-item Paginated Candidates Roster & Canonical Progress Modal | `FEAT-V2-03` | **COMPLETED & APPROVED** | Unified Vacancy Detail modal |
 | `V2-FE-010` | Centralized Motion System | `elasticDialogVariant`, `dialogBackdropVariant`, and theme-aware `--overlay` token across all modals | `N/A` | **COMPLETED & APPROVED** | Elastic spring bloom with smooth exit curves |
+| `V2-FE-011` | V1 Sunset & Route Cleanup | Removed obsolete 4-step wizard, static question papers, and flattened `v2` directories to canonical paths | `N/A` | **COMPLETED & APPROVED** | 0 TypeScript errors |
+| `V2-FE-012` | `VacancyCandidatesTab.tsx` | 2-tier layout, global multi-select across all filtered candidates, single & bulk `⚡ Authorize Tech` with `< 70%` lockout | `FEAT-V2-03` | **COMPLETED & APPROVED** | Authorize & filter UI complete |
+| `V2-FE-013` | Candidate Portal Validation & Motion | Strict regex validation (letters only for names, 10-digit phone), Photo (2MB) & Resume (5MB) constraints, Framer Motion animations | `FEAT-V2-03` | **COMPLETED & APPROVED** | Registration portal with motion |
 
 ---
 

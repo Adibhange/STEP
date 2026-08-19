@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@/design-system";
 import { CandidateAssessmentEvaluationView } from "./CandidateAssessmentEvaluationView";
-import { TempExamLinkModalV2 } from "./v2/TempExamLinkModalV2";
+import { TempExamLinkModalV2 } from "./TempExamLinkModalV2";
 import { useGetCandidatesQuery } from "@/store/services/api";
 
 interface CandidateAssessmentRow {
@@ -69,17 +69,17 @@ export const AssessmentsView: React.FC = () => {
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
           >
             <Icon name="zap" size="xs" />
-            <span>⚡ Spot Test Pass (V2)</span>
+            <span>⚡ Issue Spot Test Pass</span>
           </button>
 
           <a
-            href="/exam/v2"
+            href="/exam"
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs transition-all shadow-sm flex items-center gap-1.5"
           >
             <Icon name="external-link" size="xs" />
-            <span>Launch Offline Exam Portal (V2)</span>
+            <span>Launch Exam Portal</span>
           </a>
         </div>
       </div>

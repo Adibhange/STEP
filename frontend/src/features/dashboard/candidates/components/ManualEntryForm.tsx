@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Button, Icon, CustomSelect, type SelectOption } from '@/design-system';
+import { Button, Icon, CustomSelect, CustomCalendarPicker, type SelectOption } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { useRegisterCandidateMutation, useGetVacanciesQuery, useGetCandidatesQuery } from '@/store/services/api';
 import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
@@ -11,184 +11,6 @@ interface ManualEntryFormProps {
   onCancel: () => void;
   uiVariant?: 'v1' | 'v2' | 'v3' | 'v4' | 'v5';
 }
-
-// ── Inlined STEP Custom Date Picker ──────────────────────────────────────────
-
-interface InlineDatePickerProps {
-  placeholder?: string;
-  value: string;
-  onChange: (val: string) => void;
-}
-
-const DAYS_OF_WEEK = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-
-const InlineDatePicker: React.FC<InlineDatePickerProps> = ({
-  placeholder = 'Select date of birth...',
-  value,
-  onChange,
-}) => {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const selectedDate = value ? new Date(value) : new Date();
-  const [viewYear, setViewYear] = useState(selectedDate.getFullYear());
-  const [viewMonth, setViewMonth] = useState(selectedDate.getMonth());
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
-
-  const monthName = new Date(viewYear, viewMonth, 1).toLocaleString('default', { month: 'long' });
-
-  const calendarDays = useMemo(() => {
-    const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
-    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    const prevMonthDays = new Date(viewYear, viewMonth, 0).getDate();
-
-    const days: { day: number; isCurrentMonth: boolean; dateStr: string }[] = [];
-
-    for (let i = firstDayIndex - 1; i >= 0; i--) {
-      const dayNum = prevMonthDays - i;
-      const prevM = viewMonth === 0 ? 11 : viewMonth - 1;
-      const prevY = viewMonth === 0 ? viewYear - 1 : viewYear;
-      const dateStr = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-      days.push({ day: dayNum, isCurrentMonth: false, dateStr });
-    }
-
-    for (let i = 1; i <= daysInMonth; i++) {
-      const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-      days.push({ day: i, isCurrentMonth: true, dateStr });
-    }
-
-    const remaining = 35 - days.length > 0 ? 35 - days.length : 42 - days.length;
-    for (let i = 1; i <= remaining; i++) {
-      const nextM = viewMonth === 11 ? 0 : viewMonth + 1;
-      const nextY = viewMonth === 11 ? viewYear + 1 : viewYear;
-      const dateStr = `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-      days.push({ day: i, isCurrentMonth: false, dateStr });
-    }
-
-    return days;
-  }, [viewYear, viewMonth]);
-
-  const prevMonth = () => {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear((y) => y - 1);
-    } else {
-      setViewMonth((m) => m - 1);
-    }
-  };
-
-  const nextMonth = () => {
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear((y) => y + 1);
-    } else {
-      setViewMonth((m) => m + 1);
-    }
-  };
-
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  const displayFormattedDate = (dStr: string) => {
-    if (!dStr) return placeholder;
-    const parts = dStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return dStr;
-  };
-
-  return (
-    <div className={`relative w-full ${open ? 'z-40' : 'z-10'}`} ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`w-full h-10 px-3.5 rounded-lg border flex items-center justify-between text-[13px] bg-[var(--surface-1)] transition-all cursor-pointer select-none ${
-          open
-            ? 'border-[var(--accent-indigo)] ring-2 ring-[var(--accent-indigo-dim)] shadow-xs'
-            : 'border-[var(--border-default)] hover:border-[var(--border-strong)]'
-        }`}
-      >
-        <span className={`truncate ${value ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-tertiary)]'}`}>
-          {displayFormattedDate(value)}
-        </span>
-        <Icon name="calendar" size="xs" className="text-[var(--text-tertiary)] shrink-0" />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 bottom-full mb-1.5 w-[230px] p-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] shadow-[var(--shadow-xl)] z-50 animate-fadeIn select-none">
-          <div className="flex items-center justify-between pb-1.5 border-b border-[var(--border-soft)] mb-1.5">
-            <button
-              type="button"
-              onClick={prevMonth}
-              className="p-1 rounded text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] cursor-pointer"
-            >
-              <Icon name="chevron-left" size="xs" />
-            </button>
-
-            <span className="text-[11.5px] font-bold text-[var(--text-primary)] font-heading">
-              {monthName} {viewYear}
-            </span>
-
-            <button
-              type="button"
-              onClick={nextMonth}
-              className="p-1 rounded text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] cursor-pointer"
-            >
-              <Icon name="chevron-right" size="xs" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-7 gap-0.5 text-center mb-1">
-            {DAYS_OF_WEEK.map((d) => (
-              <span key={d} className="text-[9.5px] font-bold text-[var(--text-tertiary)]">
-                {d}
-              </span>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-0.5 text-center">
-            {calendarDays.map((dObj, idx) => {
-              const isSelected = value === dObj.dateStr;
-              const isToday = todayStr === dObj.dateStr;
-
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    onChange(dObj.dateStr);
-                    setOpen(false);
-                  }}
-                  className={`h-6 text-[10.5px] font-medium rounded transition-all flex items-center justify-center cursor-pointer ${
-                    isSelected
-                      ? 'bg-[var(--accent-indigo)] text-white font-bold'
-                      : isToday
-                      ? 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] font-bold'
-                      : dObj.isCurrentMonth
-                      ? 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-                      : 'text-[var(--text-tertiary)] opacity-30 hover:bg-[var(--surface-hover)]'
-                  }`}
-                >
-                  {dObj.day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ── Searchable Select Options ────────────────────────────────────────────────
 
@@ -588,7 +410,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
             Date of Birth
           </label>
-          <InlineDatePicker
+          <CustomCalendarPicker
             value={dob}
             onChange={setDob}
             placeholder="Select date of birth..."

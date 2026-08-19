@@ -43,6 +43,7 @@ export const CandidateWorkspace: React.FC = () => {
       role: c.vacancyTitle || c.role || "Applicant",
       experience: c.experienceYears ? `${c.experienceYears} Years` : "0 Years",
       experienceYears: c.experienceYears || 0,
+      registrationChannel: c.registrationChannel || (c.source === "WalkIn" ? "Walk-in" : "Direct"),
       source: (c.registrationChannel === "Walk-in"
         ? "WalkIn"
         : "HomeTest") as any,
@@ -227,39 +228,62 @@ export const CandidateWorkspace: React.FC = () => {
       {/* Top Highlight Catch */}
       <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none rounded-t-[var(--radius-lg)]" />
 
-      {/* Header Row */}
-      <div className="flex items-center justify-between gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[var(--border-default)] bg-[var(--surface-1)] rounded-t-[var(--radius-lg)] relative z-30 overflow-visible min-w-0">
+      {/* Header Toolbar Row */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-3.5 sm:px-4 py-2.5 sm:py-3 border-b border-[var(--border-default)] bg-[var(--surface-1)] rounded-t-[var(--radius-lg)] relative z-30 min-w-0">
         {/* Title & Count Badge */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <h2 className="text-sm sm:text-[var(--type-h3-size)] font-extrabold text-[var(--text-primary)] tracking-tight font-heading">
-            Candidates
-          </h2>
-          <span className="text-[11px] sm:text-[11.5px] font-extrabold text-[var(--text-on-accent)] bg-[var(--accent-indigo)] px-2 sm:px-2.5 py-0.5 rounded-full font-mono shadow-2xs shrink-0 tabular-figures">
-            {filteredCandidates.length}
-          </span>
-        </div>
+        <div className="flex items-center justify-between sm:justify-start gap-2 shrink-0">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm sm:text-[var(--type-h3-size)] font-extrabold text-[var(--text-primary)] tracking-tight font-heading">
+              Candidates
+            </h2>
+            <span className="text-[11px] sm:text-[11.5px] font-extrabold text-[var(--text-on-accent)] bg-[var(--accent-indigo)] px-2 sm:px-2.5 py-0.5 rounded-full font-mono shadow-2xs shrink-0 tabular-figures">
+              {filteredCandidates.length}
+            </span>
+          </div>
 
-        {/* Desktop Filter Bar */}
-        <div className="flex-1 min-w-0 relative hidden md:block">
-          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-[var(--surface-1)] to-transparent z-10" />
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-[var(--surface-1)] to-transparent z-10" />
-          <div className="overflow-x-auto scrollbar-none flex items-center gap-2 px-1 relative z-20">
-            <FilterBar
-              filters={dynamicFilters}
-              activeFilters={activeFilters}
-              onFilterChange={handleFilterChange}
-              onReset={handleFilterReset}
-              resultCount={filteredCandidates.length}
-              totalCount={apiCandidates.length}
-            />
+          {/* Quick Actions on Mobile */}
+          <div className="flex items-center gap-1.5 sm:hidden">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const listToExport = (apiCandidatesResponse?.data || filteredCandidates || []);
+                  await exportCandidatesToExcel(listToExport);
+                  toast.success("Candidates Exported", {
+                    description: `Generated Excel for ${listToExport.length} candidate(s).`,
+                  });
+                } catch (err: any) {
+                  toast.error("Export Failed", {
+                    description: err?.message || "Failed to generate Excel export.",
+                  });
+                }
+              }}
+              className="h-8 px-2.5 flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-primary)] cursor-pointer"
+              title="Export to Excel"
+            >
+              <span className="w-3.5 h-3.5 rounded-[2px] bg-[#107C41] text-white font-mono font-black text-[9px] flex items-center justify-center">
+                X
+              </span>
+              <span className="text-[11px]">Export</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="h-8 px-3 flex items-center gap-1 rounded-full bg-[var(--accent-indigo)] text-white text-xs font-bold shadow-2xs cursor-pointer border-none"
+              title="Add Candidate"
+            >
+              <Icon name="plus" size="xs" />
+              <span>Add</span>
+            </button>
           </div>
         </div>
 
-        {/* Search Input, Export Button & Add Candidate Button */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Search Input and Desktop Action Buttons */}
+        <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
           <div
-            className={`relative flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-full border
-              transition-all duration-150 ease-out w-28 sm:w-44 md:w-52 xl:w-64 shrink-0
+            className={`relative flex items-center gap-1.5 h-8.5 px-3 rounded-full border
+              transition-all duration-150 ease-out flex-1 sm:w-56 md:w-64 xl:w-72 shrink-0
               ${
                 searchFocused
                   ? "border-[var(--border-focus)] shadow-[0_0_0_3px_var(--focus-glow)] bg-[var(--surface-1)]"
@@ -279,7 +303,7 @@ export const CandidateWorkspace: React.FC = () => {
               onChange={(e) => handleSearch(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              className="flex-1 bg-transparent border-none outline-none text-[11.5px] md:text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] min-w-0 font-sans"
+              className="flex-1 bg-transparent border-none outline-none text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] min-w-0 font-sans"
               aria-label="Search candidates"
             />
             {search ? (
@@ -295,7 +319,7 @@ export const CandidateWorkspace: React.FC = () => {
                 <Icon name="x" size="xs" />
               </button>
             ) : (
-              <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--surface-3)] border border-[var(--border-default)] text-[9.5px] font-mono font-bold text-[var(--text-tertiary)] shrink-0 select-none">
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--surface-3)] border border-[var(--border-default)] text-[9.5px] font-mono font-bold text-[var(--text-tertiary)] shrink-0 select-none">
                 ⌘K
               </kbd>
             )}
@@ -316,7 +340,7 @@ export const CandidateWorkspace: React.FC = () => {
                 });
               }
             }}
-            className="h-8 w-8 sm:w-auto px-0 sm:px-3 flex items-center justify-center gap-2 rounded-full border border-[var(--border-default)]
+            className="hidden sm:inline-flex h-8.5 px-3 items-center justify-center gap-2 rounded-full border border-[var(--border-default)]
               text-[12px] font-semibold text-[var(--text-primary)] bg-[var(--surface-2)]
               hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] hover:-translate-y-[1px] hover:shadow-2xs active:scale-[0.98]
               transition-all duration-150 focus-ring-step cursor-pointer shrink-0"
@@ -326,38 +350,37 @@ export const CandidateWorkspace: React.FC = () => {
             <span className="w-4 h-4 rounded-[3px] bg-[#107C41] text-white font-mono font-black text-[9.5px] flex items-center justify-center shrink-0 leading-none shadow-2xs">
               X
             </span>
-            <span className="hidden sm:inline">Export .xlsx</span>
+            <span>Export .xlsx</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="h-8 w-8 sm:w-auto px-0 sm:px-3.5 flex items-center justify-center gap-1.5 rounded-full
+            className="hidden sm:inline-flex h-8.5 px-3.5 items-center justify-center gap-1.5 rounded-full
               bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white shadow-2xs hover:-translate-y-[1px] active:scale-[0.98]
               text-[12px] font-bold transition-all duration-150 focus-ring-step cursor-pointer shrink-0 border-none"
             aria-label="Add new candidate"
             title="Add new candidate"
           >
             <Icon name="plus" size="xs" />
-            <span className="whitespace-nowrap hidden sm:inline">
-              Add Candidate
-            </span>
+            <span className="whitespace-nowrap">Add Candidate</span>
           </button>
         </div>
       </div>
 
-      {/* Mobile Filter Bar */}
-      <div className="md:hidden border-b border-[var(--border-default)] bg-[var(--surface-1)]">
-        <div className="overflow-x-auto scrollbar-none flex items-center gap-2 px-4 py-2.5">
-          <FilterBar
-            filters={dynamicFilters}
-            activeFilters={activeFilters}
-            onFilterChange={handleFilterChange}
-            onReset={handleFilterReset}
-            resultCount={filteredCandidates.length}
-            totalCount={apiCandidates.length}
-          />
-        </div>
+      {/* Horizontal Scrollable Filter Strip Bar */}
+      <div className="border-b border-[var(--border-default)] bg-[var(--surface-1)] px-3 sm:px-4 py-2 relative z-20 overflow-hidden">
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-[var(--surface-1)] to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-[var(--surface-1)] to-transparent z-10" />
+        <FilterBar
+          filters={dynamicFilters}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onReset={handleFilterReset}
+          resultCount={filteredCandidates.length}
+          totalCount={apiCandidates.length}
+          inline={true}
+        />
       </div>
 
       {/* Candidate Table */}

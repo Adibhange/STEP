@@ -100,11 +100,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
 
   const BREADCRUMB_MAP: { match: string; label: string; href: string }[] = [
     { match: '/dashboard/candidates', label: 'Candidates', href: '/dashboard/candidates' },
-    { match: '/dashboard/question-papers', label: 'Question Papers Library', href: '/dashboard/question-papers' },
+    { match: '/dashboard/assessments', label: 'Assessments', href: '/dashboard/assessments' },
     { match: '/dashboard/users', label: 'Users & Access', href: '/dashboard/users' },
     { match: '/dashboard/vacancies', label: 'Vacancies', href: '/dashboard/vacancies' },
     { match: '/dashboard/reports', label: 'Reports', href: '/dashboard/reports' },
-    { match: '/dashboard/settings', label: 'Settings', href: '/dashboard/settings' },
+    { match: '/dashboard/settings', label: 'Master Data & Settings', href: '/dashboard/settings' },
   ];
 
   const activeCrumb = BREADCRUMB_MAP.find((b) => pathname?.includes(b.match));

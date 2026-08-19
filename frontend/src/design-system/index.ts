@@ -147,6 +147,9 @@ export type { CalendarProps } from './components/calendar';
 export { DatePicker } from './components/date-picker';
 export type { DatePickerProps } from './components/date-picker';
 
+export { CustomCalendarPicker } from './components/custom-calendar-picker/CustomCalendarPicker';
+export type { CustomCalendarPickerProps } from './components/custom-calendar-picker/CustomCalendarPicker';
+
 export {
   Menubar,
   MenubarMenu,

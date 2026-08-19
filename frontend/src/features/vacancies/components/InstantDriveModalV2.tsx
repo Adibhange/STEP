@@ -17,6 +17,7 @@ import {
   type InstantDriveResultData,
 } from '@/store/services/api';
 import { useAppDispatch, notifySuccess, notifyError } from '@/store';
+import { getAppOrigin } from '@/lib/utils/url-helper';
 
 interface InstantDriveModalV2Props {
   isOpen: boolean;
@@ -137,6 +138,14 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
   const [createdDrive, setCreatedDrive] = useState<InstantDriveResultData | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  const resolvedRegistrationUrl = useMemo(() => {
+    if (!createdDrive) return '';
+    if (createdDrive.qrCodeString) {
+      return `${getAppOrigin()}/apply/${createdDrive.qrCodeString}`;
+    }
+    return createdDrive.registrationUrl || '';
+  }, [createdDrive]);
+
   const handleLaunch = async () => {
     if (!selectedRoleId) {
       dispatch(notifyError({ title: 'Validation Error', description: 'Please select a job role.' }));
@@ -182,8 +191,8 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
   };
 
   const handleCopyLink = () => {
-    if (createdDrive?.registrationUrl) {
-      navigator.clipboard.writeText(createdDrive.registrationUrl);
+    if (resolvedRegistrationUrl) {
+      navigator.clipboard.writeText(resolvedRegistrationUrl);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
       dispatch(notifySuccess({ title: 'Link Copied', description: 'Candidate apply URL copied to clipboard.' }));
@@ -484,7 +493,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                         <input
                           type="text"
                           readOnly
-                          value={createdDrive.registrationUrl}
+                          value={resolvedRegistrationUrl}
                           className="flex-1 h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] text-xs font-mono text-[var(--text-primary)] select-all outline-none min-w-0"
                         />
                         <button
@@ -510,7 +519,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                     </div>
 
                     <a
-                      href={createdDrive.registrationUrl}
+                      href={resolvedRegistrationUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--accent-indigo)] hover:underline"

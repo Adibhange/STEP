@@ -2,19 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { Icon } from '@/design-system';
-import { CreateVacancyModal } from './CreateVacancyModal';
 import { VacancyDetailDialog } from './VacancyDetailDialog';
-import { InstantDriveModalV2 } from './v2/InstantDriveModalV2';
+import { InstantDriveModalV2 } from './InstantDriveModalV2';
 import type { VacancyItem } from '../types/vacancy.types';
 import {
   useGetVacanciesQuery,
-  useCreateVacancyMutation,
-  useCreateQuestionPaperMutation,
-  useImportQuestionPaperExcelMutation,
   useGetCandidatesQuery,
 } from '@/store/services/api';
-import { useAppDispatch, notifySuccess, notifyError } from '@/store';
-import { buildCreateVacancyCommand } from '../utils/buildCreateVacancyCommand';
 
 /**
  * STEP Enterprise VacanciesListView
@@ -24,16 +18,11 @@ import { buildCreateVacancyCommand } from '../utils/buildCreateVacancyCommand';
  * Sourced 100% dynamically from backend database API.
  */
 export const VacanciesListView: React.FC = () => {
-  const dispatch = useAppDispatch();
   const { data: apiVacanciesResponse, isLoading, isError } = useGetVacanciesQuery();
   const { data: candidatesRes } = useGetCandidatesQuery();
-  const [createVacancyApi] = useCreateVacancyMutation();
-  const [createQuestionPaperApi] = useCreateQuestionPaperMutation();
-  const [importQuestionPaperExcelApi] = useImportQuestionPaperExcelMutation();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [driveFilter, setDriveFilter] = useState<string>('All');
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isInstantDriveOpen, setIsInstantDriveOpen] = useState(false);
   const [selectedVacancy, setSelectedVacancy] = useState<VacancyItem | null>(null);
 
@@ -97,76 +86,6 @@ export const VacanciesListView: React.FC = () => {
     });
   }, [apiVacancies, search, statusFilter, driveFilter]);
 
-  const handleSaveVacancy = async (vacancyData: any) => {
-    let vacancy: any;
-    try {
-      const command = buildCreateVacancyCommand({
-        ...vacancyData,
-        jobDescription: `${vacancyData.title} - ${vacancyData.department}`,
-      });
-      const vacancyRes = await createVacancyApi(command).unwrap();
-      vacancy = vacancyRes.data;
-    } catch (err: any) {
-      dispatch(
-        notifyError({
-          title: 'Vacancy Creation Failed',
-          description: err?.data?.message || 'Failed to save vacancy to backend.',
-        })
-      );
-      throw err;
-    }
-
-    // The vacancy itself is saved at this point — a failure past here (question paper creation
-    // or Excel import) shouldn't be reported as "vacancy creation failed", since it wasn't. It's
-    // surfaced as its own distinct warning instead, and doesn't re-throw: the modal should still
-    // close and the vacancy should still show up, with question-paper setup retryable afterward
-    // from the Assessment Pattern Builder tab.
-    try {
-      // A question paper (and any staged Excel import) is only meaningful once at least one
-      // assessment section was configured — an empty pattern has nothing to attach questions to.
-      if (vacancyData.assessmentSections?.length) {
-        const paperRes = await createQuestionPaperApi({
-          vacancyId: vacancy.id,
-          title: vacancyData.questionPaperTitle,
-          durationMinutes: vacancyData.assessmentDurationMinutes,
-          passingPercentage: vacancyData.passingCriteriaPercentage,
-        }).unwrap();
-        const paper = paperRes.data;
-
-        if (vacancyData.assessmentExcelFile) {
-          const importRes = await importQuestionPaperExcelApi({
-            id: paper.id,
-            file: vacancyData.assessmentExcelFile,
-          }).unwrap();
-          const imported = importRes.data;
-          dispatch(
-            notifySuccess({
-              title: 'Questions Imported',
-              description: `${imported?.totalQuestionsImported ?? 0} question(s) imported into "${vacancy.title}"'s question paper.`,
-            })
-          );
-        }
-      }
-    } catch (err: any) {
-      dispatch(
-        notifyError({
-          title: 'Question Paper Setup Incomplete',
-          description:
-            `"${vacancy.title}" was created, but its question paper could not be fully set up: ` +
-            `${err?.data?.message || 'an error occurred'}. You can retry the upload from its Assessment Pattern tab.`,
-        })
-      );
-    }
-
-    dispatch(
-      notifySuccess({
-        title: 'Vacancy Created',
-        description: `"${vacancy.title}" created successfully.`,
-      })
-    );
-    setIsCreateOpen(false);
-  };
-
   const statusVariantMap: Record<string, string> = {
     Open: 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success)]',
     Draft: 'bg-[var(--surface-3)] text-[var(--text-tertiary)] border-[var(--border-default)]',
@@ -192,19 +111,10 @@ export const VacanciesListView: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsInstantDriveOpen(true)}
-            className="h-9 px-4 flex items-center gap-1.5 rounded-full bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
-          >
-            <Icon name="zap" size="xs" />
-            <span>1-Click Drive (V2)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="h-9 px-3.5 flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] text-[12px] font-bold transition-all cursor-pointer"
+            className="h-9 px-4 flex items-center gap-2 rounded-xl bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white text-xs font-bold transition-all cursor-pointer shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 hover:border-indigo-300/50 active:scale-[0.98]"
           >
             <Icon name="plus" size="xs" />
-            <span>Manual Vacancy</span>
+            <span>Create Vacancy / 1-Click Drive</span>
           </button>
         </div>
       </div>
@@ -384,13 +294,6 @@ export const VacanciesListView: React.FC = () => {
       <InstantDriveModalV2
         isOpen={isInstantDriveOpen}
         onClose={() => setIsInstantDriveOpen(false)}
-      />
-
-      {/* Create Vacancy Wizard Modal */}
-      <CreateVacancyModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSave={handleSaveVacancy}
       />
 
       {/* Vacancy Hiring Hub Detail Dialog Modal */}

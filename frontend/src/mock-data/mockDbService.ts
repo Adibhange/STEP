@@ -20,7 +20,7 @@ import { computeMockRecruitmentFunnel } from './reports.mock';
 import { MOCK_QUESTION_BANK, type MockQuestionBankItem } from './questionBank.mock';
 import type { ApiEnvelope, MasterRecord, UserItem } from '@/store/services/api';
 
-const STORAGE_KEY = 'step_enterprise_mock_db_v1';
+const STORAGE_KEY = 'step_enterprise_mock_db_v5';
 
 interface MockDbState {
   users: UserItem[];
@@ -34,6 +34,7 @@ interface MockDbState {
   evaluations: Record<number, any>;
   interviews: Record<number, any>;
   offers: Record<number, any>;
+  directorAccessLinks: Record<string, any>;
 }
 
 class MockDatabaseService {
@@ -65,6 +66,18 @@ class MockDatabaseService {
           if (!parsed.questionBank || parsed.questionBank.length === 0) {
             parsed.questionBank = JSON.parse(JSON.stringify(MOCK_QUESTION_BANK));
           }
+          if (!parsed.vacancies || parsed.vacancies.length === 0) {
+            parsed.vacancies = JSON.parse(JSON.stringify(MOCK_VACANCIES));
+          }
+          if (!parsed.questionPapers || parsed.questionPapers.length === 0) {
+            parsed.questionPapers = JSON.parse(JSON.stringify(MOCK_QUESTION_PAPERS));
+          }
+          if (!parsed.candidates || parsed.candidates.length === 0) {
+            parsed.candidates = JSON.parse(JSON.stringify(MOCK_CANDIDATES));
+          }
+          if (!parsed.directorAccessLinks) {
+            parsed.directorAccessLinks = {};
+          }
           return parsed;
         }
       } catch (e) {
@@ -84,6 +97,7 @@ class MockDatabaseService {
       evaluations: JSON.parse(JSON.stringify(MOCK_EVALUATION_SESSIONS)),
       interviews: JSON.parse(JSON.stringify(MOCK_INTERVIEWS)),
       offers: JSON.parse(JSON.stringify(MOCK_OFFERS)),
+      directorAccessLinks: {},
     };
   }
 
@@ -580,7 +594,7 @@ class MockDatabaseService {
         return { data: this.envelope(list) };
       }
 
-      if (url.startsWith('/candidates/') && !url.includes('/documents') && !url.includes('/schedule-test') && !url.includes('/evaluate-stage') && !url.includes('/assign-evaluator') && !url.includes('/assign-pipeline-flow') && method === 'GET') {
+      if (url.startsWith('/candidates/') && !url.includes('/director-access') && !url.includes('/director-access-link') && !url.includes('/documents') && !url.includes('/schedule-test') && !url.includes('/evaluate-stage') && !url.includes('/assign-evaluator') && !url.includes('/assign-pipeline-flow') && method === 'GET') {
         const id = Number(url.split('/')[2]);
         const c = this.state.candidates.find((item) => item.id === id);
         if (c) return { data: this.envelope(c) };
@@ -710,6 +724,179 @@ class MockDatabaseService {
           return { data: this.envelope(newDoc, 'Document uploaded') };
         }
         return { error: { status: 404, data: this.errorEnvelope('Candidate not found', 404) } };
+      }
+
+      // ────────────────── DIRECTOR CANDIDATE ACCESS GATEWAY ──────────────────
+      if (url.startsWith('/candidates/') && url.includes('/director-access-link') && method === 'POST') {
+        const id = Number(url.split('/')[2]);
+        const candidate = this.state.candidates.find((c) => c.id === id);
+        if (!candidate) {
+          return { error: { status: 404, data: this.errorEnvelope('Candidate not found', 404) } };
+        }
+
+        const candidateName = `${candidate.firstName} ${candidate.lastName}`.trim();
+        const candidateCode = candidate.candidateCode;
+        const vacancyTitle = candidate.vacancyTitle || candidate.role;
+
+        // Check if an active, unexpired, non-revoked link already exists for this candidate
+        const existingTokenKey = Object.keys(this.state.directorAccessLinks).find((k) => {
+          const r = this.state.directorAccessLinks[k];
+          return r.candidateId === id && !r.isRevoked && new Date() < new Date(r.expiresAt);
+        });
+
+        // If active link exists and client did not request explicit regeneration, return the existing active link
+        if (existingTokenKey && !body?.regenerate) {
+          const activeRecord = this.state.directorAccessLinks[existingTokenKey];
+          const accessUrl = `/?d=${activeRecord.token}`;
+          return {
+            data: this.envelope(
+              {
+                token: activeRecord.token,
+                accessUrl,
+                expiresAt: activeRecord.expiresAt,
+                candidateName,
+                candidateCode,
+                vacancyTitle,
+                isExisting: true,
+              },
+              'Active Director access link returned'
+            ),
+          };
+        }
+
+        // If regenerating, revoke existing active links for this candidate
+        if (existingTokenKey && body?.regenerate) {
+          this.state.directorAccessLinks[existingTokenKey].isRevoked = true;
+          this.state.directorAccessLinks[existingTokenKey].revokedAt = new Date().toISOString();
+        }
+
+        const token = `dir_${Math.random().toString(36).substring(2, 10)}_${Date.now().toString(36)}`;
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+        const record = {
+          token,
+          candidateId: id,
+          candidateName,
+          candidateCode,
+          vacancyTitle,
+          currentStage: candidate.currentStage,
+          createdAt: new Date().toISOString(),
+          expiresAt,
+          isRevoked: false,
+        };
+
+        this.state.directorAccessLinks[token] = record;
+        this.saveState();
+
+        const accessUrl = `/?d=${token}`;
+        return {
+          data: this.envelope(
+            {
+              token,
+              accessUrl,
+              expiresAt,
+              candidateName,
+              candidateCode,
+              vacancyTitle,
+              isExisting: false,
+            },
+            'Director access link generated (Valid for 24 Hours)'
+          ),
+        };
+      }
+
+      if (url.includes('/candidates/director-access/') && !url.includes('/verify-pin') && method === 'GET') {
+        const cleanUrl = url.split('?')[0];
+        const parts = cleanUrl.split('/');
+        const token = parts[parts.length - 1];
+        const record = this.state.directorAccessLinks[token];
+
+        if (!record) {
+          const fallbackCand = this.state.candidates[0] || MOCK_CANDIDATES[0];
+          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+          return {
+            data: this.envelope({
+              valid: true,
+              token,
+              candidateId: fallbackCand.id,
+              candidateName: `${fallbackCand.firstName} ${fallbackCand.lastName}`.trim(),
+              candidateCode: fallbackCand.candidateCode,
+              vacancyTitle: fallbackCand.vacancyTitle || fallbackCand.role,
+              currentStage: fallbackCand.currentStage,
+              createdAt: new Date().toISOString(),
+              expiresAt,
+              isExpired: false,
+              remainingMinutes: 1440,
+            }),
+          };
+        }
+
+        const isExpired = record.isRevoked || new Date() > new Date(record.expiresAt);
+        const remainingMinutes = Math.max(0, Math.round((new Date(record.expiresAt).getTime() - Date.now()) / 60000));
+
+        return {
+          data: this.envelope({
+            valid: !isExpired,
+            token,
+            candidateId: record.candidateId,
+            candidateName: record.candidateName,
+            candidateCode: record.candidateCode,
+            vacancyTitle: record.vacancyTitle,
+            currentStage: record.currentStage,
+            createdAt: record.createdAt,
+            expiresAt: record.expiresAt,
+            isExpired,
+            remainingMinutes,
+          }),
+        };
+      }
+
+      if (url.includes('/candidates/director-access/verify-pin') && method === 'POST') {
+        const { token, pin } = body;
+        const record = this.state.directorAccessLinks[token];
+        const candidateId = record?.candidateId || 1;
+
+        if (record && (record.isRevoked || new Date() > new Date(record.expiresAt))) {
+          return {
+            error: {
+              status: 401,
+              data: this.errorEnvelope('This Director access link has expired after 24 hours. Please request a new link from HR.', 401),
+            },
+          };
+        }
+
+        const validPins = ['1234', '9876'];
+        const directorUser = this.state.users.find((u) => u.role?.toLowerCase() === 'director') || {
+          id: 4,
+          employeeCode: 'EMP-004',
+          firstName: 'Vikram',
+          lastName: 'Deshmukh',
+          email: 'vikram.deshmukh@enterprise.step',
+          role: 'Director',
+          permissions: ['DIRECTOR_DECISION', 'VIEW_ALL_CANDIDATES', 'EVALUATION_WRITE'],
+        };
+
+        if (!validPins.includes(pin) && pin !== (directorUser as any).pin) {
+          return {
+            error: {
+              status: 401,
+              data: this.errorEnvelope('Invalid Director Security PIN. Please enter your valid 4-digit Director PIN.', 401),
+            },
+          };
+        }
+
+        return {
+          data: this.envelope(
+            {
+              accessToken: `mock_jwt_director_${Date.now()}`,
+              refreshToken: `mock_refresh_director_${Date.now()}`,
+              user: directorUser,
+              candidateId,
+              redirectUrl: `/dashboard/candidates/${candidateId}`,
+            },
+            'Director authenticated successfully'
+          ),
+        };
       }
 
       // ────────────────── EXAM PORTAL ──────────────────
@@ -905,45 +1092,115 @@ class MockDatabaseService {
       }
 
       if (url.startsWith('/publicregistration/') && method === 'GET') {
-        const code = url.split('/')[2] || 'WALK-IN';
+        const code = decodeURIComponent(url.split('/')[2] || 'WALK-IN');
+        const matched =
+          this.state.vacancies.find(
+            (v) =>
+              String(v.id) === code ||
+              v.vacancyCode?.toLowerCase() === code.toLowerCase() ||
+              code.toLowerCase().includes(String(v.id))
+          ) || this.state.vacancies[0];
+
+        if (matched) {
+          return {
+            data: this.envelope({
+              qrCodeId: matched.id * 10,
+              vacancyId: matched.id,
+              vacancyTitle: matched.title ? matched.title.replace(/[-–—]\s*⚡?\s*1-Click Drive/gi, '').trim() : 'Senior .NET Architect',
+              venueName: matched.testLocation || matched.hiringLocation || 'Pune Assessment Hub',
+              departmentName: matched.department || 'Production',
+              openingsCount: matched.openingsCount || matched.positionsCount || 5,
+              driveType: matched.driveType || 'Walk-in Drive',
+              vacancyCode: matched.vacancyCode || 'VAC-2026-106',
+              isOpenForRegistration: true,
+              message: null,
+            }),
+          };
+        }
         return { data: this.envelope(getMockQRScanResult(code)) };
       }
 
       if (url === '/publicregistration' && method === 'POST') {
         const newId = this.state.candidates.length + 1;
-        const newCandidate: MockCandidate = {
+        const pass = String(Math.floor(1000 + Math.random() * 9000));
+        const matchedVacancy =
+          this.state.vacancies.find(
+            (v) =>
+              String(v.id) === body.code ||
+              v.vacancyCode?.toLowerCase() === body.code?.toLowerCase() ||
+              body.code?.toLowerCase().includes(String(v.id))
+          ) || this.state.vacancies[0];
+
+        const newCandidate: MockCandidate & {
+          passcode?: string;
+          institutionName?: string;
+          yearOfPassing?: number;
+          marksPercentage?: number;
+          refType?: string;
+          refName?: string;
+          refMobile?: string;
+        } = {
           id: newId,
           candidateCode: `CND-2026-${1000 + newId}`,
           firstName: body.firstName || 'Candidate',
           lastName: body.lastName || '',
           email: body.email || '',
           phone: body.phone || '',
-          gender: 'Male',
-          dateOfBirth: '1998-01-01',
+          gender: body.gender || 'Male',
+          dateOfBirth: body.dob || '2002-05-15',
           currentLocation: body.currentLocation || 'Pune',
-          hiringLocation: 'Pune Center (Hinjawadi)',
-          testLocation: 'Pune Assessment Hub',
-          role: 'Applicant',
-          vacancyId: 2,
-          vacancyTitle: 'Walk-In Registration',
+          hiringLocation: matchedVacancy?.hiringLocation || 'Pune Center (Hinjawadi)',
+          testLocation: matchedVacancy?.testLocation || 'Pune Assessment Hub',
+          role: matchedVacancy?.title?.replace(/[-–—]\s*⚡?\s*1-Click Drive/gi, '').trim() || 'Senior .NET Architect',
+          vacancyId: matchedVacancy?.id || 2,
+          vacancyTitle: matchedVacancy?.title?.replace(/[-–—]\s*⚡?\s*1-Click Drive/gi, '').trim() || 'Senior .NET Architect',
           experienceYears: Number(body.totalExperienceYears) || 0,
           totalExperienceYears: Number(body.totalExperienceYears) || 0,
-          registrationChannel: 'Walk-in',
+          registrationChannel: matchedVacancy?.driveType === 'Direct / Sourced Hiring' ? 'Direct' : 'Walk-in',
           currentStage: 'Screening',
           status: 'Applied',
+          currentCompany: body.currentCompany || '',
+          currentDesignation: body.currentDesignation || '',
           currentCTC: Number(body.currentCTC) || 0,
           expectedCTC: Number(body.expectedCTC) || 0,
           noticePeriodDays: Number(body.noticePeriodDays) || 30,
           highestQualification: body.highestQualification || 'B.Tech / B.E.',
+          institutionName: body.institutionName || 'COEP Technological University',
+          yearOfPassing: Number(body.yearOfPassing) || 2026,
+          marksPercentage: Number(body.marksPercentage) || 85,
+          avatarUrl: body.avatarUrl || '',
+          refType: body.refType || 'Direct',
+          refName: body.refName || '',
+          refMobile: body.refMobile || '',
           assignedInterviewer: 'Walk-in Desk',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           pipelineProgress: [],
-          documents: [],
+          documents: body.resumeFileName
+            ? [
+                {
+                  id: 1,
+                  documentType: 'Resume',
+                  name: body.resumeFileName,
+                  originalFileName: body.resumeFileName,
+                  uploadedAt: new Date().toISOString(),
+                  fileSizeBytes: 1800000,
+                  storageUrl: '#',
+                },
+              ]
+            : [],
         };
         this.state.candidates.unshift(newCandidate);
         this.saveState();
-        return { data: this.envelope(newCandidate, 'Registration successful. Welcome to SCIPL!') };
+        return {
+          data: this.envelope(
+            {
+              ...newCandidate,
+              passcode: pass,
+            },
+            'Registration successful. Welcome to SCIPL!'
+          ),
+        };
       }
 
       if (url.startsWith('/qrcodes/vacancy/') && method === 'GET') {
@@ -955,6 +1212,51 @@ class MockDatabaseService {
       if (url.startsWith('/qrcodes/') && url.includes('/analytics') && method === 'GET') {
         const id = Number(url.split('/')[2]);
         return { data: this.envelope(MOCK_QR_ANALYTICS[id] || MOCK_QR_ANALYTICS[1]) };
+      }
+
+      if (url.startsWith('/reports/recruitment-funnel') && method === 'GET') {
+        const candidates = this.state.candidates || [];
+        const totalCandidates = candidates.length;
+        const appliedCount = candidates.filter((c) => {
+          const s = (c.currentStage || c.status || '').toLowerCase();
+          return s.includes('screen') || s.includes('applied') || s.includes('register');
+        }).length;
+        const inProgressCount = candidates.filter((c) => {
+          const s = (c.currentStage || c.status || '').toLowerCase();
+          return s.includes('interview') || s.includes('assess') || s.includes('director') || s.includes('round');
+        }).length;
+        const offeredCount = candidates.filter((c) => {
+          const s = (c.status || c.currentStage || '').toLowerCase();
+          return s.includes('offer');
+        }).length;
+        const withdrawnCount = candidates.filter((c) => {
+          const s = (c.status || c.currentStage || '').toLowerCase();
+          return s.includes('hold') || s.includes('withdraw');
+        }).length;
+        const rejectedCount = candidates.filter((c) => {
+          const s = (c.status || c.currentStage || '').toLowerCase();
+          return s.includes('reject');
+        }).length;
+        const joinedCount = candidates.filter((c) => {
+          const s = (c.status || c.currentStage || '').toLowerCase();
+          return s.includes('hire') || s.includes('join');
+        }).length;
+
+        const funnelData = {
+          totalCandidates,
+          totalApplications: totalCandidates,
+          appliedCount,
+          assessmentPassed: appliedCount,
+          inProgressCount,
+          interviewCleared: inProgressCount,
+          offeredCount,
+          offersIssued: offeredCount,
+          withdrawnCount,
+          onHoldCount: withdrawnCount,
+          rejectedCount,
+          joinedCount,
+        };
+        return { data: this.envelope(funnelData) };
       }
 
       // ────────────────── V2 AUTONOMOUS RECRUITMENT ENGINE ──────────────────
@@ -1083,7 +1385,7 @@ class MockDatabaseService {
           durationMinutes: 30,
           qrCodeId: newId * 100,
           qrCodeString: qrCodeStr,
-          registrationUrl: `http://localhost:3000/apply/v2/${qrCodeStr}`,
+          registrationUrl: `http://localhost:3000/apply/${qrCodeStr}`,
           qrCodeDataUrl: `/api/v2/qrcodes/vacancy/${newId}`,
         };
 
@@ -1099,7 +1401,7 @@ class MockDatabaseService {
           passcode: pass,
           candidateName: body.candidateName || 'Spot Candidate',
           roleName: 'Software Engineer',
-          examUrl: `http://localhost:3000/exam/v2?code=${code}&pass=${pass}`,
+          examUrl: `http://localhost:3000/exam?code=${code}&pass=${pass}`,
           expiresAtUtc: new Date(Date.now() + 24 * 3600000).toISOString(),
           validityHours: 24,
         };
