@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Icon } from '@/design-system';
 import { VacancyDetailDialog } from './VacancyDetailDialog';
 import { InstantDriveModalV2 } from './InstantDriveModalV2';
@@ -9,6 +10,36 @@ import {
   useGetVacanciesQuery,
   useGetCandidatesQuery,
 } from '@/store/services/api';
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.04,
+    },
+  },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 16, scale: 0.98 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: 'spring' as const,
+      damping: 26,
+      stiffness: 320,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.96,
+    transition: { duration: 0.15 },
+  },
+};
 
 /**
  * STEP Enterprise VacanciesListView
@@ -96,8 +127,13 @@ export const VacanciesListView: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6 max-w-7xl mx-auto w-full">
-      {/* Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Header Bar with Motion */}
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-wrap items-center justify-between gap-4"
+      >
         <div>
           <h1 className="text-2xl font-extrabold text-[var(--text-primary)] font-heading tracking-tight">
             Vacancies & Hiring Hubs
@@ -108,20 +144,27 @@ export const VacanciesListView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
             type="button"
             onClick={() => setIsInstantDriveOpen(true)}
-            className="h-9 px-4 flex items-center gap-2 rounded-xl bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white text-xs font-bold transition-all cursor-pointer shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 hover:border-indigo-300/50 active:scale-[0.98]"
+            className="h-9 px-4 flex items-center gap-2 rounded-xl bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white text-xs font-bold transition-all cursor-pointer shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 hover:border-indigo-300/50"
           >
-            <Icon name="plus" size="xs" />
+            <Icon name="zap" size="xs" className="text-amber-300" />
             <span>Create Vacancy / 1-Click Drive</span>
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--surface-1)] border border-[var(--border-default)] p-3 rounded-[var(--radius-lg)] shadow-2xs">
-        <div className="relative flex items-center h-8 px-3 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] w-full sm:w-64">
+      {/* Filter & Search Bar with Motion */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-wrap items-center justify-between gap-3 bg-[var(--surface-1)] border border-[var(--border-default)] p-3 rounded-[var(--radius-lg)] shadow-2xs"
+      >
+        <div className="relative flex items-center h-8 px-3 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] w-full sm:w-64 focus-within:border-[var(--accent-indigo)] transition-colors">
           <Icon name="search" size="xs" className="text-[var(--text-tertiary)] shrink-0 mr-1.5" />
           <input
             type="search"
@@ -173,7 +216,7 @@ export const VacanciesListView: React.FC = () => {
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Loading Skeleton */}
       {isLoading && (
@@ -191,49 +234,67 @@ export const VacanciesListView: React.FC = () => {
         </div>
       )}
 
-      {/* Empty State */}
-      {!isLoading && !isError && filteredVacancies.length === 0 && (
-        <div className="p-12 text-center bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] flex flex-col items-center justify-center gap-2">
-          <Icon name="briefcase" size="lg" className="text-[var(--text-tertiary)] opacity-40" />
-          <h3 className="text-sm font-extrabold text-[var(--text-primary)] font-heading">No vacancies found</h3>
-          <p className="text-xs text-[var(--text-tertiary)] max-w-sm">
-            {search || statusFilter !== 'All' || driveFilter !== 'All'
-              ? 'No vacancies match your search and filter criteria.'
-              : 'There are no job vacancies stored in the database yet. Click Create Vacancy to add one.'}
-          </p>
-        </div>
-      )}
+      {/* Empty State with Animation */}
+      <AnimatePresence mode="wait">
+        {!isLoading && !isError && filteredVacancies.length === 0 && (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.97 }}
+            className="p-12 text-center bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] flex flex-col items-center justify-center gap-2 shadow-2xs"
+          >
+            <Icon name="briefcase" size="lg" className="text-[var(--text-tertiary)] opacity-40" />
+            <h3 className="text-sm font-extrabold text-[var(--text-primary)] font-heading">No vacancies found</h3>
+            <p className="text-xs text-[var(--text-tertiary)] max-w-sm">
+              {search || statusFilter !== 'All' || driveFilter !== 'All'
+                ? 'No vacancies match your search and filter criteria.'
+                : 'There are no job vacancies stored in the database yet. Click Create Vacancy to add one.'}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Vacancy Cards List */}
+      {/* Vacancy Cards List with Staggered Motion */}
       {!isLoading && !isError && filteredVacancies.length > 0 && (
-        <div className="grid grid-cols-1 gap-4">
+        <motion.div
+          key="list"
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 gap-3.5 sm:gap-4"
+        >
           {filteredVacancies.map((v) => {
             const driveType = v.driveType || 'Walk-in Drive';
             const isDirect = driveType === 'Direct / Sourced Hiring';
 
             return (
-              <div
+              <motion.div
                 key={v.id}
+                layout
+                variants={cardVariants}
+                whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                whileTap={{ scale: 0.995 }}
                 onClick={() => setSelectedVacancy(v)}
-                className="group bg-[var(--surface-1)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)] rounded-[var(--radius-lg)] p-5 transition-all duration-150 cursor-pointer shadow-2xs hover:shadow-md flex flex-col gap-4"
+                className="group bg-[var(--surface-1)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)] rounded-[var(--radius-lg)] p-5 cursor-pointer shadow-2xs hover:shadow-[0_12px_30px_-10px_rgba(99,102,241,0.15)] flex flex-col gap-4 transition-colors duration-200"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <span className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 border ${
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 border transition-transform duration-200 group-hover:scale-105 ${
                       isDirect
                         ? 'bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border-[var(--accent-violet)]/30'
                         : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
                     }`}>
                       <Icon name={isDirect ? 'users' : 'briefcase'} size="md" />
                     </span>
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-base font-extrabold text-[var(--text-primary)] font-heading group-hover:text-[var(--accent-indigo)] transition-colors">
+                        <h3 className="text-base font-extrabold text-[var(--text-primary)] font-heading group-hover:text-[var(--accent-indigo)] transition-colors truncate">
                           {v.title}
                         </h3>
-                        <span className="font-mono text-[11px] text-[var(--text-tertiary)]">({v.code})</span>
+                        <span className="font-mono text-[11px] text-[var(--text-tertiary)] shrink-0">({v.code})</span>
 
-                        <span className={`text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border font-mono ${
+                        <span className={`text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border font-mono shrink-0 ${
                           isDirect
                             ? 'bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border-[var(--accent-violet)]/30'
                             : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30'
@@ -254,40 +315,40 @@ export const VacanciesListView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border font-mono uppercase ${statusVariantMap[v.status] || statusVariantMap.Open}`}>
                       {v.status}
                     </span>
-                    <Icon name="chevron-right" size="sm" className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-indigo)] transition-colors" />
+                    <Icon name="chevron-right" size="sm" className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-indigo)] group-hover:translate-x-1 transition-all duration-200" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t border-[var(--border-default)] bg-[var(--surface-2)] -mx-5 -mb-5 px-5 py-3 rounded-b-[var(--radius-lg)]">
-                  <div>
+                  <div className="group/stat">
                     <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Applied</span>
-                    <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.appliedCount}</span>
+                    <span className="text-sm font-black font-mono text-[var(--text-primary)] group-hover/stat:text-[var(--accent-indigo)] transition-colors">{v.appliedCount}</span>
                   </div>
-                  <div>
+                  <div className="group/stat">
                     <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Screening</span>
-                    <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.assessmentCount}</span>
+                    <span className="text-sm font-black font-mono text-[var(--text-primary)] group-hover/stat:text-[var(--accent-indigo)] transition-colors">{v.assessmentCount}</span>
                   </div>
-                  <div>
+                  <div className="group/stat">
                     <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Interview</span>
-                    <span className="text-sm font-black font-mono text-[var(--text-primary)]">{v.interviewCount}</span>
+                    <span className="text-sm font-black font-mono text-[var(--text-primary)] group-hover/stat:text-[var(--accent-indigo)] transition-colors">{v.interviewCount}</span>
                   </div>
-                  <div>
+                  <div className="group/stat">
                     <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Offered</span>
-                    <span className="text-sm font-black font-mono text-[var(--status-info-text)]">{v.offeredCount}</span>
+                    <span className="text-sm font-black font-mono text-[var(--status-info-text)] group-hover/stat:scale-105 transition-transform inline-block">{v.offeredCount}</span>
                   </div>
-                  <div>
+                  <div className="group/stat">
                     <span className="text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Hired</span>
-                    <span className="text-sm font-black font-mono text-[var(--status-success-text)]">{v.joinedCount}</span>
+                    <span className="text-sm font-black font-mono text-[var(--status-success-text)] group-hover/stat:scale-105 transition-transform inline-block">{v.joinedCount}</span>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* 1-Click Instant Drive V2 Modal */}
@@ -305,3 +366,4 @@ export const VacanciesListView: React.FC = () => {
     </div>
   );
 };
+

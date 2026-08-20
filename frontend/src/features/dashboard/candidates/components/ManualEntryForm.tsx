@@ -1,9 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Icon, CustomSelect, CustomCalendarPicker, type SelectOption } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
-import { useRegisterCandidateMutation, useGetVacanciesQuery, useGetCandidatesQuery } from '@/store/services/api';
+import {
+  useRegisterCandidateMutation,
+  useUploadCandidateDocumentMutation,
+  useGetVacanciesQuery,
+  useGetCandidatesQuery,
+} from '@/store/services/api';
 import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
 
 interface ManualEntryFormProps {
@@ -35,22 +41,19 @@ const EXPERIENCE_OPTIONS: SelectOption[] = [
 ];
 
 const SOURCE_OPTIONS: SelectOption[] = [
-  { value: 'Walk-in', label: 'Walk-in / On-site Scan' },
-  { value: 'QR Scan', label: 'QR Scanner Portal' },
+  { value: 'Walk-in', label: 'Walk-in / On-site Drive' },
+  { value: 'Office', label: 'Direct / Office Walk-in' },
   { value: 'Referral', label: 'Employee Referral' },
-  { value: 'LinkedIn', label: 'LinkedIn Jobs' },
-  { value: 'Job Board', label: 'Naukri / Indeed' },
-  { value: 'Direct Agency', label: 'Staffing Agency' },
-  { value: 'Internal Transfer', label: 'Internal Mobility' },
+  { value: 'Portal', label: 'Candidate Portal / Online' },
+  { value: 'Recruiter', label: 'Recruiter Sourced' },
 ];
 
 const HIRING_LOCATION_OPTIONS: SelectOption[] = [
-  { value: 'Mumbai', label: 'Mumbai, MH' },
-  { value: 'Pune', label: 'Pune, MH' },
-  { value: 'Bengaluru', label: 'Bengaluru, KA' },
+  { value: 'Mumbai HQ', label: 'Mumbai HQ' },
+  { value: 'Pune Center', label: 'Pune Center (Hinjawadi)' },
+  { value: 'Bangalore Tech Park', label: 'Bangalore Tech Park' },
+  { value: 'Hyderabad Center', label: 'Hyderabad Center' },
   { value: 'Remote India', label: 'Remote (India)' },
-  { value: 'Hyderabad', label: 'Hyderabad, TS' },
-  { value: 'Delhi NCR', label: 'Delhi NCR' },
 ];
 
 const EMPLOYMENT_TYPE_OPTIONS: SelectOption[] = [
@@ -85,20 +88,10 @@ const NOTICE_PERIOD_OPTIONS: SelectOption[] = [
   { value: '90 Days', label: '90 Days' },
 ];
 
-const VERIFIED_BY_OPTIONS: SelectOption[] = [
-  { value: 'HR Team', label: 'HR Team' },
-  { value: 'Recruitment Lead', label: 'Recruitment Lead' },
-  { value: 'Hiring Manager', label: 'Hiring Manager' },
-  { value: 'Department Head', label: 'Department Head' },
-];
-
 export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   onSuccess,
   onCancel,
-  uiVariant = 'v1',
 }) => {
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
-
   // Form State
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -115,39 +108,68 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   const [designation, setDesignation] = useState('');
   const [currentCtc, setCurrentCtc] = useState('');
   const [expectedCtc, setExpectedCtc] = useState('');
-  const [noticePeriod, setNoticePeriod] = useState('');
+  const [noticePeriod, setNoticePeriod] = useState('Immediate');
 
-  const [qualification, setQualification] = useState('');
+  const [qualification, setQualification] = useState('B.Tech / B.E.');
   const [college, setCollege] = useState('');
   const [passingYear, setPassingYear] = useState('');
   const [percentage, setPercentage] = useState('');
   const [source, setSource] = useState('Walk-in');
-  const [hiringLocation, setHiringLocation] = useState('Mumbai');
+  const [hiringLocation, setHiringLocation] = useState('Mumbai HQ');
   const [employmentType, setEmploymentType] = useState('Full Time');
 
-  // Step 4 Reference States
+  // Referral State (Collapsible)
+  const [hasReferral, setHasReferral] = useState(false);
   const [refType, setRefType] = useState<'internal' | 'external'>('internal');
   const [refName, setRefName] = useState('');
-  const [refEmployeeId, setRefEmployeeId] = useState('');
   const [refMobile, setRefMobile] = useState('');
-  const [refVerifiedBy, setRefVerifiedBy] = useState('');
+
+  // Avatar / Profile Photo State
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File Too Large', { description: 'Profile photo must be under 5MB.' });
+        return;
+      }
+      setAvatarFile(file);
+      const url = URL.createObjectURL(file);
+      setAvatarPreview(url);
+    }
+  };
 
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
   const [registerCandidateApi, { isLoading: isSubmitting }] = useRegisterCandidateMutation();
+  const [uploadCandidateDocumentApi] = useUploadCandidateDocumentMutation();
 
-  // Real, open vacancies to apply against — replaces the previous hardcoded `vacancyId: 7`,
-  // which silently attached every manually-entered candidate to the same vacancy regardless of
-  // what was actually selected on this form.
+  // Open vacancies
   const { data: vacanciesRes } = useGetVacanciesQuery({ pageSize: 200, status: 'Open' });
-  const vacancyOptions: SelectOption[] = (vacanciesRes?.data || []).map((v: any) => ({
-    value: String(v.id),
-    label: `${v.title} (${v.vacancyCode})`,
-  }));
+  const vacancyOptions: SelectOption[] = useMemo(() => {
+    return (vacanciesRes?.data || []).map((v: any) => ({
+      value: String(v.id),
+      label: `${v.title} (${v.vacancyCode || 'VAC'})`,
+    }));
+  }, [vacanciesRes]);
 
-  // Debounce email/phone before hitting the backend duplicate-check query, so we're not firing a
-  // request on every keystroke.
+  // Set default vacancy if available
+  useEffect(() => {
+    if (vacancyOptions.length > 0 && !vacancyId) {
+      setVacancyId(Number(vacancyOptions[0].value));
+    }
+  }, [vacancyOptions, vacancyId]);
+
+  // Selected vacancy entity for live pipeline preview
+  const selectedVacancyEntity = useMemo(() => {
+    return (vacanciesRes?.data || []).find((v: any) => Number(v.id) === vacancyId) || null;
+  }, [vacanciesRes, vacancyId]);
+
+  // Debounced duplicate checks
   const [debouncedEmail, setDebouncedEmail] = useState('');
   const [debouncedPhone, setDebouncedPhone] = useState('');
   useEffect(() => {
@@ -177,109 +199,129 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     [phoneCheckRes, debouncedPhone]
   );
 
-  // Step Toast Validation
-  const validateStep = (currentStep: number): boolean => {
-    if (currentStep === 1) {
-      if (!firstName.trim()) {
-        toast.error('First Name Required', { description: 'Please enter candidate first name.' });
-        return false;
-      }
-      if (!lastName.trim()) {
-        toast.error('Last Name Required', { description: 'Please enter candidate last name.' });
-        return false;
-      }
-      if (!email.trim()) {
-        toast.error('Email Required', { description: 'Please enter candidate email address.' });
-        return false;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-        toast.error('Invalid Email', { description: 'Please enter a valid email address.' });
-        return false;
-      }
-      if (!phone.trim()) {
-        toast.error('Mobile Required', { description: 'Please enter 10-digit mobile number.' });
-        return false;
-      }
-      if (!/^\d{10}$/.test(phone.trim())) {
-        toast.error('Invalid Phone', { description: 'Mobile number must be exactly 10 digits.' });
-        return false;
-      }
+  // Form Validation
+  const validateForm = () => {
+    if (!firstName.trim()) {
+      toast.error('First Name Required', { description: 'Please enter candidate first name.' });
+      return false;
     }
-
-    if (currentStep === 2) {
-      if (!vacancyId) {
-        toast.error('Vacancy Required', { description: 'Please select which open vacancy this candidate is applying for.' });
-        return false;
-      }
-      if (!role) {
-        toast.error('Applied Role Required', { description: 'Please select candidate applied role.' });
-        return false;
-      }
-      if (candidateType === 'experienced' && !experience) {
-        toast.error('Experience Required', { description: 'Please select candidate total experience.' });
-        return false;
-      }
+    if (firstName.trim().length > 50) {
+      toast.error('First Name Too Long', { description: 'First name must not exceed 50 characters.' });
+      return false;
     }
-
-    if (currentStep === 3) {
-      if (!hiringLocation) {
-        toast.error('Location Required', { description: 'Please select candidate hiring location.' });
-        return false;
-      }
+    if (!lastName.trim()) {
+      toast.error('Last Name Required', { description: 'Please enter candidate last name.' });
+      return false;
     }
-
-    if (currentStep === 4) {
-      if (refMobile.trim() && !/^\d{10}$/.test(refMobile.trim())) {
-        toast.error('Invalid Mobile', { description: 'Mobile number must be 10 digits.' });
-        return false;
-      }
-      return true;
+    if (lastName.trim().length > 50) {
+      toast.error('Last Name Too Long', { description: 'Last name must not exceed 50 characters.' });
+      return false;
     }
-
-    return true;
-  };
-
-  const handleNextStep = () => {
-    if (validateStep(step)) {
-      setStep((s) => (s < 5 ? ((s + 1) as any) : s));
+    if (!email.trim()) {
+      toast.error('Email Required', { description: 'Please enter candidate email address.' });
+      return false;
     }
-  };
-
-  const handleSave = async (addAnother = false) => {
-    if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) {
-      return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error('Invalid Email', { description: 'Please enter a valid email address.' });
+      return false;
+    }
+    if (!phone.trim()) {
+      toast.error('Mobile Required', { description: 'Please enter 10-digit mobile number.' });
+      return false;
+    }
+    if (!/^\d{10}$/.test(phone.trim())) {
+      toast.error('Invalid Phone', { description: 'Mobile number must be exactly 10 digits (e.g. 9876543210).' });
+      return false;
     }
     if (!vacancyId) {
       toast.error('Vacancy Required', { description: 'Please select which open vacancy this candidate is applying for.' });
-      return;
+      return false;
     }
+    const isReferralChannel = hasReferral || source === 'Referral';
+    if (isReferralChannel && !refName.trim()) {
+      toast.error('Referral Details Required', { description: 'Please enter referrer employee name for referral candidate.' });
+      return false;
+    }
+    return true;
+  };
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+  const handleSave = async (addAnother = false) => {
+    if (!validateForm()) return;
 
     try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      const isReferralChannel = hasReferral || source === 'Referral';
+      const channel = isReferralChannel
+        ? 'Referral'
+        : (['Walk-in', 'Office', 'Referral', 'Portal', 'Recruiter'].includes(source) ? source : 'Walk-in');
+
+      let referralValue: string | undefined = undefined;
+      if (isReferralChannel && refName.trim()) {
+        referralValue = refMobile.trim()
+          ? `${refName.trim()} (Mob: ${refMobile.trim()})`
+          : refName.trim();
+      }
+
+      let totalExp = 0;
+      if (candidateType === 'experienced') {
+        const match = (experience || '').match(/[\d.]+/);
+        totalExp = match ? parseFloat(match[0]) : (parseFloat(experience) || 0);
+      }
+
+      const curCTCNum = currentCtc.trim() ? parseFloat(currentCtc) : undefined;
+      const expCTCNum = expectedCtc.trim() ? parseFloat(expectedCtc) : undefined;
+      let noticeDays: number | undefined = undefined;
+      if (noticePeriod === 'Immediate') {
+        noticeDays = 0;
+      } else if (noticePeriod) {
+        const match = noticePeriod.match(/\d+/);
+        noticeDays = match ? parseInt(match[0]) : undefined;
+      }
+
       const result = await registerCandidateApi({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
         phone: phone.trim(),
-        vacancyId,
-        registrationChannel: source || 'Portal',
-        totalExperienceYears: candidateType === 'fresher' ? 0 : (parseFloat(experience) || 0),
+        vacancyId: vacancyId!,
+        registrationChannel: channel,
+        referralEmployeeName: referralValue,
+        totalExperienceYears: totalExp,
+        currentCTC: curCTCNum,
+        expectedCTC: expCTCNum,
+        noticePeriodDays: noticeDays,
         currentLocation: hiringLocation || undefined,
         highestQualification: qualification || undefined,
       }).unwrap();
 
       const created = result?.data;
+
+      // Asynchronously upload resume if attached
+      if (created?.id && resumeFile) {
+        try {
+          await uploadCandidateDocumentApi({
+            candidateId: created.id,
+            file: resumeFile,
+            documentType: 'Resume',
+          }).unwrap();
+        } catch (docErr) {
+          console.warn('Resume document upload non-fatal error:', docErr);
+        }
+      }
+
+      const targetRole = selectedVacancyEntity?.title || 'Software Engineering';
       const newCand: Partial<DashboardCandidate> = {
         id: created?.id,
         name: fullName,
         code: created?.candidateCode,
         email: email.trim(),
         mobile: phone.trim(),
-        role: role || 'Software Engineer',
-        experience: candidateType === 'fresher' ? 'Fresher' : (experience || undefined),
-        experienceYears: candidateType === 'fresher' ? 0 : parseFloat(experience) || 0,
-        source: (source as any) || 'WalkIn',
+        role: targetRole,
+        avatarUrl: avatarPreview || undefined,
+        avatarInitials: initials,
+        experience: candidateType === 'fresher' ? 'Fresher' : `${totalExp} Years`,
+        experienceYears: totalExp,
+        source: channel as any,
         stage: 'Screening',
         currentRound: 'Registered',
         status: 'Screening',
@@ -288,289 +330,434 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         city: hiringLocation || undefined,
       };
 
-      toast.success('Candidate Added to SQL Database', {
-        description: `${fullName} (${newCand.code}) saved into database.`,
+      toast.success('Candidate Registered Successfully', {
+        description: `${fullName} (${newCand.code || 'Registered'}) enrolled into hiring pipeline.`,
       });
 
-      onSuccess(newCand, addAnother);
+      if (addAnother) {
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setPhone('');
+        setExperience('');
+        setCompany('');
+        setDesignation('');
+        setCurrentCtc('');
+        setExpectedCtc('');
+        setNoticePeriod('Immediate');
+        setRefName('');
+        setRefMobile('');
+        setHasReferral(false);
+        setResumeFile(null);
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        onSuccess(newCand, true);
+      } else {
+        onSuccess(newCand, false);
+      }
     } catch (err: any) {
       const description =
         (Array.isArray(err?.data?.errors) && err.data.errors.length > 0 ? err.data.errors.join(' ') : null) ||
         err?.data?.message ||
         'Could not save this candidate. Please check the details and try again.';
-      toast.error('Candidate Registration Failed', { description });
-      console.error('[RegisterCandidate] API error:', err);
+      toast.error('Registration Failed', { description });
     }
   };
 
-  const STEPS = [
-    { num: 1, title: 'Basic Info' },
-    { num: 2, title: 'Professional Info' },
-    { num: 3, title: 'Education & Operations' },
-    { num: 4, title: 'Reference Details' },
-    { num: 5, title: 'Resume Upload' },
-  ];
+  const initials = useMemo(() => {
+    const f = (firstName || '').trim().charAt(0).toUpperCase();
+    const l = (lastName || '').trim().charAt(0).toUpperCase();
+    return f || l ? `${f}${l}` : 'CP';
+  }, [firstName, lastName]);
 
-  const ICONS = ['user', 'briefcase', 'graduation-cap', 'users', 'file-text'];
-
-  const renderStep1 = () => (
-    <div className="space-y-3.5 animate-fadeIn">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            First Name <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Rahul"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            className={`w-full h-9 px-3 border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all ${
-              uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-            }`}
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            Last Name <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Sharma"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            className={`w-full h-9 px-3 border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all ${
-              uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-            }`}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            Email Address <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="email"
-            placeholder="e.g. rahul.sharma@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={`w-full h-9 px-3 border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all ${
-              uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-            }`}
-          />
-          {isDuplicateEmail && (
-            <div className="flex items-center gap-1 mt-1 text-[10.5px] text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-              <Icon name="alert-triangle" size="xs" className="shrink-0" />
-              <span>Candidate with this email exists in STEP.</span>
+  return (
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
+      {/* ── Scrollable Comprehensive Form Body ─────────────────────────── */}
+      <div className="flex-1 min-h-0 px-4 sm:px-8 pt-4 pb-6 space-y-4 overflow-y-auto scrollbar-none">
+        {/* ── Section 1: Candidate Profile & Contact ──────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] space-y-3 shadow-2xs"
+        >
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-default)]">
+            <div className="flex items-center gap-2">
+              <Icon name="user" size="xs" className="text-[var(--accent-indigo)]" />
+              <span className="text-xs font-bold text-[var(--text-primary)] font-heading uppercase tracking-wider">
+                1. Candidate Profile & Contact
+              </span>
             </div>
-          )}
-        </div>
+            <span className="text-[10.5px] font-mono text-[var(--text-tertiary)]">* Required fields</span>
+          </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            Mobile Number <span className="text-rose-500">*</span>
-          </label>
+          {/* Profile Photo Uploader Row */}
           <input
-            type="tel"
-            maxLength={10}
-            placeholder="e.g. 9876543210"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-            className={`w-full h-9 px-3 border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all ${
-              uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-            }`}
+            type="file"
+            ref={avatarInputRef}
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            className="hidden"
+            onChange={handleAvatarChange}
           />
-          {isDuplicatePhone && (
-            <div className="flex items-center gap-1 mt-1 text-[10.5px] text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-              <Icon name="alert-triangle" size="xs" className="shrink-0" />
-              <span>Mobile number matches existing profile.</span>
+          <div className="flex items-center gap-4 p-3 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)]">
+            <div className="shrink-0">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="Candidate Avatar Preview"
+                  className="w-12 h-12 rounded-xl object-cover border border-[var(--border-strong)] shadow-xs"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--accent-indigo)] to-[#4f46e5] text-white flex items-center justify-center font-bold text-sm font-mono shadow-xs border border-indigo-400/30">
+                  {initials}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            Gender
-          </label>
-          <CustomSelect
-            placeholder="Select gender..."
-            value={gender}
-            options={GENDER_OPTIONS}
-            onChange={setGender}
-            widthClass="w-full"
-          />
-        </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold text-[var(--text-primary)] font-heading">
+                    Candidate Profile Photo <span className="text-[10.5px] font-normal text-[var(--text-tertiary)]">(Optional)</span>
+                  </p>
+                  <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                    Supports PNG, JPG, or WEBP up to 5MB
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="h-8 px-3 rounded-lg text-xs font-semibold bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] transition-all cursor-pointer"
+                  >
+                    {avatarPreview ? 'Change Photo' : 'Upload Photo'}
+                  </button>
+                  {avatarPreview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarFile(null);
+                        setAvatarPreview(null);
+                      }}
+                      className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      title="Remove photo"
+                    >
+                      <Icon name="trash-2" size="xs" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            Date of Birth
-          </label>
-          <CustomCalendarPicker
-            value={dob}
-            onChange={setDob}
-            placeholder="Select date of birth..."
-          />
-        </div>
-      </div>
-    </div>
-  );
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                First Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Rahul"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+              />
+            </div>
 
-  const renderStep2 = () => (
-    <div className="space-y-3.5 animate-fadeIn">
-      <div>
-        <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-          Applying For (Open Vacancy) <span className="text-rose-500">*</span>
-        </label>
-        <CustomSelect
-          placeholder={vacancyOptions.length === 0 ? 'No open vacancies found...' : 'Select the vacancy...'}
-          value={vacancyId ? String(vacancyId) : ''}
-          options={vacancyOptions}
-          onChange={(val) => setVacancyId(val ? Number(val) : null)}
-          widthClass="w-full"
-        />
-      </div>
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Last Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Sharma"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+              />
+            </div>
+          </div>
 
-      <div>
-        <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-          Candidate Background Type <span className="text-rose-500">*</span>
-        </label>
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => setCandidateType('experienced')}
-            className={`h-10 px-4 text-[13px] font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-              uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-            } ${
-              candidateType === 'experienced'
-                ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-2xs'
-                : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
-            }`}
-          >
-            <Icon name="briefcase" size="xs" />
-            <span>Experienced Professional</span>
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Email Address <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="email"
+                placeholder="e.g. rahul.sharma@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+              />
+              {isDuplicateEmail && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-amber-500 font-semibold bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-lg animate-step-shake">
+                  <Icon name="alert-triangle" size="xs" className="shrink-0" />
+                  <span>Candidate with this email already exists.</span>
+                </div>
+              )}
+            </div>
 
-          <button
-            type="button"
-            onClick={() => setCandidateType('fresher')}
-            className={`h-10 px-4 text-[13px] font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-              uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-            } ${
-              candidateType === 'fresher'
-                ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-2xs'
-                : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
-            }`}
-          >
-            <Icon name="graduation-cap" size="xs" />
-            <span>Fresher / Graduate</span>
-          </button>
-        </div>
-      </div>
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Mobile Number (10 Digits) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="tel"
+                maxLength={10}
+                placeholder="e.g. 9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+              />
+              {isDuplicatePhone && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-amber-500 font-semibold bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-lg animate-step-shake">
+                  <Icon name="alert-triangle" size="xs" className="shrink-0" />
+                  <span>Mobile number matches existing record.</span>
+                </div>
+              )}
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            Applied Role <span className="text-rose-500">*</span>
-          </label>
-          <CustomSelect
-            placeholder="Search applied role..."
-            value={role}
-            options={ROLE_OPTIONS}
-            onChange={setRole}
-            widthClass="w-full"
-          />
-        </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Gender
+              </label>
+              <CustomSelect
+                placeholder="Select gender..."
+                value={gender}
+                options={GENDER_OPTIONS}
+                onChange={setGender}
+                widthClass="w-full"
+              />
+            </div>
 
-        {candidateType === 'experienced' && (
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Date of Birth
+              </label>
+              <CustomCalendarPicker
+                value={dob}
+                onChange={setDob}
+                placeholder="Select date of birth..."
+              />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── Section 2: Vacancy & Role Assignment ─────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
+          className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] space-y-3 shadow-2xs"
+        >
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-default)]">
+            <div className="flex items-center gap-2">
+              <Icon name="briefcase" size="xs" className="text-[var(--accent-indigo)]" />
+              <span className="text-xs font-bold text-[var(--text-primary)] font-heading uppercase tracking-wider">
+                2. Vacancy & Role Assignment
+              </span>
+            </div>
+            {selectedVacancyEntity && (
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
+                {selectedVacancyEntity.driveType || 'Walk-in Drive'}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Applying For (Target Vacancy) <span className="text-rose-500">*</span>
+              </label>
+              <CustomSelect
+                placeholder={vacancyOptions.length === 0 ? 'No active vacancies...' : 'Select open vacancy...'}
+                value={vacancyId ? String(vacancyId) : ''}
+                options={vacancyOptions}
+                onChange={(val) => setVacancyId(val ? Number(val) : null)}
+                widthClass="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Assigned Role Profile <span className="text-[10px] text-[var(--text-tertiary)]">(Bound to Vacancy)</span>
+              </label>
+              <div className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] flex items-center justify-between text-xs sm:text-[13px] font-medium text-[var(--text-primary)] shadow-2xs">
+                <span className="truncate">{selectedVacancyEntity?.title || 'Select a vacancy above...'}</span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] shrink-0">
+                  {selectedVacancyEntity?.vacancyCode || 'AUTO'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Candidate Experience Tier Switcher */}
           <div>
             <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-              Total Experience <span className="text-rose-500">*</span>
+              Candidate Background
             </label>
-            <input
-              type="text"
-              placeholder="e.g. 3.5 Years"
-              value={experience}
-              onChange={(e) => setExperience(e.target.value)}
-              className={`w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all`}
-            />
-          </div>
-        )}
-      </div>
-
-      {candidateType === 'experienced' && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Current Company
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Tata Consultancy Services"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                className={`w-full h-9 px-3 border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none ${
-                  uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
+            <div className="grid grid-cols-2 gap-2.5">
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                type="button"
+                onClick={() => setCandidateType('experienced')}
+                className={`h-10 px-4 text-xs sm:text-[13px] font-bold flex items-center justify-center gap-2 border rounded-xl transition-all cursor-pointer ${
+                  candidateType === 'experienced'
+                    ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-xs ring-1 ring-[var(--accent-indigo)]/30'
+                    : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
                 }`}
+              >
+                <Icon name="briefcase" size="xs" />
+                <span>Experienced Professional</span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                type="button"
+                onClick={() => setCandidateType('fresher')}
+                className={`h-10 px-4 text-xs sm:text-[13px] font-bold flex items-center justify-center gap-2 border rounded-xl transition-all cursor-pointer ${
+                  candidateType === 'fresher'
+                    ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-xs ring-1 ring-[var(--accent-indigo)]/30'
+                    : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
+                }`}
+              >
+                <Icon name="graduation-cap" size="xs" />
+                <span>Fresher / Graduate</span>
+              </motion.button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {candidateType === 'experienced' ? (
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                  Total Experience <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 3.5 Years"
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                  Experience Tier
+                </label>
+                <div className="h-10 px-3.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] flex items-center text-xs font-mono font-bold text-emerald-500">
+                  Fresher (0 Years)
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Hiring Location <span className="text-rose-500">*</span>
+              </label>
+              <CustomSelect
+                placeholder="Select location..."
+                value={hiringLocation}
+                options={HIRING_LOCATION_OPTIONS}
+                onChange={setHiringLocation}
+                widthClass="w-full"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Current Designation
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Sourcing Channel
               </label>
-              <input
-                type="text"
-                placeholder="e.g. Senior Software Engineer"
-                value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-                className={`w-full h-9 px-3 border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none ${
-                  uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-                }`}
+              <CustomSelect
+                placeholder="Select channel..."
+                value={source}
+                options={SOURCE_OPTIONS}
+                onChange={setSource}
+                widthClass="w-full"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {candidateType === 'experienced' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                  Current Company
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Infosys / TCS"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                  Current Designation
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Software Engineer"
+                  value={designation}
+                  onChange={(e) => setDesignation(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+                />
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* ── Section 3: Compensation & Academic Details ───────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] space-y-3 shadow-2xs"
+        >
+          <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-default)]">
+            <Icon name="briefcase" size="xs" className="text-[var(--accent-indigo)]" />
+            <span className="text-xs font-bold text-[var(--text-primary)] font-heading uppercase tracking-wider">
+              3. Compensation & Academic Details
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
                 Current CTC
               </label>
               <input
                 type="text"
-                placeholder="e.g. ₹ 9.5 LPA"
+                placeholder="e.g. ₹ 8.5 LPA"
                 value={currentCtc}
                 onChange={(e) => setCurrentCtc(e.target.value)}
-                className={`w-full h-9 px-3 border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none ${
-                  uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-                }`}
+                className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
                 Expected CTC
               </label>
               <input
                 type="text"
-                placeholder="e.g. ₹ 14 LPA"
+                placeholder="e.g. ₹ 12.0 LPA"
                 value={expectedCtc}
                 onChange={(e) => setExpectedCtc(e.target.value)}
-                className={`w-full h-9 px-3 border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs bg-[var(--surface-1)] text-[var(--text-primary)] outline-none ${
-                  uiVariant === 'v5' ? 'rounded-xl' : 'rounded-lg'
-                }`}
+                className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
                 Notice Period
               </label>
               <CustomSelect
@@ -582,422 +769,228 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
               />
             </div>
           </div>
-        </>
-      )}
-    </div>
-  );
 
-  const renderStep3 = () => (
-    <div className="space-y-4 animate-fadeIn">
-      {/* Sub-Section 1: Academic Background */}
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-1.5 pb-1 border-b border-[var(--border-soft)]">
-          <Icon name="graduation-cap" size="xs" className="text-[var(--accent-indigo)]" />
-          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-[var(--text-tertiary)] font-heading">
-            Academic Background
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-              Highest Qualification
-            </label>
-            <CustomSelect
-              placeholder="Select qualification..."
-              value={qualification}
-              options={QUALIFICATION_OPTIONS}
-              onChange={setQualification}
-              widthClass="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-              College / University
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. COEP / SPPU"
-              value={college}
-              onChange={(e) => setCollege(e.target.value)}
-              className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-              Passing Year
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. 2023"
-              value={passingYear}
-              onChange={(e) => setPassingYear(e.target.value)}
-              className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-              Percentage / CGPA
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. 8.4 CGPA / 82%"
-              value={percentage}
-              onChange={(e) => setPercentage(e.target.value)}
-              className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Hiring Location & Employment Type (2-Column Row) */}
-      <div className="grid grid-cols-2 gap-3 pt-1 border-t border-[var(--border-soft)]">
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            Hiring Location <span className="text-rose-500">*</span>
-          </label>
-          <CustomSelect
-            placeholder="Select location..."
-            value={hiringLocation}
-            options={HIRING_LOCATION_OPTIONS}
-            onChange={setHiringLocation}
-            widthClass="w-full"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-            Employment Type
-          </label>
-          <CustomSelect
-            placeholder="Select type..."
-            value={employmentType}
-            options={EMPLOYMENT_TYPE_OPTIONS}
-            onChange={setEmploymentType}
-            widthClass="w-full"
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep4 = () => (
-    <div className="space-y-4 animate-fadeIn">
-      <div>
-        <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-          Reference Category <span className="text-[10px] font-normal text-[var(--text-tertiary)]">(Optional)</span>
-        </label>
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => setRefType('internal')}
-            className={`h-10 px-4 text-[13px] font-bold flex items-center justify-center gap-2 border rounded-lg transition-all cursor-pointer ${
-              refType === 'internal'
-                ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-2xs'
-                : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
-            }`}
-          >
-            <Icon name="user" size="xs" />
-            <span>Internal Employee Reference</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setRefType('external')}
-            className={`h-10 px-4 text-[13px] font-bold flex items-center justify-center gap-2 border rounded-lg transition-all cursor-pointer ${
-              refType === 'external'
-                ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-2xs'
-                : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--surface-hover)]'
-            }`}
-          >
-            <Icon name="users" size="xs" />
-            <span>External Reference</span>
-          </button>
-        </div>
-      </div>
-
-      {refType === 'internal' ? (
-        <>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Employee Name
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Highest Qualification
               </label>
-              <input
-                type="text"
-                placeholder="e.g. Vikramaditya Rao"
-                value={refName}
-                onChange={(e) => setRefName(e.target.value)}
-                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+              <CustomSelect
+                placeholder="Select qualification..."
+                value={qualification}
+                options={QUALIFICATION_OPTIONS}
+                onChange={setQualification}
+                widthClass="w-full"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Employee ID
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                Employment Mode
               </label>
-              <input
-                type="text"
-                placeholder="e.g. EMP-9082"
-                value={refEmployeeId}
-                onChange={(e) => setRefEmployeeId(e.target.value)}
-                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
+              <CustomSelect
+                placeholder="Select mode..."
+                value={employmentType}
+                options={EMPLOYMENT_TYPE_OPTIONS}
+                onChange={setEmploymentType}
+                widthClass="w-full"
               />
             </div>
           </div>
+        </motion.div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Mobile Number
-              </label>
-              <input
-                type="tel"
-                maxLength={10}
-                placeholder="e.g. 9876543210"
-                value={refMobile}
-                onChange={(e) => setRefMobile(e.target.value.replace(/\D/g, ''))}
-                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Verified By
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Anand Sharma (HR Lead)"
-                value={refVerifiedBy}
-                onChange={(e) => setRefVerifiedBy(e.target.value)}
-                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
-              />
-            </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Referrer Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Rajesh Kumar"
-                value={refName}
-                onChange={(e) => setRefName(e.target.value)}
-                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Mobile Number
-              </label>
-              <input
-                type="tel"
-                maxLength={10}
-                placeholder="e.g. 9876543210"
-                value={refMobile}
-                onChange={(e) => setRefMobile(e.target.value.replace(/\D/g, ''))}
-                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 font-sans">
-                Verified By
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Anand Sharma (HR Lead)"
-                value={refVerifiedBy}
-                onChange={(e) => setRefVerifiedBy(e.target.value)}
-                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo-dim)] text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none"
-              />
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-  const renderStep5 = () => (
-    <div className="space-y-3.5 animate-fadeIn">
-      <input
-        type="file"
-        ref={resumeInputRef}
-        accept=".pdf,.doc,.docx"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) {
-            setResumeFile(f);
-          }
-        }}
-      />
-
-      <label className="block text-xs font-semibold text-[var(--text-primary)] font-heading">
-        Upload Candidate Resume <span className="text-rose-500">*</span>
-      </label>
-
-      {resumeFile ? (
-        <div className="flex items-center justify-between p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 shadow-2xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-              <Icon name="file-text" size="sm" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-800 font-mono truncate max-w-[360px]">{resumeFile.name}</p>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">{(resumeFile.size / 1024).toFixed(1)} KB • Resume Attached</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setResumeFile(null)}
-            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 transition-colors cursor-pointer"
-            title="Remove resume"
-          >
-            <Icon name="trash-2" size="xs" />
-          </button>
-        </div>
-      ) : (
-        <div
-          onClick={() => resumeInputRef.current?.click()}
-          className="border-2 border-dashed border-[var(--border-default)] hover:border-[var(--accent-indigo)] bg-gradient-to-b from-[var(--surface-1)] to-[var(--surface-2)]/40 rounded-xl py-9 px-6 text-center cursor-pointer transition-all min-h-[200px] flex flex-col items-center justify-center space-y-2.5 shadow-2xs group"
+        {/* ── Section 4: Resume Document Ingestion ─────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] space-y-3 shadow-2xs"
         >
-          <div className="w-12 h-12 rounded-2xl bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] group-hover:scale-105 flex items-center justify-center transition-transform">
-            <Icon name="upload" size="md" />
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-default)]">
+            <div className="flex items-center gap-2">
+              <Icon name="file-text" size="xs" className="text-[var(--accent-indigo)]" />
+              <span className="text-xs font-bold text-[var(--text-primary)] font-heading uppercase tracking-wider">
+                4. Resume Document Attachment
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-[var(--text-tertiary)]">PDF, DOC, DOCX up to 10MB</span>
           </div>
-          <div>
-            <p className="text-xs font-extrabold text-[var(--text-primary)] font-heading">
-              Click or drag candidate resume here
-            </p>
-            <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 font-sans">
-              Supports PDF, DOC, DOCX up to 10MB
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 pt-1">
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-[var(--surface-2)] border border-[var(--border-default)] text-[var(--text-tertiary)]">PDF</span>
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-[var(--surface-2)] border border-[var(--border-default)] text-[var(--text-tertiary)]">DOCX</span>
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-[var(--surface-2)] border border-[var(--border-default)] text-[var(--text-tertiary)]">DOC</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 
-  const renderFooter = () => (
-    <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[var(--surface-1)] border-t border-[var(--border-default)] shrink-0 shadow-xs">
-      {step < 5 ? (
-        <div className="grid grid-cols-2 gap-3">
-          {step > 1 ? (
-            <button
-              type="button"
-              onClick={() => setStep((s) => ((s - 1) as any))}
-              className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2.5 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
+          <input
+            type="file"
+            ref={resumeInputRef}
+            accept=".pdf,.doc,.docx"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) setResumeFile(f);
+            }}
+          />
+
+          {resumeFile ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center justify-between p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 shadow-2xs"
             >
-              <Icon name="chevron-left" size="xs" />
-              <span>Back</span>
-            </button>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                  <Icon name="file-text" size="sm" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[var(--text-primary)] font-mono truncate">{resumeFile.name}</p>
+                  <p className="text-[11px] text-emerald-500 font-medium mt-0.5">
+                    {(resumeFile.size / 1024).toFixed(1)} KB • Document Attached Ready
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResumeFile(null)}
+                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/20 transition-colors cursor-pointer shrink-0"
+                title="Remove resume"
+              >
+                <Icon name="trash-2" size="xs" />
+              </button>
+            </motion.div>
           ) : (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2.5 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
+            <div
+              onClick={() => resumeInputRef.current?.click()}
+              className="border-2 border-dashed border-[var(--border-default)] hover:border-[var(--accent-indigo)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] rounded-xl py-6 px-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-1.5 group"
             >
-              <span>Cancel</span>
-            </button>
+              <div className="w-9 h-9 rounded-xl bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] group-hover:scale-110 flex items-center justify-center transition-transform shadow-2xs">
+                <Icon name="upload" size="sm" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[var(--text-primary)] font-heading">
+                  Click or drag candidate resume here
+                </p>
+                <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                  Automated parsing extracts candidate background into profile
+                </p>
+              </div>
+            </div>
           )}
+        </motion.div>
+
+        {/* ── Optional Collapsible Section: Employee Referral ─────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
+          className="p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)]"
+        >
           <button
             type="button"
-            onClick={handleNextStep}
-            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white shadow-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer select-none w-full"
+            onClick={() => setHasReferral(!hasReferral)}
+            className="w-full flex items-center justify-between text-left cursor-pointer"
           >
-            <span>Next Step</span>
-            <Icon name="chevron-right" size="xs" />
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setStep(4)}
-            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2.5 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
-          >
-            <Icon name="chevron-left" size="xs" />
-            <span>Back</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSave(false)}
-            className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white shadow-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer select-none w-full"
-          >
-            <Icon name="check" size="xs" />
-            <span>Save Candidate</span>
-          </button>
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="flex flex-col overflow-hidden">
-
-      {/* ── Scrollable Form Body ────────────────────────────────────────── */}
-      <div className="max-h-[55vh] sm:max-h-[60vh] px-4 sm:px-8 pt-4 sm:pt-5 pb-5 sm:pb-6 space-y-4 sm:space-y-5 overflow-y-auto scrollbar-none">
-
-        {/* Progress Segments Bar (5 Steps) */}
-        <div className="space-y-2.5 p-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] shadow-xs">
-          <div className="flex items-center justify-between text-[13px] font-bold">
-            <span className="text-[var(--text-primary)] font-heading flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[var(--accent-indigo)] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
-                {step}
+            <div className="flex items-center gap-2">
+              <Icon name="users" size="xs" className="text-[var(--accent-indigo)]" />
+              <span className="text-xs font-bold text-[var(--text-primary)] font-heading">
+                Add Employee Referral / Reference Details (Optional)
               </span>
-              <span>Step {step} of 5:</span>
-              <span className="font-extrabold text-[var(--accent-indigo)]">
-                {STEPS[step - 1].title}
-              </span>
-            </span>
-            <span className="text-xs font-mono font-bold tracking-tight text-[var(--text-secondary)]">
-              {step * 20}% Complete
-            </span>
-          </div>
+            </div>
+            <Icon name={hasReferral ? "chevron-up" : "chevron-down"} size="xs" className="text-[var(--text-tertiary)]" />
+          </button>
 
-          <div className="grid grid-cols-5 gap-1.5 h-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className={`rounded-full transition-all duration-300 ${
-                  i <= step
-                    ? 'bg-[var(--accent-indigo)] shadow-2xs'
-                    : 'bg-[var(--border-default)]'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
+          <AnimatePresence>
+            {hasReferral && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3 mt-3 border-t border-[var(--border-default)] space-y-3">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setRefType('internal')}
+                      className={`h-9 px-3 text-xs font-bold flex items-center justify-center gap-2 border rounded-lg transition-all cursor-pointer ${
+                        refType === 'internal'
+                          ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-xs'
+                          : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)]'
+                      }`}
+                    >
+                      <Icon name="user" size="xs" />
+                      <span>Internal Employee</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRefType('external')}
+                      className={`h-9 px-3 text-xs font-bold flex items-center justify-center gap-2 border rounded-lg transition-all cursor-pointer ${
+                        refType === 'external'
+                          ? 'bg-[var(--accent-indigo)] text-white border-[var(--accent-indigo)] shadow-xs'
+                          : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border-[var(--border-default)]'
+                      }`}
+                    >
+                      <Icon name="users" size="xs" />
+                      <span>External Contact</span>
+                    </button>
+                  </div>
 
-        {/* ── Form Steps Render ─────────────────────────────────────────── */}
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-        {step === 4 && renderStep4()}
-        {step === 5 && renderStep5()}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                        {refType === 'internal' ? 'Employee Full Name' : 'Referrer Contact Name'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={refType === 'internal' ? 'e.g. Vikramaditya Rao' : 'e.g. Rajesh Kumar'}
+                        value={refName}
+                        onChange={(e) => setRefName(e.target.value)}
+                        className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1 font-sans">
+                        Referrer Mobile Number
+                      </label>
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        placeholder="e.g. 9876543210"
+                        value={refMobile}
+                        onChange={(e) => setRefMobile(e.target.value.replace(/\D/g, ''))}
+                        className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] focus:border-[var(--accent-indigo)] text-xs sm:text-[13px] bg-[var(--surface-1)] text-[var(--text-primary)] outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
       </div>
 
       {/* ── Sticky Action Buttons Footer ───────────────────────────────── */}
-      {renderFooter()}
-
+      <div className="px-5 sm:px-8 py-3 bg-[var(--surface-1)] border-t border-[var(--border-default)] shrink-0 flex items-center justify-end gap-2.5 shadow-xs">
+        <motion.button
+          whileHover={{ scale: 1.02, y: -1 }}
+          whileTap={{ scale: 0.98 }}
+          type="button"
+          disabled={isSubmitting}
+          onClick={() => handleSave(true)}
+          className="h-9 px-4 rounded-xl text-xs font-bold bg-[var(--surface-2)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/40 hover:bg-[var(--accent-indigo-dim)] transition-all cursor-pointer disabled:opacity-50"
+        >
+          Save & Add Another
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02, y: -1 }}
+          whileTap={{ scale: 0.98 }}
+          type="button"
+          disabled={isSubmitting}
+          onClick={() => handleSave(false)}
+          className="h-9 px-5 rounded-xl text-xs font-bold bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+        >
+          <Icon name="check" size="xs" />
+          <span>{isSubmitting ? 'Registering...' : 'Register Candidate'}</span>
+        </motion.button>
+      </div>
     </div>
   );
 };
+

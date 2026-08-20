@@ -11,9 +11,10 @@ import {
 } from '@/design-system';
 import {
   useGetMasterDataByCategoryQuery,
-  useGetRoleHiringProfilesV2Query,
+  useGetBlueprintsV2Query,
   useCreateInstantDriveV2Mutation,
-  type RoleHiringProfileData,
+  type AssessmentBlueprintData,
+  type MasterRecord,
   type InstantDriveResultData,
 } from '@/store/services/api';
 import { useAppDispatch, notifySuccess, notifyError } from '@/store';
@@ -46,14 +47,21 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
   // Form State
   const [driveType, setDriveType] = useState<'Walk-in Drive' | 'Direct / Sourced Hiring'>('Walk-in Drive');
   const [selectedRoleId, setSelectedRoleId] = useState<number>(0);
-  const [selectedProfileId, setSelectedProfileId] = useState<number>(0);
+  const [selectedExperienceLevelId, setSelectedExperienceLevelId] = useState<number>(0);
+  const [selectedBlueprintId, setSelectedBlueprintId] = useState<number>(0);
   const [selectedLocationId, setSelectedLocationId] = useState<number>(0);
   const [selectedDeptId, setSelectedDeptId] = useState<number>(0);
   const [totalOpenings, setTotalOpenings] = useState<number>(5);
   const [walkinDate, setWalkinDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  // Queries
+  // Master Data Queries
   const { data: rolesRes, isLoading: isRolesLoading } = useGetMasterDataByCategoryQuery('roles', {
+    skip: !isOpen,
+  });
+  const { data: expLevelsRes, isLoading: isExpLoading } = useGetMasterDataByCategoryQuery('experiencelevels', {
+    skip: !isOpen,
+  });
+  const { data: blueprintsRes, isLoading: isBlueprintsLoading } = useGetBlueprintsV2Query(undefined, {
     skip: !isOpen,
   });
   const { data: locationsRes } = useGetMasterDataByCategoryQuery('hiringlocations', {
@@ -63,9 +71,23 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
     skip: !isOpen,
   });
 
-  const roles = useMemo(() => rolesRes?.data || [], [rolesRes]);
-  const hiringLocations = useMemo(() => locationsRes?.data || [], [locationsRes]);
-  const departments = useMemo(() => departmentsRes?.data || [], [departmentsRes]);
+  const roles = useMemo(() => (Array.isArray(rolesRes?.data) ? rolesRes.data : []), [rolesRes]);
+  const experienceLevels = useMemo(
+    () => (Array.isArray(expLevelsRes?.data) ? expLevelsRes.data : []),
+    [expLevelsRes]
+  );
+  const blueprints: AssessmentBlueprintData[] = useMemo(
+    () => (Array.isArray(blueprintsRes?.data) ? blueprintsRes.data : []),
+    [blueprintsRes]
+  );
+  const hiringLocations = useMemo(
+    () => (Array.isArray(locationsRes?.data) ? locationsRes.data : []),
+    [locationsRes]
+  );
+  const departments = useMemo(
+    () => (Array.isArray(departmentsRes?.data) ? departmentsRes.data : []),
+    [departmentsRes]
+  );
 
   // CustomSelect Options Mappings
   const roleOptions = useMemo(() => {
@@ -75,6 +97,20 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
     }));
   }, [roles]);
 
+  const experienceOptions = useMemo(() => {
+    return experienceLevels.map((e) => ({
+      value: String(e.id),
+      label: e.name,
+    }));
+  }, [experienceLevels]);
+
+  const blueprintOptions = useMemo(() => {
+    return blueprints.map((b) => ({
+      value: String(b.id),
+      label: b.name,
+    }));
+  }, [blueprints]);
+
   const locationOptions = useMemo(() => {
     return hiringLocations.map((loc) => ({
       value: String(loc.id),
@@ -82,35 +118,38 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
     }));
   }, [hiringLocations]);
 
-  // Query profiles for the selected role
-  const {
-    data: profilesRes,
-    isLoading: isProfilesLoading,
-  } = useGetRoleHiringProfilesV2Query(selectedRoleId, {
-    skip: !selectedRoleId,
-  });
+  // Active selected entities
+  const activeRole = useMemo(() => {
+    return roles.find((r) => Number(r.id) === selectedRoleId) || roles[0] || null;
+  }, [roles, selectedRoleId]);
 
-  const profiles: RoleHiringProfileData[] = useMemo(() => profilesRes?.data || [], [profilesRes]);
+  const activeExperience = useMemo(() => {
+    return experienceLevels.find((e) => Number(e.id) === selectedExperienceLevelId) || experienceLevels[0] || null;
+  }, [experienceLevels, selectedExperienceLevelId]);
 
-  const profileOptions = useMemo(() => {
-    return profiles.map((p) => ({
-      value: String(p.id),
-      label: `${p.profileName} ${p.isDefault ? '(Default)' : ''}`.trim(),
-    }));
-  }, [profiles]);
+  const activeBlueprint = useMemo(() => {
+    return blueprints.find((b) => b.id === selectedBlueprintId) || blueprints[0] || null;
+  }, [blueprints, selectedBlueprintId]);
 
-  // Active selected profile
-  const activeProfile = useMemo(() => {
-    return profiles.find((p) => p.id === selectedProfileId) || profiles[0] || null;
-  }, [profiles, selectedProfileId]);
-
-  // Auto-select initial role & location
+  // Auto-select initial defaults
   useEffect(() => {
     if (roles.length > 0 && selectedRoleId === 0) {
-      const defaultRole = roles[0];
-      setSelectedRoleId(Number(defaultRole.id));
+      setSelectedRoleId(Number(roles[0].id));
     }
   }, [roles, selectedRoleId]);
+
+  useEffect(() => {
+    if (experienceLevels.length > 0 && selectedExperienceLevelId === 0) {
+      setSelectedExperienceLevelId(Number(experienceLevels[0].id));
+    }
+  }, [experienceLevels, selectedExperienceLevelId]);
+
+  useEffect(() => {
+    if (blueprints.length > 0 && selectedBlueprintId === 0) {
+      const def = blueprints.find((b) => b.isDefault) || blueprints[0];
+      setSelectedBlueprintId(def.id);
+    }
+  }, [blueprints, selectedBlueprintId]);
 
   useEffect(() => {
     if (hiringLocations.length > 0 && selectedLocationId === 0) {
@@ -120,16 +159,6 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
       setSelectedDeptId(Number(departments[0].id));
     }
   }, [hiringLocations, departments, selectedLocationId, selectedDeptId]);
-
-  // Auto-select default profile when profiles load
-  useEffect(() => {
-    if (profiles.length > 0) {
-      const def = profiles.find((p) => p.isDefault) || profiles[0];
-      setSelectedProfileId(def.id);
-    } else {
-      setSelectedProfileId(0);
-    }
-  }, [profiles]);
 
   // Mutation
   const [createInstantDrive, { isLoading: isLaunching }] = useCreateInstantDriveV2Mutation();
@@ -155,7 +184,8 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
     try {
       const result = await createInstantDrive({
         roleId: selectedRoleId,
-        profileId: selectedProfileId || undefined,
+        experienceLevelId: selectedExperienceLevelId || undefined,
+        blueprintId: selectedBlueprintId || undefined,
         driveType,
         hiringLocationId: selectedLocationId || undefined,
         departmentId: selectedDeptId || undefined,
@@ -247,12 +277,9 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                   <h2 className="text-xs sm:text-base font-extrabold text-[var(--text-primary)] font-heading leading-tight truncate">
                     1-Click Autonomous Drive
                   </h2>
-                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
-                    V2 Engine
-                  </span>
                 </div>
                 <p className="text-[10.5px] sm:text-xs text-[var(--text-tertiary)] mt-0.5 truncate sm:whitespace-normal">
-                  Instant drive initialization, assessment blueprint & QR hub.
+                  Instant drive initialization, assessment blueprint &amp; QR hub.
                 </p>
               </div>
             </div>
@@ -308,7 +335,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                   </div>
                 </div>
 
-                {/* 2. Tokenized CustomSelect Dropdowns: Role & Profile */}
+                {/* 2. Tokenized CustomSelect Dropdowns: Role & Experience Tier */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {/* Role Selector with CustomSelect */}
                   <div className="space-y-1 sm:space-y-1.5">
@@ -320,88 +347,248 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                       label="Target Role"
                       value={String(selectedRoleId)}
                       options={roleOptions}
-                      onChange={(val) => {
-                        setSelectedRoleId(Number(val));
-                        setSelectedProfileId(0);
-                      }}
+                      onChange={(val) => setSelectedRoleId(Number(val))}
                       disabled={isRolesLoading || isLaunching}
                       widthClass="w-full"
                     />
                   </div>
 
-                  {/* Profile Selector with CustomSelect */}
+                  {/* Experience Level Selector directly from master.ExperienceLevels */}
                   <div className="space-y-1 sm:space-y-1.5">
                     <label className="text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
                       <Icon name="graduation-cap" size="xs" className="text-[var(--accent-indigo)]" />
-                      <span>Recruitment Profile / Tier</span>
-                      {isProfilesLoading && <span className="text-[10px] text-[var(--text-tertiary)] animate-pulse">(Loading...)</span>}
+                      <span>Experience Tier</span>
+                      {isExpLoading && <span className="text-[10px] text-[var(--text-tertiary)] animate-pulse">(Loading...)</span>}
                     </label>
                     <CustomSelect
-                      label="Recruitment Profile"
-                      value={String(selectedProfileId)}
-                      options={profileOptions}
-                      onChange={(val) => setSelectedProfileId(Number(val))}
-                      disabled={isProfilesLoading || profiles.length === 0 || isLaunching}
+                      label="Experience Level"
+                      value={String(selectedExperienceLevelId)}
+                      options={experienceOptions}
+                      onChange={(val) => setSelectedExperienceLevelId(Number(val))}
+                      disabled={isExpLoading || experienceLevels.length === 0 || isLaunching}
                       widthClass="w-full"
                     />
                   </div>
                 </div>
 
-                {/* 3. Dynamic Automation Hiring Profile Card */}
-                {activeProfile && (
-                  <div className="p-3 sm:p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] space-y-2.5 sm:space-y-3 shadow-2xs">
-                    <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-2 gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Icon name="sparkles" size="xs" className="text-[var(--accent-indigo)] shrink-0" />
-                        <span className="text-[11.5px] sm:text-xs font-bold text-[var(--text-primary)] font-heading truncate">
-                          Hiring Profile: {activeProfile.profileName}
-                        </span>
-                      </div>
-                      <span className="text-[10.5px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] shrink-0">
-                        Cutoff: {activeProfile.passingPercentage}%
-                      </span>
-                    </div>
+                {/* 3. Universal Assessment Blueprint / Track Selector */}
+                <div className="space-y-1 sm:space-y-1.5">
+                  <label className="text-xs font-bold text-[var(--text-secondary)] flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Icon name="file-text" size="xs" className="text-[var(--accent-indigo)]" />
+                      <span>Assessment Track / Blueprint</span>
+                    </span>
+                    {isBlueprintsLoading && (
+                      <span className="text-[10px] text-[var(--text-tertiary)] animate-pulse">Loading blueprints...</span>
+                    )}
+                  </label>
+                  <CustomSelect
+                    label="Assessment Blueprint"
+                    value={String(selectedBlueprintId)}
+                    options={blueprintOptions}
+                    onChange={(val) => setSelectedBlueprintId(Number(val))}
+                    disabled={isBlueprintsLoading || blueprints.length === 0 || isLaunching}
+                    widthClass="w-full"
+                  />
+                </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                      <div className="p-2 sm:p-2.5 rounded-lg bg-[var(--surface-1)] border border-[var(--border-default)]">
-                        <span className="text-[9.5px] sm:text-[10px] font-semibold text-[var(--text-tertiary)] uppercase block">Exp. Target</span>
-                        <span className="font-bold text-[var(--text-primary)] mt-0.5 block truncate">
-                          {activeProfile.minExperienceYears} – {activeProfile.maxExperienceYears} Yrs
-                        </span>
+                {/* 4. Clean Dynamic Automated Pipeline Breakdown Card */}
+                {activeBlueprint && (() => {
+                  const isWalkin = driveType === 'Walk-in Drive';
+                  const isTechnicalTrack = activeBlueprint.code !== 'RULE-MCQ-ONLY';
+                  const totalRounds = isWalkin ? (isTechnicalTrack ? 4 : 3) : 4;
+
+                  return (
+                    <div className="p-3 sm:p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] space-y-2.5 shadow-2xs">
+                      {/* Clean Single Header */}
+                      <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-2 gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Icon name="sparkles" size="xs" className="text-[var(--accent-indigo)] shrink-0" />
+                          <span className="text-[11.5px] font-bold text-[var(--text-primary)] font-heading truncate">
+                            Automated Pipeline Plan
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 font-mono">
+                            {totalRounds} Rounds • {activeBlueprint.defaultPassingPercentage}% Cutoff
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="p-2 sm:p-2.5 rounded-lg bg-[var(--surface-1)] border border-[var(--border-default)]">
-                        <span className="text-[9.5px] sm:text-[10px] font-semibold text-[var(--text-tertiary)] uppercase block">Base Salary</span>
-                        <span className="font-bold text-[var(--text-primary)] mt-0.5 block truncate">
-                          {activeProfile.defaultBaseCTC ? `₹${(activeProfile.defaultBaseCTC / 100000).toFixed(1)} LPA` : 'Standard'}
-                        </span>
-                      </div>
+                      {/* Clean Stage-by-Stage Flow */}
+                      <div className="space-y-1.5">
+                        {isWalkin ? (
+                          isTechnicalTrack ? (
+                            <>
+                              {/* Round 1: Aptitude Elimination */}
+                              <div className="flex items-start gap-2.5 p-2 rounded-lg bg-[var(--surface-1)] border border-[var(--border-default)]">
+                                <div className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                  1
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                                    <span className="text-[11px] font-bold text-[var(--text-primary)]">
+                                      Round 1: Aptitude Assessment (Elimination)
+                                    </span>
+                                    <span className="text-[10px] font-mono text-amber-500 font-semibold">20 Qs • 30m</span>
+                                  </div>
+                                  <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
+                                    Venue QR check-in test. Passing unlocks Round 2.
+                                  </p>
+                                </div>
+                              </div>
 
-                      <div className="p-2 sm:p-2.5 rounded-lg bg-[var(--surface-1)] border border-[var(--border-default)]">
-                        <span className="text-[9.5px] sm:text-[10px] font-semibold text-[var(--text-tertiary)] uppercase block">Pipeline</span>
-                        <span className="font-bold text-[var(--text-primary)] mt-0.5 block truncate">
-                          {driveType === 'Walk-in Drive' ? '4 Rounds' : '3 Rounds'}
-                        </span>
-                      </div>
+                              {/* Round 2: Technical Assessment */}
+                              <div className="flex items-start gap-2.5 p-2 rounded-lg bg-[var(--surface-1)] border border-[var(--accent-indigo)]/40 shadow-xs">
+                                <div className="w-5 h-5 rounded-full bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 text-[var(--accent-indigo)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                  2
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                                    <span className="text-[11px] font-bold text-[var(--accent-indigo)]">
+                                      Round 2: {activeBlueprint.name}
+                                    </span>
+                                    <span className="text-[10px] font-mono text-[var(--accent-indigo)] font-semibold">
+                                      {activeBlueprint.totalQuestions} Qs • {activeBlueprint.totalDurationMinutes}m
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                                    {activeBlueprint.code === 'RULE-DATA-SQL' ? 'SQL Query Sandbox & DB MCQs' : 'Coding IDE Challenge & Technical MCQs'}
+                                  </p>
+                                </div>
+                              </div>
 
-                      <div className="p-2 sm:p-2.5 rounded-lg bg-[var(--surface-1)] border border-[var(--border-default)]">
-                        <span className="text-[9.5px] sm:text-[10px] font-semibold text-[var(--text-tertiary)] uppercase block">Screening</span>
-                        <span className="font-bold text-[var(--status-success-text)] mt-0.5 block truncate">Zero-Touch</span>
-                      </div>
-                    </div>
+                              {/* Round 3: Technical Interview */}
+                              <div className="flex items-start gap-2.5 p-1.5 px-2 rounded-lg bg-[var(--surface-1)]/60 border border-[var(--border-default)]">
+                                <div className="w-5 h-5 rounded-full bg-[var(--surface-2)] text-[var(--text-tertiary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                  3
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-[11px] font-semibold text-[var(--text-secondary)]">Round 3: Technical Interview</span>
+                                  <p className="text-[9.5px] text-[var(--text-tertiary)]">Scorecard & Evaluation</p>
+                                </div>
+                              </div>
 
-                    <div className="flex items-center gap-2 text-[10.5px] sm:text-[11px] text-[var(--text-secondary)] bg-[var(--surface-1)] border border-[var(--border-default)] p-2 sm:p-2.5 rounded-lg">
-                      <Icon name="check-circle" size="xs" className="text-[var(--accent-indigo)] shrink-0" />
-                      <span className="leading-snug">
-                        {driveType === 'Walk-in Drive' ? (
-                          <>Round 1 requires <strong>≥ {activeProfile.passingPercentage}%</strong> to unlock Technical Assessment.</>
+                              {/* Round 4: Director Final & Offer */}
+                              <div className="flex items-start gap-2.5 p-1.5 px-2 rounded-lg bg-[var(--surface-1)]/60 border border-[var(--border-default)]">
+                                <div className="w-5 h-5 rounded-full bg-[var(--surface-2)] text-[var(--text-tertiary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                  4
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-[11px] font-semibold text-[var(--text-secondary)]">Round 4: Director Final & Offer</span>
+                                  <p className="text-[9.5px] text-[var(--text-tertiary)]">Automated Offer Generation</p>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* Non-IT / Standard 3-Round Pipeline */}
+                              <div className="flex items-start gap-2.5 p-2 rounded-lg bg-[var(--surface-1)] border border-[var(--accent-indigo)]/40 shadow-xs">
+                                <div className="w-5 h-5 rounded-full bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 text-[var(--accent-indigo)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                  1
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                                    <span className="text-[11px] font-bold text-[var(--accent-indigo)]">
+                                      Round 1: Standard Assessment
+                                    </span>
+                                    <span className="text-[10px] font-mono text-[var(--accent-indigo)] font-semibold">
+                                      {activeBlueprint.totalQuestions} Qs • {activeBlueprint.totalDurationMinutes}m
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                                    Single-stage MCQ test. Advances directly to Interview.
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Round 2: HR / Domain Interview */}
+                              <div className="flex items-start gap-2.5 p-1.5 px-2 rounded-lg bg-[var(--surface-1)]/60 border border-[var(--border-default)]">
+                                <div className="w-5 h-5 rounded-full bg-[var(--surface-2)] text-[var(--text-tertiary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                  2
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-[11px] font-semibold text-[var(--text-secondary)]">Round 2: HR / Domain Interview</span>
+                                  <p className="text-[9.5px] text-[var(--text-tertiary)]">Scorecard & Behavioral Evaluation</p>
+                                </div>
+                              </div>
+
+                              {/* Round 3: Director Final & Offer */}
+                              <div className="flex items-start gap-2.5 p-1.5 px-2 rounded-lg bg-[var(--surface-1)]/60 border border-[var(--border-default)]">
+                                <div className="w-5 h-5 rounded-full bg-[var(--surface-2)] text-[var(--text-tertiary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                  3
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-[11px] font-semibold text-[var(--text-secondary)]">Round 3: Director Final & Offer</span>
+                                  <p className="text-[9.5px] text-[var(--text-tertiary)]">Automated Offer Generation</p>
+                                </div>
+                              </div>
+                            </>
+                          )
                         ) : (
-                          <>Candidates scoring <strong>≥ {activeProfile.passingPercentage}%</strong> advance to Interview.</>
+                          <>
+                            {/* Direct / Sourced Pipeline */}
+                            <div className="flex items-start gap-2.5 p-2 rounded-lg bg-[var(--surface-1)] border border-[var(--border-default)]">
+                              <div className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                1
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-1 flex-wrap">
+                                  <span className="text-[11px] font-bold text-[var(--text-primary)]">
+                                    Round 1: Sourcing & Pre-Screening
+                                  </span>
+                                  <span className="text-[10px] font-mono text-emerald-500 font-semibold">Zero-Touch</span>
+                                </div>
+                                <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
+                                  Direct candidate invite link. Pre-screened candidates enter Round 2.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start gap-2.5 p-2 rounded-lg bg-[var(--surface-1)] border border-[var(--accent-indigo)]/40 shadow-xs">
+                              <div className="w-5 h-5 rounded-full bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 text-[var(--accent-indigo)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                2
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-1 flex-wrap">
+                                  <span className="text-[11px] font-bold text-[var(--accent-indigo)]">
+                                    Round 2: {activeBlueprint.name}
+                                  </span>
+                                  <span className="text-[10px] font-mono text-[var(--accent-indigo)] font-semibold">
+                                    {activeBlueprint.totalQuestions} Qs • {activeBlueprint.totalDurationMinutes}m
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-[var(--text-secondary)] mt-0.5">
+                                  {isTechnicalTrack ? 'Online Technical Assessment & Sandbox' : 'Domain MCQ Test'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start gap-2.5 p-1.5 px-2 rounded-lg bg-[var(--surface-1)]/60 border border-[var(--border-default)]">
+                              <div className="w-5 h-5 rounded-full bg-[var(--surface-2)] text-[var(--text-tertiary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                3
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[11px] font-semibold text-[var(--text-secondary)]">Round 3: Interview</span>
+                                <p className="text-[9.5px] text-[var(--text-tertiary)]">Technical / Management Interview</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start gap-2.5 p-1.5 px-2 rounded-lg bg-[var(--surface-1)]/60 border border-[var(--border-default)]">
+                              <div className="w-5 h-5 rounded-full bg-[var(--surface-2)] text-[var(--text-tertiary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                                4
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[11px] font-semibold text-[var(--text-secondary)]">Round 4: Director Final & Offer</span>
+                                <p className="text-[9.5px] text-[var(--text-tertiary)]">Automated Offer Generation</p>
+                              </div>
+                            </div>
+                          </>
                         )}
-                      </span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* 4. Secondary Options: Openings, Location, Date */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">

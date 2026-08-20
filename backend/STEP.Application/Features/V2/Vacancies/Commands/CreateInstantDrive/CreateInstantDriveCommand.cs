@@ -5,6 +5,7 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
 {
     public record CreateInstantDriveCommand(
         int MasterRoleId,
+        int? ExperienceLevelId = null,
         int? RoleHiringProfileId = null,
         int? BlueprintId = null,
         string? DriveType = "Walk-in Drive",

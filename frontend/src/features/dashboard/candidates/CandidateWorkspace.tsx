@@ -265,17 +265,17 @@ export const CandidateWorkspace: React.FC = () => {
                 X
               </span>
               <span className="text-[11px]">Export</span>
-            </button>
-
-            <button
+            </button>            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="button"
               onClick={() => setIsAddModalOpen(true)}
-              className="h-8 px-3 flex items-center gap-1 rounded-full bg-[var(--accent-indigo)] text-white text-xs font-bold shadow-2xs cursor-pointer border-none"
+              className="h-8 px-3 flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white text-xs font-bold shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 cursor-pointer"
               title="Add Candidate"
             >
-              <Icon name="plus" size="xs" />
+              <Icon name="user-plus" size="xs" />
               <span>Add</span>
-            </button>
+            </motion.button>
           </div>
         </div>
 
@@ -283,45 +283,40 @@ export const CandidateWorkspace: React.FC = () => {
         <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
           <div
             className={`relative flex items-center gap-1.5 h-8.5 px-3 rounded-full border
-              transition-all duration-150 ease-out flex-1 sm:w-56 md:w-64 xl:w-72 shrink-0
-              ${
+              transition-all duration-200 ${
                 searchFocused
-                  ? "border-[var(--border-focus)] shadow-[0_0_0_3px_var(--focus-glow)] bg-[var(--surface-1)]"
-                  : "border-[var(--border-default)] hover:border-[var(--border-strong)] bg-[var(--surface-2)]"
+                  ? "border-[var(--accent-indigo)] bg-[var(--surface-1)] shadow-xs w-full sm:w-64"
+                  : "border-[var(--border-default)] bg-[var(--surface-2)] hover:border-[var(--border-strong)] w-full sm:w-56"
               }`}
           >
             <Icon
               name="search"
               size="xs"
-              className={`shrink-0 transition-opacity duration-150 ${searchFocused ? "opacity-100 text-[var(--accent-indigo)]" : "opacity-75 text-[var(--text-tertiary)]"}`}
+              className={`shrink-0 transition-colors ${
+                searchFocused
+                  ? "text-[var(--accent-indigo)]"
+                  : "text-[var(--text-tertiary)]"
+              }`}
             />
             <input
-              ref={searchInputRef}
               type="search"
-              placeholder="Search candidates..."
               value={search}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              className="flex-1 bg-transparent border-none outline-none text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] min-w-0 font-sans"
-              aria-label="Search candidates"
+              placeholder="Search candidate, role..."
+              className="w-full bg-transparent text-xs text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] outline-none"
+              aria-label="Search candidates by name, code, role, or email"
             />
-            {search ? (
+            {search && (
               <button
                 type="button"
-                onClick={() => {
-                  setSearch("");
-                  setCurrentPage(1);
-                }}
+                onClick={() => setSearch("")}
                 className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                aria-label="Clear search"
+                aria-label="Clear search input"
               >
                 <Icon name="x" size="xs" />
               </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-[var(--surface-3)] border border-[var(--border-default)] text-[9.5px] font-mono font-bold text-[var(--text-tertiary)] shrink-0 select-none">
-                ⌘K
-              </kbd>
             )}
           </div>
 
@@ -329,10 +324,14 @@ export const CandidateWorkspace: React.FC = () => {
             type="button"
             onClick={async () => {
               try {
-                const listToExport = (apiCandidatesResponse?.data || filteredCandidates || []);
-                await exportCandidatesToExcel(listToExport);
-                toast.success("Candidates Exported", {
-                  description: `Successfully generated Excel workbook for ${listToExport.length} candidate(s).`,
+                await exportCandidatesToExcel(
+                  filteredCandidates,
+                  `STEP_Candidates_${filterKey}_${
+                    new Date().toISOString().split("T")[0]
+                  }.xlsx`
+                );
+                toast.success("Excel Export Ready", {
+                  description: `Exported ${filteredCandidates.length} candidate records to .xlsx file.`,
                 });
               } catch (err: any) {
                 toast.error("Export Failed", {
@@ -340,8 +339,8 @@ export const CandidateWorkspace: React.FC = () => {
                 });
               }
             }}
-            className="hidden sm:inline-flex h-8.5 px-3 items-center justify-center gap-2 rounded-full border border-[var(--border-default)]
-              text-[12px] font-semibold text-[var(--text-primary)] bg-[var(--surface-2)]
+            className="hidden sm:inline-flex h-8.5 px-3 items-center justify-center gap-1.5 rounded-xl border border-[var(--border-default)]
+              bg-[var(--surface-1)] text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]
               hover:bg-[var(--surface-hover)] hover:border-[var(--border-strong)] hover:-translate-y-[1px] hover:shadow-2xs active:scale-[0.98]
               transition-all duration-150 focus-ring-step cursor-pointer shrink-0"
             aria-label="Export candidates to Excel (.xlsx)"
@@ -353,18 +352,22 @@ export const CandidateWorkspace: React.FC = () => {
             <span>Export .xlsx</span>
           </button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="hidden sm:inline-flex h-8.5 px-3.5 items-center justify-center gap-1.5 rounded-full
-              bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white shadow-2xs hover:-translate-y-[1px] active:scale-[0.98]
-              text-[12px] font-bold transition-all duration-150 focus-ring-step cursor-pointer shrink-0 border-none"
+            className="hidden sm:inline-flex h-8.5 px-3.5 items-center justify-center gap-1.5 rounded-xl
+              bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white
+              shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset]
+              border border-indigo-400/30 hover:border-indigo-300/50
+              text-[12px] font-bold transition-all cursor-pointer shrink-0"
             aria-label="Add new candidate"
             title="Add new candidate"
           >
-            <Icon name="plus" size="xs" />
+            <Icon name="user-plus" size="xs" />
             <span className="whitespace-nowrap">Add Candidate</span>
-          </button>
+          </motion.button>
         </div>
       </div>
 

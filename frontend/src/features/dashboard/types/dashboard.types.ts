@@ -38,6 +38,7 @@ export interface DashboardCandidate {
   riskScore: number;
   city: string;
   appliedDate: string;
+  avatarUrl?: string;
   avatarInitials?: string;
   avatarBg?: string;
 }

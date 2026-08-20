@@ -1077,7 +1077,8 @@ Effective passing percentage = `PassingPercentageOverride ?? AssessmentBlueprint
 ```json
 {
   "roleId": 1,
-  "profileId": 2,
+  "experienceLevelId": 2,
+  "blueprintId": 1,
   "driveType": "Walk-in Drive",
   "departmentId": 2,
   "hiringLocationId": 1,
@@ -1086,10 +1087,11 @@ Effective passing percentage = `PassingPercentageOverride ?? AssessmentBlueprint
 }
 ```
 
-> **Backend Property Binding Aliases**: The backend command handler natively binds both property conventions:
+> **Backend Property Binding Aliases**: The backend command handler natively binds property conventions:
 >
 > - `roleId` $\leftrightarrow$ `masterRoleId`
-> - `profileId` $\leftrightarrow$ `assessmentBlueprintId` $\leftrightarrow$ `roleHiringProfileId`
+> - `experienceLevelId`: Resolves experience tier from `master.ExperienceLevels` (`MinExperienceYears`, `MaxExperienceYears`).
+> - `blueprintId`: Resolves universal assessment template from `examv2.AssessmentBlueprints`. Also accepts legacy `profileId` / `roleHiringProfileId` for backwards compatibility.
 > - `walkinDate` $\leftrightarrow$ `walkinDriveDate`
 > - `driveType`: `'Walk-in Drive'` (default, with QR generation & Round 1 Aptitude Elimination) or `'Direct / Sourced Hiring'` (direct candidate portal link, Round 1 HR Screening is Auto-Passed).
 

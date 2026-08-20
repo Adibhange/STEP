@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -33,108 +34,123 @@ export const AddCandidateDialog: React.FC<AddCandidateDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[92vw] sm:w-[65vw] sm:max-w-[960px] sm:min-w-[720px] h-auto max-h-[90vh] flex flex-col p-0 border border-[var(--border-default)] shadow-[var(--shadow-2xl)] rounded-[var(--radius-xl)] bg-[var(--surface-1)] overflow-hidden">
+      <DialogContent className="w-[92vw] sm:w-[65vw] sm:max-w-[960px] sm:min-w-[720px] h-[88vh] max-h-[780px] min-h-[580px] flex flex-col p-0 border border-[var(--border-default)] shadow-[var(--shadow-2xl)] rounded-2xl bg-[var(--surface-1)] overflow-hidden animate-step-modal-elastic">
 
-        {/* ── Dialog Header with Title & Dual Mode Selection Cards ────────── */}
-        <DialogHeader className="px-4 sm:px-7 pt-4 sm:pt-5 pb-3.5 sm:pb-4 border-b border-[var(--border-default)] mb-0 shrink-0 bg-[var(--surface-1)]">
+        {/* ── Dialog Header with V2 Engine Badge & Segmented Method Selector ── */}
+        <DialogHeader className="px-5 sm:px-7 pt-4 sm:pt-5 pb-3 sm:pb-3.5 border-b border-[var(--border-default)] mb-0 shrink-0 bg-[var(--surface-1)]">
           {/* Top Title & Close Row */}
-          <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] flex items-center justify-center shrink-0 border border-[var(--accent-indigo)]/20 shadow-2xs">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent-indigo)]/20 to-[var(--accent-indigo)]/5 text-[var(--accent-indigo)] flex items-center justify-center shrink-0 border border-[var(--accent-indigo)]/30 shadow-2xs">
                 <Icon name="user-plus" size="sm" />
               </div>
               <div>
-                <DialogTitle className="text-base sm:text-xl font-extrabold text-[var(--text-primary)] font-heading tracking-tight leading-none">
+                <DialogTitle className="text-base sm:text-lg font-extrabold text-[var(--text-primary)] font-heading tracking-tight leading-none">
                   Add Candidate
                 </DialogTitle>
-                <p className="text-xs sm:text-[13px] text-[var(--text-tertiary)] font-sans mt-0.5">
-                  Select candidate creation method below
+                <p className="text-xs text-[var(--text-tertiary)] font-sans mt-1">
+                  Single-candidate form wizard or high-speed Excel bulk ingestion.
                 </p>
               </div>
             </div>
 
             {/* Custom Close Button */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={onClose}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0 border border-transparent hover:border-[var(--border-default)]"
               aria-label="Close dialog"
             >
               <Icon name="x" size="xs" />
-            </button>
+            </motion.button>
           </div>
 
-          {/* Dual Selection Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-            {/* Dual Card 1: Single Candidate Entry */}
-            <button
+          {/* Segmented Mode Selector Bar with Animated Sliding Indicator */}
+          <div className="grid grid-cols-2 p-1 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] gap-1 relative">
+            {/* Mode 1: Single Candidate Direct Entry */}
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               type="button"
               onClick={() => setActiveTab('manual')}
-              className={`p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all cursor-pointer select-none ${
+              className={`relative h-10 px-3 rounded-lg text-left flex items-center justify-center gap-2.5 transition-colors cursor-pointer select-none font-sans z-10 ${
                 activeTab === 'manual'
-                  ? 'border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)]/40 shadow-xs ring-1 ring-[var(--accent-indigo)]/40'
-                  : 'border-[var(--border-default)] bg-[var(--surface-2)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]'
+                  ? 'text-[var(--accent-indigo)] font-bold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium'
               }`}
             >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                activeTab === 'manual'
-                  ? 'bg-[var(--accent-indigo)] text-white shadow-2xs'
-                  : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)]'
-              }`}>
-                <Icon name="user-plus" size="sm" />
-              </div>
-              <div>
-                <span className="block text-[13px] font-extrabold text-[var(--text-primary)] font-heading leading-tight">
-                  Single Candidate Entry
-                </span>
-                <span className="block text-xs text-[var(--text-tertiary)] font-sans mt-0.5">
-                  Step-by-step form wizard
-                </span>
-              </div>
-            </button>
+              {activeTab === 'manual' && (
+                <motion.div
+                  layoutId="activeAddModePill"
+                  transition={{ type: 'spring', damping: 26, stiffness: 350 }}
+                  className="absolute inset-0 bg-[var(--surface-1)] rounded-lg shadow-xs border border-[var(--accent-indigo)]/30 ring-1 ring-[var(--accent-indigo)]/20 z-[-1]"
+                />
+              )}
+              <Icon name="user-plus" size="xs" className={activeTab === 'manual' ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'} />
+              <span className="text-xs sm:text-[13px]">Single Candidate Entry</span>
+              <span className="hidden sm:inline text-[10.5px] text-[var(--text-tertiary)] font-mono">(Direct Form)</span>
+            </motion.button>
 
-            {/* Dual Card 2: Excel Bulk Upload */}
-            <button
+            {/* Mode 2: Excel Bulk Upload */}
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               type="button"
               onClick={() => setActiveTab('excel')}
-              className={`p-4 rounded-xl border text-left flex items-center gap-3.5 transition-all cursor-pointer select-none ${
+              className={`relative h-10 px-3 rounded-lg text-left flex items-center justify-center gap-2.5 transition-colors cursor-pointer select-none font-sans z-10 ${
                 activeTab === 'excel'
-                  ? 'border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)]/40 shadow-xs ring-1 ring-[var(--accent-indigo)]/40'
-                  : 'border-[var(--border-default)] bg-[var(--surface-2)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]'
+                  ? 'text-[var(--accent-indigo)] font-bold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium'
               }`}
             >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                activeTab === 'excel'
-                  ? 'bg-[var(--accent-indigo)] text-white shadow-2xs'
-                  : 'bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)]'
-              }`}>
-                <Icon name="file-spreadsheet" size="sm" />
-              </div>
-              <div>
-                <span className="block text-[13px] font-extrabold text-[var(--text-primary)] font-heading leading-tight">
-                  Excel Bulk Upload
-                </span>
-                <span className="block text-xs text-[var(--text-tertiary)] font-sans mt-0.5">
-                  Import candidates from .xlsx
-                </span>
-              </div>
-            </button>
+              {activeTab === 'excel' && (
+                <motion.div
+                  layoutId="activeAddModePill"
+                  transition={{ type: 'spring', damping: 26, stiffness: 350 }}
+                  className="absolute inset-0 bg-[var(--surface-1)] rounded-lg shadow-xs border border-[var(--accent-indigo)]/30 ring-1 ring-[var(--accent-indigo)]/20 z-[-1]"
+                />
+              )}
+              <Icon name="file-spreadsheet" size="xs" className={activeTab === 'excel' ? 'text-emerald-500' : 'text-[var(--text-tertiary)]'} />
+              <span className="text-xs sm:text-[13px]">Excel Bulk Upload</span>
+              <span className="hidden sm:inline text-[10.5px] text-[var(--text-tertiary)] font-mono">(.xlsx / .csv)</span>
+            </motion.button>
           </div>
         </DialogHeader>
 
-        {/* ── Dialog Content Surface ───────────────────────────────────────── */}
-        <div className="overflow-hidden">
-          {activeTab === 'manual' ? (
-            <ManualEntryForm
-              onSuccess={handleSuccess}
-              onCancel={onClose}
-              uiVariant="v2"
-            />
-          ) : (
-            <div className="p-5 h-full overflow-y-auto scrollbar-none">
-              <ExcelUploadForm onSuccess={onClose} />
-            </div>
-          )}
+        {/* ── Stable Fluid Dialog Content Surface ───────────────────────────── */}
+        <div className="flex-1 min-h-0 overflow-hidden relative">
+          <AnimatePresence mode="wait" initial={false}>
+            {activeTab === 'manual' ? (
+              <motion.div
+                key="manual-tab-view"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                className="h-full flex flex-col min-h-0"
+              >
+                <ManualEntryForm
+                  onSuccess={handleSuccess}
+                  onCancel={onClose}
+                  uiVariant="v2"
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="excel-tab-view"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                className="h-full flex flex-col min-h-0"
+              >
+                <ExcelUploadForm
+                  onSuccess={onClose}
+                  onCancel={onClose}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
       </DialogContent>

@@ -27,7 +27,15 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 .FirstOrDefaultAsync(r => r.Id == request.MasterRoleId, cancellationToken)
                 ?? throw new NotFoundException(nameof(MasterRole), request.MasterRoleId);
 
-            // 2. Resolve AssessmentBlueprint
+            // 2. Resolve Experience Level (Direct master.ExperienceLevels)
+            MasterExperienceLevel? expLevel = null;
+            if (request.ExperienceLevelId.HasValue)
+            {
+                expLevel = await db.MasterExperienceLevels
+                    .FirstOrDefaultAsync(e => e.Id == request.ExperienceLevelId.Value && e.IsActive, cancellationToken);
+            }
+
+            // 3. Resolve AssessmentBlueprint
             var blueprintId = request.BlueprintId ?? request.RoleHiringProfileId;
             AssessmentBlueprint? blueprint = null;
 
@@ -50,7 +58,7 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
             var totalQuestions = blueprint?.TotalQuestions ?? 20;
             var totalDuration = blueprint?.TotalDurationMinutes ?? 30;
 
-            // 3. Resolve Master Taxonomies with Fallbacks
+            // 4. Resolve Master Taxonomies with Fallbacks
             var department = request.DepartmentId.HasValue
                 ? await db.MasterDepartments.FirstOrDefaultAsync(d => d.Id == request.DepartmentId.Value, cancellationToken)
                 : await db.MasterDepartments.FirstOrDefaultAsync(cancellationToken);
@@ -71,11 +79,24 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 : await db.MasterTestLocations.FirstOrDefaultAsync(cancellationToken);
             testLocation ??= await db.MasterTestLocations.FirstAsync(cancellationToken);
 
-            // 4. Generate Vacancy Code & Title
+            // 5. Generate Vacancy Code & Title
             var sequence = await db.Vacancies.IgnoreQueryFilters().CountAsync(cancellationToken) + 101;
             var vacancyCode = $"VAC-{DateTime.UtcNow:yyyy}-{sequence}";
             var driveType = string.IsNullOrWhiteSpace(request.DriveType) ? "Walk-in Drive" : request.DriveType.Trim();
             var driveTitle = $"{masterRole.Name} - ⚡ 1-Click Drive";
+
+            decimal minExp = 0.0m;
+            decimal maxExp = 99.0m;
+
+            if (expLevel != null)
+            {
+                var code = (expLevel.Code ?? "").ToUpperInvariant();
+                if (code.Contains("0") || code.Contains("FRESH")) { minExp = 0.0m; maxExp = 1.0m; }
+                else if (code.Contains("1-3") || code.Contains("1-2") || code.Contains("JR")) { minExp = 1.0m; maxExp = 3.0m; }
+                else if (code.Contains("3-5") || code.Contains("2-4") || code.Contains("MID")) { minExp = 3.0m; maxExp = 5.0m; }
+                else if (code.Contains("5-8") || code.Contains("4-7") || code.Contains("SR")) { minExp = 5.0m; maxExp = 8.0m; }
+                else if (code.Contains("8") || code.Contains("LEAD") || code.Contains("PLUS")) { minExp = 8.0m; maxExp = 99.0m; }
+            }
 
             var vacancy = new VacancyEntity
             {
@@ -89,9 +110,9 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 WorkMode = "On-site",
                 Status = "Active",
                 TotalOpenings = request.TotalOpenings > 0 ? request.TotalOpenings : 5,
-                MinExperienceYears = 0.0m,
-                MaxExperienceYears = 99.0m,
-                JobDescription = $"Autonomous 1-Click Recruitment Drive for {masterRole.Name} ({blueprintName}).",
+                MinExperienceYears = minExp,
+                MaxExperienceYears = maxExp,
+                JobDescription = $"Autonomous 1-Click Recruitment Drive for {masterRole.Name} ({blueprintName} - {expLevel?.Name ?? "All Tiers"}).",
                 ClosingDate = DateTime.UtcNow.AddDays(30),
                 WalkinDriveDate = request.WalkinDriveDate ?? DateTime.UtcNow.Date,
                 WalkinStartTime = request.WalkinStartTime ?? new TimeSpan(9, 30, 0),
@@ -113,18 +134,32 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 IsDefault = true,
             };
 
+            bool isTechnicalTrack = blueprint != null && blueprint.Code != "RULE-MCQ-ONLY";
+
             if (driveType == "Walk-in Drive")
             {
-                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Round 1: Aptitude Assessment (Elimination)", RoundType = "Assessment", CutoffPercent = passingCutoff });
-                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Round 2: Technical Assessment", RoundType = "Assessment", CutoffPercent = 70.00m });
-                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Round 3: Technical Interview", RoundType = "Interview", CutoffPercent = 70.00m });
-                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Round 4: Director Final & Offer", RoundType = "Director", CutoffPercent = 70.00m });
+                if (isTechnicalTrack)
+                {
+                    // 4-Round Multi-Stage IT Pipeline
+                    flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Round 1: Aptitude Assessment (Elimination)", RoundType = "Assessment", CutoffPercent = 70.00m });
+                    flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = $"Round 2: {blueprintName}", RoundType = "Assessment", CutoffPercent = passingCutoff });
+                    flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Round 3: Technical Interview", RoundType = "Interview", CutoffPercent = 70.00m });
+                    flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Round 4: Director Final & Offer", RoundType = "Director", CutoffPercent = 70.00m });
+                }
+                else
+                {
+                    // 3-Round Single-Stage Non-IT / Standard Pipeline (No redundant coding test)
+                    flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Round 1: Standard Domain & Aptitude Assessment", RoundType = "Assessment", CutoffPercent = passingCutoff });
+                    flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Round 2: HR / Domain Interview", RoundType = "Interview", CutoffPercent = 70.00m });
+                    flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Round 3: Director Final & Offer", RoundType = "Director", CutoffPercent = 70.00m });
+                }
             }
             else
             {
-                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Round 1: HR Sourcing & Screening (Auto-Passed)", RoundType = "Assessment", CutoffPercent = passingCutoff });
-                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Round 2: Technical Assessment", RoundType = "Assessment", CutoffPercent = 70.00m });
-                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Round 3: Technical Interview", RoundType = "Interview", CutoffPercent = 70.00m });
+                // Direct / Sourced Sourcing Pipeline
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Round 1: HR Sourcing & Screening (Auto-Passed)", RoundType = "Assessment", CutoffPercent = 70.00m });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = $"Round 2: {blueprintName}", RoundType = "Assessment", CutoffPercent = passingCutoff });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Round 3: Technical / Domain Interview", RoundType = "Interview", CutoffPercent = 70.00m });
                 flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Round 4: Director Final & Offer", RoundType = "Director", CutoffPercent = 70.00m });
             }
 
@@ -160,7 +195,7 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 vacancy.Id,
                 vacancy.VacancyCode,
                 vacancy.Title,
-                blueprintName,
+                expLevel?.Name ?? blueprintName,
                 department.Name,
                 hiringLocation.Name,
                 vacancy.TotalOpenings,

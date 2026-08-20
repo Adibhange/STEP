@@ -18,6 +18,7 @@ import {
 } from './qrcodes.mock';
 import { computeMockRecruitmentFunnel } from './reports.mock';
 import { MOCK_QUESTION_BANK, type MockQuestionBankItem } from './questionBank.mock';
+import { MOCK_BLUEPRINTS } from './blueprints.mock';
 import type { ApiEnvelope, MasterRecord, UserItem } from '@/store/services/api';
 
 const STORAGE_KEY = 'step_enterprise_mock_db_v5';
@@ -1260,6 +1261,16 @@ class MockDatabaseService {
       }
 
       // ────────────────── V2 AUTONOMOUS RECRUITMENT ENGINE ──────────────────
+      if ((url === '/v2/hiring-blueprints' || url === '/v2/assessment-templates' || url === '/assessment-templates') && method === 'GET') {
+        return { data: this.envelope(MOCK_BLUEPRINTS, 'Assessment blueprints retrieved') };
+      }
+
+      if ((url.startsWith('/v2/hiring-blueprints/') || url.startsWith('/v2/assessment-templates/')) && method === 'GET') {
+        const id = Number(url.split('/').pop()) || 1;
+        const bp = MOCK_BLUEPRINTS.find((b) => b.id === id) || MOCK_BLUEPRINTS[0];
+        return { data: this.envelope(bp, 'Assessment blueprint retrieved') };
+      }
+
       if (url.startsWith('/v2/vacancies/roles/') && url.endsWith('/profiles') && method === 'GET') {
         const parts = url.split('/').filter(Boolean);
         const roleId = Number(parts[3]) || 1;
@@ -1331,29 +1342,66 @@ class MockDatabaseService {
       }
 
       if (url === '/v2/vacancies/instant-drive' && method === 'POST') {
-        const roleId = Number(body.masterRoleId) || 1;
+        const roleId = Number(body.roleId || body.masterRoleId) || 1;
         const roleName = this.state.masterData['roles']?.find((r) => String(r.id) === String(roleId))?.name || 'Software Engineer';
+        const expId = Number(body.experienceLevelId) || 1;
+        const bpId = Number(body.blueprintId) || 1;
+
+        const expLevel = this.state.masterData['experiencelevels']?.find((e) => String(e.id) === String(expId));
+        const blueprint = MOCK_BLUEPRINTS.find((b) => b.id === bpId) || MOCK_BLUEPRINTS[0];
+
+        const minExp = expId === 1 ? 0 : expId === 2 ? 1 : expId === 3 ? 3 : expId === 4 ? 5 : 8;
+        const maxExp = expId === 1 ? 1 : expId === 2 ? 3 : expId === 3 ? 5 : expId === 4 ? 8 : 15;
+
+        const locId = Number(body.hiringLocationId) || 1;
+        const locName = this.state.masterData['hiringlocations']?.find((l) => String(l.id) === String(locId))?.name || 'Pune Center (Hinjawadi)';
+        const deptId = Number(body.departmentId) || 1;
+        const deptName = this.state.masterData['departments']?.find((d) => String(d.id) === String(deptId))?.name || 'Engineering';
+
         const newId = this.state.vacancies.length + 1;
         const code = `VAC-2026-${100 + newId}`;
         const qrCodeStr = `WD-V2-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+        const isTechnicalTrack = blueprint?.code !== 'RULE-MCQ-ONLY';
+        const isWalkin = (body.driveType || 'Walk-in Drive') === 'Walk-in Drive';
+
+        const generatedRounds = isWalkin
+          ? isTechnicalTrack
+            ? [
+                { id: newId * 10 + 1, roundNumber: 1, roundTitle: 'Round 1: Aptitude Assessment (Elimination)', roundType: 'Assessment' as const, durationMinutes: 30, passingScore: 70 },
+                { id: newId * 10 + 2, roundNumber: 2, roundTitle: `Round 2: ${blueprint?.name || 'Technical Assessment'}`, roundType: 'Assessment' as const, durationMinutes: blueprint?.totalDurationMinutes || 85, passingScore: blueprint?.defaultPassingPercentage || 70 },
+                { id: newId * 10 + 3, roundNumber: 3, roundTitle: 'Round 3: Technical Interview', roundType: 'Interview' as const, durationMinutes: 45, passingScore: 70 },
+                { id: newId * 10 + 4, roundNumber: 4, roundTitle: 'Round 4: Director Final & Offer', roundType: 'Interview' as const, durationMinutes: 30, passingScore: 70 },
+              ]
+            : [
+                { id: newId * 10 + 1, roundNumber: 1, roundTitle: 'Round 1: Standard Domain & Aptitude Assessment', roundType: 'Assessment' as const, durationMinutes: blueprint?.totalDurationMinutes || 30, passingScore: blueprint?.defaultPassingPercentage || 70 },
+                { id: newId * 10 + 2, roundNumber: 2, roundTitle: 'Round 2: HR / Domain Interview', roundType: 'Interview' as const, durationMinutes: 45, passingScore: 70 },
+                { id: newId * 10 + 3, roundNumber: 3, roundTitle: 'Round 3: Director Final & Offer', roundType: 'Interview' as const, durationMinutes: 30, passingScore: 70 },
+              ]
+          : [
+              { id: newId * 10 + 1, roundNumber: 1, roundTitle: 'Round 1: HR Sourcing & Screening (Auto-Passed)', roundType: 'Assessment' as const, durationMinutes: 15, passingScore: 70 },
+              { id: newId * 10 + 2, roundNumber: 2, roundTitle: `Round 2: ${blueprint?.name || 'Technical Assessment'}`, roundType: 'Assessment' as const, durationMinutes: blueprint?.totalDurationMinutes || 85, passingScore: blueprint?.defaultPassingPercentage || 70 },
+              { id: newId * 10 + 3, roundNumber: 3, roundTitle: 'Round 3: Technical / Domain Interview', roundType: 'Interview' as const, durationMinutes: 45, passingScore: 70 },
+              { id: newId * 10 + 4, roundNumber: 4, roundTitle: 'Round 4: Director Final & Offer', roundType: 'Interview' as const, durationMinutes: 30, passingScore: 70 },
+            ];
 
         const newVac: MockVacancy = {
           id: newId,
           vacancyCode: code,
           title: `${roleName} - ⚡ 1-Click Drive`,
           role: roleName,
-          department: 'Production',
+          department: deptName,
           employmentType: 'Full-Time Permanent',
-          experience: '0-3 Years',
-          experienceYearsMin: 0,
-          experienceYearsMax: 3,
-          hiringLocation: 'Pune Center (Hinjawadi)',
+          experience: `${minExp}-${maxExp} Years`,
+          experienceYearsMin: minExp,
+          experienceYearsMax: maxExp,
+          hiringLocation: locName,
           testLocation: 'Pune Assessment Hub',
           workMode: 'Onsite',
           openingsCount: body.totalOpenings || 5,
           positionsCount: body.totalOpenings || 5,
           status: 'Open',
-          driveType: 'Walk-in Drive',
+          driveType: body.driveType || 'Walk-in Drive',
           createdAt: new Date().toISOString().split('T')[0],
           closingDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
           assignedRecruiter: 'AI Recruitment Engine',
@@ -1363,7 +1411,15 @@ class MockDatabaseService {
           interviewCount: 0,
           offeredCount: 0,
           joinedCount: 0,
-          pipelineFlows: [],
+          pipelineFlows: [
+            {
+              id: newId,
+              flowName: 'Autonomous Flow v2',
+              isDefault: true,
+              version: 2,
+              rounds: generatedRounds,
+            },
+          ],
         };
 
         this.state.vacancies.unshift(newVac);
@@ -1373,16 +1429,16 @@ class MockDatabaseService {
           vacancyId: newId,
           vacancyCode: code,
           title: newVac.title,
-          profileName: 'Fresher (0-1 Year)',
-          departmentName: 'Production',
-          hiringLocationName: 'Pune Center',
+          profileName: expLevel?.name || 'Fresher (0-1 Years)',
+          departmentName: deptName,
+          hiringLocationName: locName,
           totalOpenings: newVac.positionsCount,
-          minExperienceYears: 0,
-          maxExperienceYears: 3,
-          passingPercentage: 65,
-          questionPaperTitle: `${roleName} Assessment Paper`,
-          totalQuestions: 10,
-          durationMinutes: 30,
+          minExperienceYears: minExp,
+          maxExperienceYears: maxExp,
+          passingPercentage: blueprint?.defaultPassingPercentage || 70,
+          questionPaperTitle: `${roleName} - ${blueprint?.name || 'Assessment Track'}`,
+          totalQuestions: blueprint?.totalQuestions || 20,
+          durationMinutes: blueprint?.totalDurationMinutes || 30,
           qrCodeId: newId * 100,
           qrCodeString: qrCodeStr,
           registrationUrl: `http://localhost:3000/apply/${qrCodeStr}`,
