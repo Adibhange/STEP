@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
+using STEP.Domain.Entities.Exam;
 using STEP.Domain.Entities.Master;
 using STEP.Domain.Entities.QR;
 using STEP.Domain.Entities.Vacancy;
@@ -23,26 +24,31 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
         {
             // 1. Resolve MasterRole
             var masterRole = await db.MasterRoles
-                .Include(r => r.HiringProfiles)
                 .FirstOrDefaultAsync(r => r.Id == request.MasterRoleId, cancellationToken)
                 ?? throw new NotFoundException(nameof(MasterRole), request.MasterRoleId);
 
-            // 2. Resolve RoleHiringProfile
-            RoleHiringProfile? profile = null;
-            if (request.RoleHiringProfileId.HasValue)
+            // 2. Resolve AssessmentBlueprint
+            var blueprintId = request.BlueprintId ?? request.RoleHiringProfileId;
+            AssessmentBlueprint? blueprint = null;
+
+            if (blueprintId.HasValue)
             {
-                profile = await db.RoleHiringProfiles
-                    .Include(p => p.ExperienceLevel)
-                    .FirstOrDefaultAsync(p => p.Id == request.RoleHiringProfileId.Value && p.MasterRoleId == masterRole.Id, cancellationToken);
+                blueprint = await db.AssessmentBlueprints
+                    .Include(b => b.SectionRules.Where(r => r.IsActive))
+                    .FirstOrDefaultAsync(b => b.Id == blueprintId.Value && b.IsActive, cancellationToken);
             }
 
-            profile ??= masterRole.HiringProfiles.FirstOrDefault(p => p.IsDefault && p.IsActive)
-                     ?? masterRole.HiringProfiles.FirstOrDefault(p => p.IsActive);
+            blueprint ??= await db.AssessmentBlueprints
+                .Include(b => b.SectionRules.Where(r => r.IsActive))
+                .FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, cancellationToken)
+                ?? await db.AssessmentBlueprints
+                .Include(b => b.SectionRules.Where(r => r.IsActive))
+                .FirstOrDefaultAsync(b => b.IsActive, cancellationToken);
 
-            var profileName = profile?.ProfileName ?? "Standard Direct Hiring Profile";
-            var minExp = profile?.MinExperienceYears ?? 0.0m;
-            var maxExp = profile?.MaxExperienceYears ?? 3.0m;
-            var passingCutoff = profile?.PassingPercentage ?? 70.00m;
+            var blueprintName = blueprint?.Name ?? "Standard Assessment Track";
+            var passingCutoff = blueprint?.DefaultPassingPercentage ?? 70.00m;
+            var totalQuestions = blueprint?.TotalQuestions ?? 20;
+            var totalDuration = blueprint?.TotalDurationMinutes ?? 30;
 
             // 3. Resolve Master Taxonomies with Fallbacks
             var department = request.DepartmentId.HasValue
@@ -68,7 +74,8 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
             // 4. Generate Vacancy Code & Title
             var sequence = await db.Vacancies.IgnoreQueryFilters().CountAsync(cancellationToken) + 101;
             var vacancyCode = $"VAC-{DateTime.UtcNow:yyyy}-{sequence}";
-            var driveTitle = $"{masterRole.Name} ({profileName}) - ⚡ 1-Click Drive";
+            var driveType = string.IsNullOrWhiteSpace(request.DriveType) ? "Walk-in Drive" : request.DriveType.Trim();
+            var driveTitle = $"{masterRole.Name} - ⚡ 1-Click Drive";
 
             var vacancy = new VacancyEntity
             {
@@ -78,139 +85,66 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 DepartmentId = department.Id,
                 HiringLocationId = hiringLocation.Id,
                 EmploymentTypeId = employmentType.Id,
-                DriveType = "Walk-in Drive",
+                DriveType = driveType,
                 WorkMode = "On-site",
                 Status = "Active",
                 TotalOpenings = request.TotalOpenings > 0 ? request.TotalOpenings : 5,
-                MinExperienceYears = minExp,
-                MaxExperienceYears = maxExp,
-                JobDescription = $"Automated recruitment drive for {masterRole.Name} - {profileName}.",
+                MinExperienceYears = 0.0m,
+                MaxExperienceYears = 99.0m,
+                JobDescription = $"Autonomous 1-Click Recruitment Drive for {masterRole.Name} ({blueprintName}).",
                 ClosingDate = DateTime.UtcNow.AddDays(30),
                 WalkinDriveDate = request.WalkinDriveDate ?? DateTime.UtcNow.Date,
                 WalkinStartTime = request.WalkinStartTime ?? new TimeSpan(9, 30, 0),
                 WalkinEndTime = request.WalkinEndTime ?? new TimeSpan(18, 0, 0),
+                AssessmentBlueprintId = blueprint?.Id,
+                PassingPercentageOverride = passingCutoff
             };
 
-            vacancy.TestLocations.Add(new VacancyTestLocation { MasterTestLocationId = testLocation.Id });
-
-            // 5. Clone or Create Published Question Paper
-            VacancyQuestionPaper paper;
-            if (profile?.QuestionPaperTemplateId.HasValue == true)
+            if (testLocation != null)
             {
-                var templatePaper = await db.VacancyQuestionPapers
-                    .Include(p => p.Questions)
-                        .ThenInclude(q => q.Options)
-                    .FirstOrDefaultAsync(p => p.Id == profile.QuestionPaperTemplateId.Value, cancellationToken);
-
-                if (templatePaper != null)
-                {
-                    paper = new VacancyQuestionPaper
-                    {
-                        PaperCode = $"QP-{DateTime.UtcNow:yyyy}-{sequence}",
-                        Title = $"{templatePaper.Title} (Cloned)",
-                        PaperVersion = 1,
-                        TotalQuestions = templatePaper.TotalQuestions,
-                        TotalMarks = templatePaper.TotalMarks,
-                        DurationMinutes = templatePaper.DurationMinutes > 0 ? templatePaper.DurationMinutes : 45,
-                        PassingPercentage = passingCutoff,
-                        Status = "Published",
-                        PublishedAt = DateTime.UtcNow,
-                    };
-
-                    foreach (var q in templatePaper.Questions.OrderBy(q => q.QuestionNumber))
-                    {
-                        var clonedQ = new VacancyQuestion
-                        {
-                            QuestionNumber = q.QuestionNumber,
-                            QuestionType = q.QuestionType,
-                            QuestionText = q.QuestionText,
-                            Marks = q.Marks,
-                            TimeAllowedMinutes = q.TimeAllowedMinutes,
-                            ProgrammingLanguage = q.ProgrammingLanguage,
-                            SqlSchema = q.SqlSchema,
-                            MaxWordCount = q.MaxWordCount,
-                        };
-                        foreach (var opt in q.Options)
-                        {
-                            clonedQ.Options.Add(new VacancyQuestionOption
-                            {
-                                OptionLabel = opt.OptionLabel,
-                                OptionText = opt.OptionText,
-                                IsCorrect = opt.IsCorrect,
-                            });
-                        }
-                        paper.Questions.Add(clonedQ);
-                    }
-                }
-                else
-                {
-                    paper = GenerateDefaultAssessmentPaper(sequence, masterRole.Name, profileName, passingCutoff);
-                }
-            }
-            else
-            {
-                paper = GenerateDefaultAssessmentPaper(sequence, masterRole.Name, profileName, passingCutoff);
+                vacancy.TestLocations.Add(new VacancyTestLocation { MasterTestLocationId = testLocation.Id });
             }
 
-            vacancy.QuestionPapers.Add(paper);
-
-            // 6. Build Multi-Round Autonomous Pipeline Flow
+            // 5. Build 4-Round Pipeline Flow
             var flow = new VacancyPipelineFlow
             {
-                VersionName = "Autonomous Flow v1",
-                Description = "Standard 3-stage automated recruitment flow",
+                VersionName = "Autonomous Flow v2",
+                Description = "Standard 4-round automated recruitment flow",
                 IsDefault = true,
             };
 
-            var round1 = new VacancyPipelineFlowRound
+            if (driveType == "Walk-in Drive")
             {
-                RoundOrder = 1,
-                Name = "Round 1: Aptitude & Technical Assessment",
-                RoundType = "Assessment",
-                CutoffPercent = passingCutoff,
-            };
-            round1.RoundAssessments.Add(new VacancyRoundAssessment
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Round 1: Aptitude Assessment (Elimination)", RoundType = "Assessment", CutoffPercent = passingCutoff });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Round 2: Technical Assessment", RoundType = "Assessment", CutoffPercent = 70.00m });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Round 3: Technical Interview", RoundType = "Interview", CutoffPercent = 70.00m });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Round 4: Director Final & Offer", RoundType = "Director", CutoffPercent = 70.00m });
+            }
+            else
             {
-                VacancyQuestionPaper = paper,
-            });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Round 1: HR Sourcing & Screening (Auto-Passed)", RoundType = "Assessment", CutoffPercent = passingCutoff });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Round 2: Technical Assessment", RoundType = "Assessment", CutoffPercent = 70.00m });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Round 3: Technical Interview", RoundType = "Interview", CutoffPercent = 70.00m });
+                flow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Round 4: Director Final & Offer", RoundType = "Director", CutoffPercent = 70.00m });
+            }
 
-            var round2 = new VacancyPipelineFlowRound
-            {
-                RoundOrder = 2,
-                Name = "Round 2: Technical Interview",
-                RoundType = "Interview",
-                CutoffPercent = 70.00m,
-            };
-
-            var round3 = new VacancyPipelineFlowRound
-            {
-                RoundOrder = 3,
-                Name = "Round 3: Director Final Round",
-                RoundType = "Director",
-                CutoffPercent = 70.00m,
-            };
-
-            flow.Rounds.Add(round1);
-            flow.Rounds.Add(round2);
-            flow.Rounds.Add(round3);
             vacancy.PipelineFlows.Add(flow);
-
             db.Vacancies.Add(vacancy);
             await db.SaveChangesAsync(cancellationToken);
 
-            // 7. Generate Live QR Code and Public V2 Apply URL
+            // 6. Generate Live QR Code and Public V2 Apply URL
             var frontendUrlRaw = configuration["FRONTEND_URL"] ?? "http://localhost:3000";
             var frontendUrl = frontendUrlRaw.TrimEnd('/');
-            var qrCodeString = $"WD-{Convert.ToHexString(RandomNumberGenerator.GetBytes(4))}";
-            var registrationUrl = $"{frontendUrl}/apply/v2/{qrCodeString}";
+            var qrCodeString = $"WD-{Convert.ToHexString(RandomNumberGenerator.GetBytes(4)).ToUpperInvariant()}";
+            var registrationUrl = $"{frontendUrl}/apply/{qrCodeString}";
 
             var qrCode = new QRCode
             {
                 VacancyId = vacancy.Id,
                 Code = qrCodeString,
                 RegistrationUrl = registrationUrl,
-                VenueName = testLocation.Name,
-                VenueAddress = testLocation.Description,
+                VenueName = testLocation?.Name ?? "Pune Assessment Hub",
+                VenueAddress = testLocation?.Description,
                 DriveDate = vacancy.WalkinDriveDate ?? DateTime.UtcNow.Date,
                 DriveStartTime = vacancy.WalkinStartTime,
                 DriveEndTime = vacancy.WalkinEndTime,
@@ -226,79 +160,21 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 vacancy.Id,
                 vacancy.VacancyCode,
                 vacancy.Title,
-                profileName,
+                blueprintName,
                 department.Name,
                 hiringLocation.Name,
                 vacancy.TotalOpenings,
                 vacancy.MinExperienceYears,
                 vacancy.MaxExperienceYears,
-                paper.PassingPercentage,
-                paper.Title,
-                paper.TotalQuestions,
-                paper.DurationMinutes,
+                passingCutoff,
+                blueprintName,
+                totalQuestions,
+                totalDuration,
                 qrCode.Id,
                 qrCode.Code,
                 qrCode.RegistrationUrl,
                 $"/api/v2/qrcodes/vacancy/{vacancy.Id}"
             );
-        }
-
-        private static VacancyQuestionPaper GenerateDefaultAssessmentPaper(
-            int sequence, string roleName, string profileName, decimal passingCutoff)
-        {
-            var paper = new VacancyQuestionPaper
-            {
-                PaperCode = $"QP-AUT-{DateTime.UtcNow:yyyy}-{sequence}",
-                Title = $"{roleName} ({profileName}) Assessment Paper",
-                PaperVersion = 1,
-                TotalQuestions = 10,
-                TotalMarks = 20,
-                DurationMinutes = 30,
-                PassingPercentage = passingCutoff,
-                Status = "Published",
-                PublishedAt = DateTime.UtcNow,
-            };
-
-            var questionsData = new[]
-            {
-                ("What is the primary advantage of component-based UI architecture?", "Single Choice", new[] { ("Reusability and maintainability", true), ("Direct database access", false), ("Elimination of CSS", false), ("Bypassing HTTP protocols", false) }),
-                ("Which of the following is an asynchronous operation in modern web applications?", "Single Choice", new[] { ("HTTP Fetch Request", true), ("Variable declaration", false), ("Integer addition", false), ("Array length check", false) }),
-                ("What does REST stand for in API design?", "Single Choice", new[] { ("Representational State Transfer", true), ("Realtime Execution Standard Target", false), ("Remote Enterprise Software Table", false), ("Relational Entity State Transaction", false) }),
-                ("Which data structure operates on a First-In-First-Out (FIFO) principle?", "Single Choice", new[] { ("Queue", true), ("Stack", false), ("Binary Search Tree", false), ("Heap", false) }),
-                ("What is the main purpose of an indexing mechanism in relational databases?", "Single Choice", new[] { ("Speed up data retrieval", true), ("Encrypt table storage", false), ("Enforce HTML escaping", false), ("Compress server memory", false) }),
-                ("In Git, which command creates and switches to a new branch simultaneously?", "Single Choice", new[] { ("git checkout -b <branch>", true), ("git merge --new", false), ("git push -u origin", false), ("git commit -m", false) }),
-                ("What does HTTP status code 401 indicate?", "Single Choice", new[] { ("Unauthorized / Authentication Required", true), ("Page Not Found", false), ("Internal Server Error", false), ("Redirect Permanently", false) }),
-                ("Which principle states that software entities should be open for extension, but closed for modification?", "Single Choice", new[] { ("Open-Closed Principle (OCP)", true), ("Single Responsibility Principle", false), ("Liskov Substitution Principle", false), ("Dependency Inversion Principle", false) }),
-                ("What is the purpose of CORS (Cross-Origin Resource Sharing)?", "Single Choice", new[] { ("Control resource access from different origins in browsers", true), ("Accelerate database transactions", false), ("Compile TypeScript to C#", false), ("Manage CSS grid layouts", false) }),
-                ("In SQL, which clause is used to filter records after aggregate functions (e.g. COUNT, SUM)?", "Single Choice", new[] { ("HAVING", true), ("WHERE", false), ("GROUP BY", false), ("ORDER BY", false) }),
-            };
-
-            int qNum = 1;
-            foreach (var item in questionsData)
-            {
-                var q = new VacancyQuestion
-                {
-                    QuestionNumber = qNum++,
-                    QuestionType = "SINGLE_CHOICE",
-                    QuestionText = item.Item1,
-                    Marks = 2,
-                    TimeAllowedMinutes = 3,
-                };
-                char optChar = 'A';
-                foreach (var opt in item.Item3)
-                {
-                    q.Options.Add(new VacancyQuestionOption
-                    {
-                        OptionLabel = optChar.ToString(),
-                        OptionText = opt.Item1,
-                        IsCorrect = opt.Item2,
-                    });
-                    optChar++;
-                }
-                paper.Questions.Add(q);
-            }
-
-            return paper;
         }
     }
 }

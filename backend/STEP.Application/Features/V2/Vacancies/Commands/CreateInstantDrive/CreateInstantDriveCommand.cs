@@ -5,11 +5,13 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
 {
     public record CreateInstantDriveCommand(
         int MasterRoleId,
-        int? RoleHiringProfileId,
-        int? DepartmentId,
-        int? HiringLocationId,
-        int? EmploymentTypeId,
-        int? TestLocationId,
+        int? RoleHiringProfileId = null,
+        int? BlueprintId = null,
+        string? DriveType = "Walk-in Drive",
+        int? DepartmentId = null,
+        int? HiringLocationId = null,
+        int? EmploymentTypeId = null,
+        int? TestLocationId = null,
         int TotalOpenings = 5,
         DateTime? WalkinDriveDate = null,
         TimeSpan? WalkinStartTime = null,

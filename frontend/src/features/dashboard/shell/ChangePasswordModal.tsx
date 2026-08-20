@@ -34,10 +34,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // PIN fields
+  // PIN fields (4-Digit Director PIN)
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [maskPin, setMaskPin] = useState(true);
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,9 +60,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     setError(null);
 
     if (isDirector) {
-      if (!currentPin) { setError('Please enter your current PIN.'); return; }
-      if (!newPin) { setError('Please enter a new PIN.'); return; }
-      if (newPin.length !== 6 || !/^\d{6}$/.test(newPin)) { setError('New PIN must be exactly 6 digits.'); return; }
+      if (!currentPin) { setError('Please enter your current 4-digit PIN.'); return; }
+      if (!newPin) { setError('Please enter a new 4-digit PIN.'); return; }
+      if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { setError('New PIN must be exactly 4 numeric digits.'); return; }
       if (newPin !== confirmPin) { setError('New PIN and confirm PIN do not match.'); return; }
     } else {
       if (!currentPassword) { setError('Please enter your current password.'); return; }
@@ -73,10 +74,10 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     try {
       if (isDirector) {
         await changePinApi({ currentPin, newPin }).unwrap();
-        toast.success('PIN updated successfully in SQL Server!');
+        toast.success('Director 4-digit PIN updated successfully!');
       } else {
         await changePasswordApi({ currentPassword, newPassword }).unwrap();
-        toast.success('Password updated successfully in SQL Server!');
+        toast.success('Password updated successfully!');
       }
       onClose();
     } catch (err: any) {
@@ -86,29 +87,29 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     }
   };
 
-  const title = isDirector ? 'Change Security PIN' : 'Change Password';
+  const title = isDirector ? 'Change Director PIN' : 'Change Password';
   const subtitle = isDirector
-    ? 'Update your 6-digit Director security PIN'
+    ? 'Update your 4-digit executive security PIN'
     : 'Update your account credentials securely';
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
+      <DialogContent className="max-w-md p-0 overflow-hidden shadow-2xl rounded-2xl border border-[var(--border-default)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-default)] bg-[var(--surface-2)]">
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isDirector ? 'bg-amber-100 text-amber-600' : 'bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)]'}`}>
-              <Icon name={isDirector ? 'shield' : 'lock'} size="sm" />
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border-default)] bg-[var(--surface-2,#f8fafc)]">
+          <div className="flex items-center gap-3.5">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isDirector ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'}`}>
+              <Icon name={isDirector ? 'shield' : 'lock'} size="md" />
             </div>
-            <DialogHeader className="mb-0 gap-0">
-              <DialogTitle className="text-base font-bold font-heading">{title}</DialogTitle>
-              <DialogDescription className="text-xs text-[var(--text-tertiary)]">{subtitle}</DialogDescription>
+            <DialogHeader className="mb-0 gap-0.5 text-left">
+              <DialogTitle className="text-base font-bold font-heading text-[var(--text-primary)]">{title}</DialogTitle>
+              <DialogDescription className="text-xs text-[var(--text-secondary)]">{subtitle}</DialogDescription>
             </DialogHeader>
           </div>
           <DialogClose asChild>
             <button
               type="button"
-              className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
             >
               <Icon name="x" size="sm" />
             </button>
@@ -116,36 +117,58 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {error && (
-            <div className="p-3 rounded-lg bg-[var(--status-danger-bg)] border border-[var(--status-danger-border,#feccae)] text-[var(--status-danger)] text-xs font-semibold flex items-center gap-2">
-              <Icon name="alert-triangle" size="xs" className="shrink-0" />
+            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs font-semibold flex items-center gap-2.5 animate-shake">
+              <Icon name="alert-triangle" size="xs" className="shrink-0 text-red-500" />
               <span>{error}</span>
             </div>
           )}
 
           {isDirector ? (
-            /* ── PIN Mode ── */
-            <>
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Current PIN</label>
-                <PinInput value={currentPin} onChange={setCurrentPin} masked />
+            /* ── 4-Digit PIN Mode ── */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Security Keypad Mode</span>
+                <button
+                  type="button"
+                  onClick={() => setMaskPin(!maskPin)}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Icon name={maskPin ? 'eye' : 'unlock'} size="xs" />
+                  <span>{maskPin ? 'Show Digits' : 'Mask Digits'}</span>
+                </button>
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">New PIN</label>
-                <PinInput value={newPin} onChange={setNewPin} masked />
+                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
+                  Current 4-Digit PIN
+                </label>
+                <PinInput length={4} value={currentPin} onChange={setCurrentPin} masked={maskPin} autoFocus />
               </div>
+
+              <div className="pt-2 border-t border-[var(--border-subtle)]">
+                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
+                  New 4-Digit PIN
+                </label>
+                <PinInput length={4} value={newPin} onChange={setNewPin} masked={maskPin} />
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Confirm New PIN</label>
-                <PinInput value={confirmPin} onChange={setConfirmPin} masked />
+                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
+                  Confirm New PIN
+                </label>
+                <PinInput length={4} value={confirmPin} onChange={setConfirmPin} masked={maskPin} />
               </div>
-              <p className="text-xs text-[var(--text-tertiary)]">
-                Your PIN must be exactly 6 numeric digits and is used for high-privilege approvals.
-              </p>
-            </>
+
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs">
+                <Icon name="info" size="xs" className="shrink-0 mt-0.5" />
+                <span>Your PIN must be exactly <strong>4 numeric digits</strong> (e.g. 1234) and is required for instant 1-click candidate review and offer rollouts.</span>
+              </div>
+            </div>
           ) : (
             /* ── Password Mode ── */
-            <>
+            <div className="space-y-3.5">
               <Input
                 label="Current Password"
                 type={showCurrent ? 'text' : 'password'}
@@ -155,7 +178,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                 sizeToken="lg"
                 rightSlot={
                   <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                    <Icon name="eye" size="xs" />
+                    <Icon name={showCurrent ? 'unlock' : 'lock'} size="xs" />
                   </button>
                 }
               />
@@ -169,7 +192,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                 sizeToken="lg"
                 rightSlot={
                   <button type="button" onClick={() => setShowNew(!showNew)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                    <Icon name="eye" size="xs" />
+                    <Icon name={showNew ? 'unlock' : 'lock'} size="xs" />
                   </button>
                 }
               />
@@ -183,15 +206,15 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                 sizeToken="lg"
                 rightSlot={
                   <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                    <Icon name="eye" size="xs" />
+                    <Icon name={showConfirm ? 'unlock' : 'lock'} size="xs" />
                   </button>
                 }
               />
-            </>
+            </div>
           )}
 
           {/* Action Buttons */}
-          <DialogFooter className="pt-3 mt-0 border-t border-[var(--border-default)]">
+          <DialogFooter className="pt-4 mt-2 border-t border-[var(--border-default)] flex items-center justify-end gap-2.5">
             <Button type="button" variant="ghost" size="md" onClick={onClose}>
               Cancel
             </Button>
@@ -200,9 +223,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
               variant="primary"
               size="md"
               loading={isSubmitting}
-              className={isDirector ? 'bg-amber-500 hover:bg-amber-600' : ''}
+              className={isDirector ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md shadow-amber-500/20 text-white font-semibold' : 'bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-md shadow-indigo-500/20 text-white font-semibold'}
             >
-              {isDirector ? 'Update PIN' : 'Update Password'}
+              {isDirector ? 'Update 4-Digit PIN' : 'Update Password'}
             </Button>
           </DialogFooter>
         </form>

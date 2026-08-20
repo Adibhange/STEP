@@ -2,13 +2,13 @@ import React, { useRef, useEffect } from 'react';
 import type { PinInputProps } from './pin-input.types';
 
 /**
- * 6-Digit Keypad PIN Input Primitive Component
+ * 4-Digit (or N-Digit) Keypad PIN Input Primitive Component
  * 
- * Auto-advancing digit input keypad supporting 6-digit paste, backspace navigation,
- * mask toggle, numeric keyboard support, and auto-completion trigger.
+ * Auto-advancing digit input keypad supporting fast pasting, backspace navigation,
+ * mask toggle, numeric keyboard support, micro-animations, and auto-completion trigger.
  */
 export const PinInput: React.FC<PinInputProps> = ({
-  length = 6,
+  length = 4,
   value,
   onChange,
   onComplete,
@@ -30,7 +30,6 @@ export const PinInput: React.FC<PinInputProps> = ({
   }, [autoFocus]);
 
   const handleDigitChange = (index: number, digitValue: string) => {
-    // Only accept numeric digits
     const cleaned = digitValue.replace(/\D/g, '');
     if (!cleaned && digitValue !== '') return;
 
@@ -80,35 +79,41 @@ export const PinInput: React.FC<PinInputProps> = ({
   };
 
   return (
-    <div className={`flex flex-col gap-xs items-center ${className}`}>
-      <div className="flex items-center gap-xs">
-        {digits.map((digit, index) => (
-          <input
-            key={index}
-            ref={(el) => {
-              inputRefs.current[index] = el;
-            }}
-            type={masked ? 'password' : 'text'}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={1}
-            value={digit}
-            disabled={disabled}
-            onChange={(e) => handleDigitChange(index, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(index, e)}
-            onPaste={handlePaste}
-            aria-label={`Digit ${index + 1} of ${length}`}
-            className={`w-[44px] h-[48px] text-center text-[length:var(--type-h2-size)] font-mono font-bold rounded-sm bg-[var(--surface-base)] text-[var(--text-primary)] border transition-all duration-fast focus-ring-step ${
-              error
-                ? 'border-[var(--status-danger)]'
-                : 'border-[var(--border-subtle)] focus:border-[var(--border-strong)]'
-            }`}
-          />
-        ))}
+    <div className={`flex flex-col gap-2 items-center ${className}`}>
+      <div className="flex items-center gap-3">
+        {digits.map((digit, index) => {
+          const isFilled = Boolean(digit);
+          return (
+            <input
+              key={index}
+              ref={(el) => {
+                inputRefs.current[index] = el;
+              }}
+              type={masked ? 'password' : 'text'}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={1}
+              value={digit}
+              disabled={disabled}
+              onChange={(e) => handleDigitChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              onPaste={handlePaste}
+              aria-label={`Digit ${index + 1} of ${length}`}
+              aria-invalid={Boolean(error)}
+              className={`w-[54px] h-[58px] text-center text-2xl font-mono font-bold rounded-xl transition-all duration-200 ease-out outline-none select-none ${
+                error
+                  ? 'border-2 border-red-500 bg-red-500/5 text-red-600 shadow-[0_0_12px_rgba(239,68,68,0.15)] animate-shake'
+                  : isFilled
+                  ? 'border-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 shadow-[0_2px_8px_rgba(99,102,241,0.12)] scale-[1.02]'
+                  : 'border border-[var(--border-default,#cbd5e1)] bg-[var(--surface-1,#ffffff)] text-[var(--text-primary,#0f172a)] hover:border-[var(--border-strong,#94a3b8)] focus:border-2 focus:border-indigo-600 focus:bg-white focus:shadow-[0_0_0_4px_rgba(99,102,241,0.15)] focus:scale-[1.04]'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}`}
+            />
+          );
+        })}
       </div>
 
       {error && (
-        <p role="alert" className="text-[length:var(--type-caption-size)] text-[var(--status-danger)] font-medium animate-shake">
+        <p role="alert" className="text-xs text-red-500 font-semibold animate-shake mt-1">
           {error}
         </p>
       )}

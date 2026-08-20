@@ -287,12 +287,8 @@ const applePopInfoSection: Variants = {
  * Perfectly aligned with the loaded card layout
  */
 export const CandidateProfileSkeleton: React.FC = () => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    transition={{ duration: 0.2 }}
-    className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[var(--canvas)] min-h-screen text-[13px] font-sans relative"
+  <div
+    className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[var(--canvas)] min-h-screen text-[13px] font-sans relative animate-in fade-in duration-150"
   >
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
       {/* Left Column Skeleton */}
@@ -383,7 +379,7 @@ export const CandidateProfileSkeleton: React.FC = () => (
         </div>
       </div>
     </div>
-  </motion.div>
+  </div>
 );
 
 export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({

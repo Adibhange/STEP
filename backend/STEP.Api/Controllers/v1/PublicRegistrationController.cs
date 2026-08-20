@@ -9,9 +9,11 @@ using STEP.Application.Features.QR.Queries.CheckQRRegistrationEligibility;
 namespace STEP.Api.Controllers.v1
 {
     /// <summary>
-    /// Entirely anonymous — this is what a candidate's phone hits after scanning a walk-in drive
-    /// QR code (frontend route would be something like /apply/{code}). No staff JWT involved.
+    /// Entirely anonymous public candidate application gateway for QR walk-ins.
     /// </summary>
+    [Route("api/v2/apply")]
+    [Route("api/v1/apply")]
+    [Route("api/apply")]
     public class PublicRegistrationController(ISender mediator) : BaseApiController
     {
         [HttpGet("{code}")]

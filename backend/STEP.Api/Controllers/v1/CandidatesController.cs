@@ -112,12 +112,29 @@ namespace STEP.Api.Controllers.v1
                 id, body.TestMode, body.ScheduledDate, body.StartTime, body.EndTime, body.Passcode));
             return Ok(ApiResponse<object>.Ok(candidate, "Test scheduled successfully"));
         }
+
+        [HttpPost("{id:int}/director-access-link")]
+        [Authorize(Policy = "Candidate.Approve")]
+        public async Task<IActionResult> GenerateDirectorAccessLink(int id, [FromBody] GenerateDirectorAccessLinkRequestBody? body)
+        {
+            var result = await mediator.Send(new STEP.Application.Features.V2.DirectorAccess.CreateDirectorAccessLinkCommand(id, body?.Regenerate ?? false));
+            return Ok(ApiResponse<object>.Ok(result, "Director access link generated successfully"));
+        }
+
+        [HttpGet("director-access/{token}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ValidateDirectorAccess(string token)
+        {
+            var result = await mediator.Send(new STEP.Application.Features.V2.DirectorAccess.GetDirectorAccessGatewayQuery(token));
+            return Ok(ApiResponse<object>.Ok(result, "Director access gateway validation completed"));
+        }
     }
 
     public record AssignPipelineFlowRequestBody(int VacancyPipelineFlowId);
     public record EvaluateStageRequestBody(int RoundNumber, bool Passed, string? Remarks);
     public record AssignEvaluatorRequestBody(int RoundNumber, int EvaluatorUserId);
     public record ScheduleTestRequestBody(string TestMode, string ScheduledDate, string StartTime, string EndTime, string? Passcode);
+    public record GenerateDirectorAccessLinkRequestBody(bool Regenerate);
     public record UpdateCandidateRequestBody(
         string FirstName, string LastName, string Email, string Phone, string? CurrentLocation,
         string? HighestQualification, decimal TotalExperienceYears, decimal CurrentCTC, decimal ExpectedCTC, int NoticePeriodDays);

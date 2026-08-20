@@ -12,8 +12,10 @@ namespace STEP.Persistence.Seed
             try
             {
                 var hash = BCrypt.Net.BCrypt.HashPassword("user@123");
-                var hrUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == "hr@sthapatya.com");
+                var pinHash = BCrypt.Net.BCrypt.HashPassword("1234"); // 4-digit Director PIN
 
+                // Ensure HR user
+                var hrUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == "hr@sthapatya.com");
                 if (hrUser == null)
                 {
                     db.Users.Add(new User
@@ -27,46 +29,53 @@ namespace STEP.Persistence.Seed
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow
                     });
-                    await db.SaveChangesAsync();
                 }
                 else
                 {
                     hrUser.PasswordHash = hash;
                     hrUser.IsActive = true;
                     hrUser.IsDeleted = false;
-                    await db.SaveChangesAsync();
                 }
 
-                // Ensure Director (RoleId = 2) has a valid PIN hash for PIN "123456"
-                var pinHash = BCrypt.Net.BCrypt.HashPassword("123456");
-                var directorUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.RoleId == 2 || u.Email == "director@sthapatya.com");
-
-                if (directorUser == null)
+                // Ensure Admin user
+                var adminUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == "admin@sthapatya.in");
+                if (adminUser == null)
                 {
                     db.Users.Add(new User
                     {
-                        EmployeeCode = "EMP-0002",
-                        FirstName = "Director",
-                        LastName = "Executive",
-                        Email = "director@sthapatya.com",
+                        EmployeeCode = "EMP-0099",
+                        FirstName = "System",
+                        LastName = "Administrator",
+                        Email = "admin@sthapatya.in",
                         PasswordHash = hash,
-                        PinHash = pinHash,
-                        RoleId = 2, // Director Role
+                        RoleId = 1, // Administrator Role
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow
                     });
-                    await db.SaveChangesAsync();
                 }
-                else if (string.IsNullOrEmpty(directorUser.PinHash))
+                else
                 {
-                    directorUser.PinHash = pinHash;
-                    await db.SaveChangesAsync();
+                    adminUser.PasswordHash = hash;
+                    adminUser.IsActive = true;
+                    adminUser.IsDeleted = false;
                 }
+
+                // Ensure Director users have 4-digit PIN "1234"
+                var directors = await db.Users.IgnoreQueryFilters().Where(u => u.RoleId == 2).ToListAsync();
+                foreach (var dir in directors)
+                {
+                    dir.PinHash = pinHash;
+                    dir.PasswordHash = hash;
+                    dir.IsActive = true;
+                    dir.IsDeleted = false;
+                }
+
+                await db.SaveChangesAsync();
 
                 var syncPermissionsSql = @"
                     INSERT INTO master.RolePermissions (RoleId, PermissionId, CreatedAt, IsDeleted)
                     SELECT r.RoleId, p.PermissionId, GETUTCDATE(), 0
-                    FROM (VALUES (2), (3)) AS r(RoleId)
+                    FROM (VALUES (1), (2), (3)) AS r(RoleId)
                     CROSS JOIN (VALUES (1), (2), (3), (4), (5), (6), (7), (8)) AS p(PermissionId)
                     WHERE NOT EXISTS (
                         SELECT 1 FROM master.RolePermissions rp

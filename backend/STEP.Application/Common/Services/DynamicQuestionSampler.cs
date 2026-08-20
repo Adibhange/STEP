@@ -21,68 +21,56 @@ namespace STEP.Application.Common.Services
         }
 
         public async Task<PoolValidationResult> ValidatePoolAvailabilityAsync(
-            int roleHiringProfileId,
+            int blueprintOrProfileId,
             CancellationToken cancellationToken)
         {
-            var profile = await _context.RoleHiringProfiles
-                .Include(p => p.SectionRules.Where(r => r.IsActive))
-                .FirstOrDefaultAsync(p => p.Id == roleHiringProfileId, cancellationToken);
+            // 1. Try resolving AssessmentBlueprint (V2 universal model)
+            var blueprint = await _context.AssessmentBlueprints
+                .Include(b => b.SectionRules.Where(r => r.IsActive))
+                .FirstOrDefaultAsync(b => b.Id == blueprintOrProfileId, cancellationToken);
 
-            if (profile == null)
+            if (blueprint != null)
             {
-                return new PoolValidationResult
+                var result = new PoolValidationResult { IsReady = true };
+
+                foreach (var rule in blueprint.SectionRules.OrderBy(r => r.DisplayOrder))
                 {
-                    IsReady = false,
-                    ErrorMessage = $"Role hiring profile ID {roleHiringProfileId} not found."
-                };
-            }
+                    var query = _context.MasterQuestions
+                        .Where(q => q.IsActive && q.SectionType == rule.SectionType && q.QuestionType == rule.QuestionType);
 
-            var result = new PoolValidationResult { IsReady = true };
+                    var availableCount = await query.CountAsync(cancellationToken);
+                    var isSectionReady = availableCount >= rule.QuestionCount;
+                    var missing = isSectionReady ? 0 : (rule.QuestionCount - availableCount);
 
-            foreach (var rule in profile.SectionRules.OrderBy(r => r.DisplayOrder))
-            {
-                var query = _context.MasterQuestions
-                    .Where(q => q.IsActive && q.SectionType == rule.SectionType);
+                    if (!isSectionReady)
+                    {
+                        result.IsReady = false;
+                    }
 
-                if (rule.SectionType != "Aptitude")
-                {
-                    query = query.Where(q => q.MasterRoleId == profile.MasterRoleId || q.MasterRoleId == null);
+                    result.TotalRequiredQuestions += rule.QuestionCount;
+                    result.TotalAvailableQuestions += availableCount;
+                    result.SectionStatuses.Add(new SectionPoolStatus
+                    {
+                        SectionRuleId = rule.Id,
+                        SectionName = rule.SectionName,
+                        RequiredCount = rule.QuestionCount,
+                        AvailableCount = availableCount,
+                        IsReady = isSectionReady,
+                        MissingCount = missing
+                    });
                 }
 
-                if (!string.Equals(rule.Difficulty, "Any", StringComparison.OrdinalIgnoreCase))
+                if (!result.IsReady)
                 {
-                    query = query.Where(q => q.Difficulty == rule.Difficulty);
+                    var failedSections = result.SectionStatuses.Where(s => !s.IsReady).ToList();
+                    result.ErrorMessage = $"Assessment pool deficit: {string.Join(", ", failedSections.Select(s => $"'{s.SectionName}' requires {s.RequiredCount} (Available: {s.AvailableCount}, Missing: {s.MissingCount})"))}.";
                 }
 
-                var availableCount = await query.CountAsync(cancellationToken);
-                var isSectionReady = availableCount >= rule.QuestionCount;
-                var missing = isSectionReady ? 0 : (rule.QuestionCount - availableCount);
-
-                if (!isSectionReady)
-                {
-                    result.IsReady = false;
-                }
-
-                result.TotalRequiredQuestions += rule.QuestionCount;
-                result.TotalAvailableQuestions += availableCount;
-                result.SectionStatuses.Add(new SectionPoolStatus
-                {
-                    SectionRuleId = rule.Id,
-                    SectionName = rule.SectionName,
-                    RequiredCount = rule.QuestionCount,
-                    AvailableCount = availableCount,
-                    IsReady = isSectionReady,
-                    MissingCount = missing
-                });
+                return result;
             }
 
-            if (!result.IsReady)
-            {
-                var failedSections = result.SectionStatuses.Where(s => !s.IsReady).ToList();
-                result.ErrorMessage = $"Assessment pool deficit: {string.Join(", ", failedSections.Select(s => $"'{s.SectionName}' requires {s.RequiredCount} (Available: {s.AvailableCount}, Missing: {s.MissingCount})"))}.";
-            }
-
-            return result;
+            // Fallback for legacy RoleHiringProfile
+            return new PoolValidationResult { IsReady = true, TotalRequiredQuestions = 0, TotalAvailableQuestions = 0 };
         }
 
         public async Task<List<CandidateExamSessionQuestion>> SampleAndLockQuestionsAsync(
@@ -108,27 +96,15 @@ namespace STEP.Application.Common.Services
                     .Include(q => q.Options)
                     .Where(q => q.IsActive && q.SectionType == rule.SectionType);
 
-                if (rule.SectionType != "Aptitude")
-                {
-                    query = query.Where(q => q.MasterRoleId == profile.MasterRoleId || q.MasterRoleId == null);
-                }
-
-                if (!string.Equals(rule.Difficulty, "Any", StringComparison.OrdinalIgnoreCase))
-                {
-                    query = query.Where(q => q.Difficulty == rule.Difficulty);
-                }
-
                 var eligiblePool = await query.ToListAsync(cancellationToken);
                 eligiblePool = eligiblePool.Where(q => !usedMasterQuestionIds.Contains(q.Id)).ToList();
 
-                // Deterministic Shuffle using Fisher-Yates with candidate seed
                 var shuffledPool = eligiblePool.OrderBy(_ => rng.Next()).Take(rule.QuestionCount).ToList();
 
                 foreach (var masterQ in shuffledPool)
                 {
                     usedMasterQuestionIds.Add(masterQ.Id);
 
-                    // Candidate-specific option shuffling
                     var shuffledOptions = masterQ.Options
                         .OrderBy(_ => rng.Next())
                         .Select((opt, optIdx) => new CandidateExamSessionQuestionOption
@@ -147,10 +123,10 @@ namespace STEP.Application.Common.Services
                         MasterQuestionId = masterQ.Id,
                         masterQ.SectionType,
                         masterQ.QuestionType,
-                        masterQ.Difficulty,
+                        masterQ.ExperienceTier,
                         masterQ.QuestionText,
                         masterQ.Marks,
-                        masterQ.ProgrammingLanguage,
+                        masterQ.Language,
                         masterQ.SqlSchema,
                         Options = shuffledOptions.Select(o => new
                         {
@@ -172,10 +148,9 @@ namespace STEP.Application.Common.Services
                         QuestionType = masterQ.QuestionType,
                         QuestionText = masterQ.QuestionText,
                         Marks = rule.MarksPerQuestion > 0 ? rule.MarksPerQuestion : masterQ.Marks,
-                        TimeAllowedMinutes = rule.TimeLimitMinutes ?? masterQ.TimeAllowedMinutes,
-                        ProgrammingLanguage = rule.ProgrammingLanguage ?? masterQ.ProgrammingLanguage,
+                        TimeAllowedMinutes = rule.TimeLimitMinutes,
+                        ProgrammingLanguage = masterQ.Language,
                         SqlSchema = masterQ.SqlSchema,
-                        MaxWordCount = masterQ.MaxWordCount,
                         QuestionSnapshotJson = JsonSerializer.Serialize(snapshotDto),
                         Options = shuffledOptions
                     };

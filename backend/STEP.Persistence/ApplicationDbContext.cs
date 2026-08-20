@@ -17,22 +17,8 @@ namespace STEP.Persistence;
 
 /// <summary>
 /// Production Entity Framework Core 10 DbContext for STEP Enterprise ATS.
-/// Phase 1: Identity/RBAC (Users, Roles, Permissions, RolePermissions, UserRefreshTokens),
-/// Master Data taxonomies, and AuditLogs.
-/// Phase 2: Vacancy Engine, Pipeline Flow split, Assessment Sections, decoupled Round
-/// Assessments, and Question Paper publishing/locking.
-/// Phase 3: Candidate Journey, Pipeline Progression, Document Repository.
-/// Phase 4: Atomic Exam Snapshot, Evaluation, Result Publishing.
-/// Phase 5: Interview Scheduling, Outbox Transactional Queue, Director PIN Offer Approvals.
-/// Phase 6: QR Code Walk-in Drive, Executive Funnel Analytics.
-/// Tables live under per-domain schemas — "staff" (Users/UserRefreshTokens), "master"
-/// (Roles/Permissions/RolePermissions + the 5 master-data taxonomies), "audit" (AuditLogs),
-/// "vacancy" (Vacancy engine/pipeline flow), "question" (question papers/questions/options),
-/// "candidate" (candidates/documents/pipeline progress), "exam" (exam sessions/snapshots/answers),
-/// "interview" (interviews/scorecards/offers), "notification" (outbox), "qr" (QR codes/scan
-/// analytics) — so this context never touches any pre-existing table in the shared
-/// InterviewTestPortal database (its separate ~34-table "dbo" schema is an entirely different
-/// live system).
+/// All V2 entities live under isolated schemas "examv2" and "staffv2", ensuring
+/// zero collision or breaking changes with existing production tables.
 /// </summary>
 public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
@@ -41,14 +27,15 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
     }
 
-    // Identity / RBAC
+    // Identity / RBAC (staff, master, staffv2 schemas)
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();
+    public DbSet<DirectorAccessLink> DirectorAccessLinks => Set<DirectorAccessLink>();
 
-    // Master Data
+    // Master Data (master schema)
     public DbSet<MasterRole> MasterRoles => Set<MasterRole>();
     public DbSet<MasterDepartment> MasterDepartments => Set<MasterDepartment>();
     public DbSet<MasterHiringLocation> MasterHiringLocations => Set<MasterHiringLocation>();
@@ -56,14 +43,19 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<MasterEmploymentType> MasterEmploymentTypes => Set<MasterEmploymentType>();
     public DbSet<MasterExperienceLevel> MasterExperienceLevels => Set<MasterExperienceLevel>();
     public DbSet<RoleHiringProfile> RoleHiringProfiles => Set<RoleHiringProfile>();
-    public DbSet<MasterQuestion> MasterQuestions => Set<MasterQuestion>();
-    public DbSet<MasterQuestionOption> MasterQuestionOptions => Set<MasterQuestionOption>();
     public DbSet<RoleAssessmentSectionRule> RoleAssessmentSectionRules => Set<RoleAssessmentSectionRule>();
 
-    // Audit
-    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    // V2 Central Blueprints & Question Bank (examv2 schema)
+    public DbSet<AssessmentBlueprint> AssessmentBlueprints => Set<AssessmentBlueprint>();
+    public DbSet<AssessmentBlueprintSectionRule> AssessmentBlueprintSectionRules => Set<AssessmentBlueprintSectionRule>();
+    public DbSet<MasterQuestion> MasterQuestions => Set<MasterQuestion>();
+    public DbSet<MasterQuestionOption> MasterQuestionOptions => Set<MasterQuestionOption>();
 
-    // Vacancy Engine (Phase 2)
+    // Audit & Outbox
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    // Vacancy Engine (vacancy schema)
     public DbSet<Vacancy> Vacancies => Set<Vacancy>();
     public DbSet<VacancyTestLocation> VacancyTestLocations => Set<VacancyTestLocation>();
     public DbSet<VacancyPipelineFlow> VacancyPipelineFlows => Set<VacancyPipelineFlow>();
@@ -74,27 +66,32 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<VacancyQuestion> VacancyQuestions => Set<VacancyQuestion>();
     public DbSet<VacancyQuestionOption> VacancyQuestionOptions => Set<VacancyQuestionOption>();
 
-    // Candidate Journey (Phase 3)
+    // Candidate Journey (candidate schema)
     public DbSet<CandidateEntity> Candidates => Set<CandidateEntity>();
     public DbSet<CandidateDocument> CandidateDocuments => Set<CandidateDocument>();
     public DbSet<CandidatePipelineProgress> CandidatePipelineProgresses => Set<CandidatePipelineProgress>();
 
-    // Exam Snapshot Engine (Phase 4)
+    // V1 Legacy Exam Snapshot Engine (exam schema)
     public DbSet<CandidateExamSession> CandidateExamSessions => Set<CandidateExamSession>();
     public DbSet<CandidateExamSessionQuestion> CandidateExamSessionQuestions => Set<CandidateExamSessionQuestion>();
     public DbSet<CandidateExamSessionQuestionOption> CandidateExamSessionQuestionOptions => Set<CandidateExamSessionQuestionOption>();
     public DbSet<CandidateExamAnswer> CandidateExamAnswers => Set<CandidateExamAnswer>();
     public DbSet<CandidateExamAnswerOption> CandidateExamAnswerOptions => Set<CandidateExamAnswerOption>();
 
-    // Interviews & Offers (Phase 5)
+    // V2 Isolated Dynamic Exam Engine (examv2 schema)
+    public DbSet<CandidateExamSessionV2> CandidateExamSessionsV2 => Set<CandidateExamSessionV2>();
+    public DbSet<CandidateExamSessionQuestionV2> CandidateExamSessionQuestionsV2 => Set<CandidateExamSessionQuestionV2>();
+    public DbSet<CandidateExamSessionQuestionOptionV2> CandidateExamSessionQuestionOptionsV2 => Set<CandidateExamSessionQuestionOptionV2>();
+    public DbSet<CandidateExamAnswerV2> CandidateExamAnswersV2 => Set<CandidateExamAnswerV2>();
+    public DbSet<CandidateExamAnswerOptionV2> CandidateExamAnswerOptionsV2 => Set<CandidateExamAnswerOptionV2>();
+    public DbSet<ExamProctoringLog> ExamProctoringLogs => Set<ExamProctoringLog>();
+
+    // Interviews & Offers (interview schema)
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<InterviewRoundDetail> InterviewRoundDetails => Set<InterviewRoundDetail>();
     public DbSet<OfferLetter> OfferLetters => Set<OfferLetter>();
 
-    // Outbox (Phase 5)
-    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-
-    // QR Walk-in & Analytics (Phase 6)
+    // QR Walk-in & Analytics (qr schema)
     public DbSet<QRCode> QRCodes => Set<QRCode>();
     public DbSet<QRScanAnalytic> QRScanAnalytics => Set<QRScanAnalytic>();
 

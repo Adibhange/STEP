@@ -17,8 +17,7 @@ namespace STEP.Persistence.Configurations
             builder.Property(e => e.Status).HasMaxLength(30).IsRequired().HasDefaultValue("Draft");
             builder.Property(e => e.WorkMode).HasMaxLength(30).IsRequired();
             builder.Property(e => e.MinExperienceYears).HasColumnType("decimal(4,1)");
-            builder.Property(e => e.MaxExperienceYears).HasColumnType("decimal(4,1)");
-            builder.Property(e => e.JobDescription).HasColumnType("nvarchar(max)");
+            builder.Property(e => e.PassingPercentageOverride).HasColumnType("decimal(5,2)");
             builder.Property(e => e.RowVersion).IsRowVersion();
             builder.HasIndex(e => e.VacancyCode).IsUnique();
 
@@ -27,7 +26,7 @@ namespace STEP.Persistence.Configurations
             builder.HasOne(e => e.HiringLocation).WithMany().HasForeignKey(e => e.HiringLocationId).OnDelete(DeleteBehavior.Restrict);
             builder.HasOne(e => e.EmploymentType).WithMany().HasForeignKey(e => e.EmploymentTypeId).OnDelete(DeleteBehavior.Restrict);
             builder.HasOne(e => e.AssignedRecruiter).WithMany().HasForeignKey(e => e.AssignedRecruiterId).OnDelete(DeleteBehavior.Restrict);
-            builder.HasOne(e => e.HiringManager).WithMany().HasForeignKey(e => e.HiringManagerId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.AssessmentBlueprint).WithMany().HasForeignKey(e => e.AssessmentBlueprintId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
 
             builder.HasQueryFilter(e => !e.IsDeleted);
         }

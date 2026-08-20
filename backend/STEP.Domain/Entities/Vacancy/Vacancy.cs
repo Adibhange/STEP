@@ -51,6 +51,10 @@ namespace STEP.Domain.Entities.Vacancy
         public int? HiringManagerId { get; set; }
         public User? HiringManager { get; set; }
 
+        public int? AssessmentBlueprintId { get; set; }
+        public Exam.AssessmentBlueprint? AssessmentBlueprint { get; set; }
+        public decimal? PassingPercentageOverride { get; set; }
+
         public ICollection<VacancyTestLocation> TestLocations { get; set; } = new List<VacancyTestLocation>();
         public ICollection<VacancyPipelineFlow> PipelineFlows { get; set; } = new List<VacancyPipelineFlow>();
         public ICollection<VacancyAssessmentSection> AssessmentSections { get; set; } = new List<VacancyAssessmentSection>();

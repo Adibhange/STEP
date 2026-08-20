@@ -113,7 +113,10 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
 
 export const ConfigurationPanel: React.FC = () => {
   const [activeCategoryKey, setActiveCategoryKey] = useState<string>('roles');
-  const { data: masterResponse, isLoading, isError } = useGetMasterDataByCategoryQuery(activeCategoryKey);
+  const shouldSkipMasterQuery = activeCategoryKey === 'hiringprofiles' || activeCategoryKey === 'questionbank';
+  const { data: masterResponse, isLoading, isError } = useGetMasterDataByCategoryQuery(activeCategoryKey, {
+    skip: shouldSkipMasterQuery,
+  });
   const [createMasterDataApi] = useCreateMasterDataMutation();
   const [updateMasterDataApi] = useUpdateMasterDataMutation();
   const [toggleStatusApi] = useToggleMasterDataStatusMutation();
@@ -122,6 +125,7 @@ export const ConfigurationPanel: React.FC = () => {
   const activeCategory = CONFIG_CATEGORIES.find((c) => c.key === activeCategoryKey) || CONFIG_CATEGORIES[0];
 
   const fetchedRecords: MasterRecord[] = useMemo(() => {
+    if (shouldSkipMasterQuery) return [];
     return (masterResponse?.data || []).map((m: any) => {
       const recStatus = (m.status || (m.isActive === false ? 'Inactive' : 'Active')) as 'Active' | 'Inactive';
       return {
@@ -136,7 +140,7 @@ export const ConfigurationPanel: React.FC = () => {
         updatedAt: m.updatedAt || new Date().toISOString().split('T')[0],
       };
     });
-  }, [masterResponse, activeCategoryKey]);
+  }, [masterResponse, activeCategoryKey, shouldSkipMasterQuery]);
 
   const [records, setRecords] = useState<MasterRecord[]>([]);
 
@@ -295,13 +299,13 @@ export const ConfigurationPanel: React.FC = () => {
         })}
       </div>
 
-      {isLoading && (
+      {!shouldSkipMasterQuery && isLoading && (
         <div className="p-8 text-center text-xs text-[var(--text-tertiary)] font-mono animate-pulse">
           Loading master records for {activeCategory.title}...
         </div>
       )}
 
-      {isError && (
+      {!shouldSkipMasterQuery && isError && (
         <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] text-xs font-semibold">
           Failed to load master records from backend database.
         </div>

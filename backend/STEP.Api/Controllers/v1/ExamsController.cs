@@ -11,13 +11,14 @@ using STEP.Application.Features.Exams.Commands.StartExamSession;
 using STEP.Application.Features.Exams.Commands.SubmitExam;
 using STEP.Application.Features.Exams.Queries.GetExamEvaluationView;
 using STEP.Application.Features.Exams.Queries.ResumeExamSession;
+using STEP.Application.Features.V2.Exams.Commands.GenerateTempExamPass;
+using STEP.Application.Features.V2.Exams.Commands.PublishAssessmentResultV2;
+using STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch;
 
 namespace STEP.Api.Controllers.v1
 {
     /// <summary>
-    /// Candidate-facing endpoints (start/resume/answer/submit) are intentionally anonymous —
-    /// candidates authenticate with CandidateCode + Passcode, not a staff JWT. Evaluation/publish
-    /// endpoints are staff-only.
+    /// Unified Exam & Assessment Controller mapped to /api/v2/exams, /api/v1/exams, and /api/exams.
     /// </summary>
     public class ExamsController(ISender mediator) : BaseApiController
     {
@@ -43,6 +44,13 @@ namespace STEP.Api.Controllers.v1
         {
             await mediator.Send(command);
             return Ok(ApiResponse<object>.Ok(new { }, "Answer saved"));
+        }
+
+        [HttpPost("batch-answers")]
+        public async Task<IActionResult> SaveAnswerBatch([FromBody] SaveExamAnswerBatchCommand command)
+        {
+            var result = await mediator.Send(command);
+            return Ok(ApiResponse<object>.Ok(result, "Offline answers synced and saved successfully"));
         }
 
         [HttpPost("submit")]
@@ -84,6 +92,23 @@ namespace STEP.Api.Controllers.v1
             var result = await mediator.Send(new PublishAssessmentResultCommand(sessionId, body.Remarks, publishedBy));
             return Ok(ApiResponse<object>.Ok(result, "Assessment result published and locked"));
         }
+
+        [HttpPost("temp-pass")]
+        [Authorize(Policy = "Candidate.Manage")]
+        public async Task<IActionResult> GenerateTempPass([FromBody] GenerateTempExamPassCommand command)
+        {
+            var pass = await mediator.Send(command);
+            return Ok(ApiResponse<object>.Ok(pass, "Temporary exam pass generated successfully"));
+        }
+
+        [HttpPost("{sessionId:int}/auto-grade-publish")]
+        [Authorize(Policy = "Exam.Manage")]
+        public async Task<IActionResult> AutoGradeAndPublish(int sessionId, [FromBody] AutoGradePublishRequestBody? body)
+        {
+            var evaluatorId = CurrentUserId;
+            var result = await mediator.Send(new PublishAssessmentResultV2Command(sessionId, body?.Remarks, evaluatorId));
+            return Ok(ApiResponse<object>.Ok(result, "Assessment auto-evaluated and published"));
+        }
     }
 
     public record StartExamSessionRequestBody(string CandidateCode, string Passcode, string? TestSource);
@@ -91,4 +116,5 @@ namespace STEP.Api.Controllers.v1
     public record ReportExamViolationRequestBody(string SessionToken, string ViolationType);
     public record EvaluateAnswerRequestBody(int CandidateExamAnswerId, decimal MarksObtained, string? EvaluatorRemarks);
     public record PublishRequestBody(string? Remarks);
+    public record AutoGradePublishRequestBody(string? Remarks);
 }

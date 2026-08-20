@@ -3,7 +3,7 @@ import { mockDbService } from '@/mock-data';
 import type { ApiEnvelope, AuthResultData } from './types';
 
 export const getApiBaseUrl = (): string => {
-  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5125/api/v2';
   return envUrl.replace(/\/+$/, '');
 };
 
@@ -12,7 +12,7 @@ export const isMockDataEnabled = (): boolean => {
     const override = localStorage.getItem('step_use_mock_data');
     if (override !== null) return override === 'true';
   }
-  return process.env.NEXT_PUBLIC_USE_MOCK_DATA !== 'false';
+  return process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 };
 
 const rawBaseQuery = fetchBaseQuery({
@@ -27,29 +27,23 @@ const rawBaseQuery = fetchBaseQuery({
 });
 
 const executeRawQuery = (args: string | FetchArgs, api: any, extraOptions: any) => {
+  const base = getApiBaseUrl(); // e.g. http://localhost:5125/api/v2
+  
   if (typeof args === 'string') {
-    if (args.startsWith('/v2/')) {
-      const baseUrl = getApiBaseUrl().replace(/\/api\/v1$/, '/api');
-      return fetchBaseQuery({
-        baseUrl,
-        prepareHeaders: (h) => {
-          const token = typeof window !== 'undefined' ? localStorage.getItem('step_token') : null;
-          if (token) h.set('authorization', `Bearer ${token}`);
-          return h;
-        },
-      })(args, api, extraOptions);
+    // If route already starts with /v2/ and baseUrl ends with /api/v2, strip redundant /v2 prefix
+    let cleanUrl = args;
+    if (cleanUrl.startsWith('/v2/') && base.endsWith('/v2')) {
+      cleanUrl = cleanUrl.replace(/^\/v2/, '');
     }
-  } else if (typeof args === 'object' && args.url && args.url.startsWith('/v2/')) {
-    const baseUrl = getApiBaseUrl().replace(/\/api\/v1$/, '/api');
-    return fetchBaseQuery({
-      baseUrl,
-      prepareHeaders: (h) => {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('step_token') : null;
-        if (token) h.set('authorization', `Bearer ${token}`);
-        return h;
-      },
-    })(args, api, extraOptions);
+    return rawBaseQuery(cleanUrl, api, extraOptions);
+  } else if (typeof args === 'object' && args.url) {
+    let cleanUrl = args.url;
+    if (cleanUrl.startsWith('/v2/') && base.endsWith('/v2')) {
+      cleanUrl = cleanUrl.replace(/^\/v2/, '');
+    }
+    return rawBaseQuery({ ...args, url: cleanUrl }, api, extraOptions);
   }
+  
   return rawBaseQuery(args, api, extraOptions);
 };
 
@@ -58,7 +52,7 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, Fetch
   api,
   extraOptions
 ) => {
-  // If Mock DB is enabled, dispatch directly to local mock DB
+  // If Mock DB is explicitly forced via env or localStorage override
   if (isMockDataEnabled()) {
     const reqObj = typeof args === 'string' ? { url: args } : args;
     const mockRes = await mockDbService.handleRequest(reqObj);
@@ -70,9 +64,9 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, Fetch
 
   let result = await executeRawQuery(args, api, extraOptions);
 
-  // If real backend is unreachable (network error or timeout), gracefully fallback to Mock DB
+  // If real backend is unreachable (network error or timeout), fallback to Mock DB and log warning
   if (result.error && (result.error.status === 'FETCH_ERROR' || result.error.status === 'TIMEOUT_ERROR')) {
-    console.warn('[STEP API] Backend unreachable, falling back to Local Mock Database.');
+    console.warn('[STEP API] Backend unreachable at ' + getApiBaseUrl() + ', falling back to Mock Database for offline development.');
     const reqObj = typeof args === 'string' ? { url: args } : args;
     const mockRes = await mockDbService.handleRequest(reqObj);
     if (mockRes.error) {
@@ -109,7 +103,7 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, Fetch
           localStorage.setItem('step_user_id', newData.user.id ? String(newData.user.id) : '');
         }
         // Retry initial request with new token
-        result = await rawBaseQuery(args, api, extraOptions);
+        result = await executeRawQuery(args, api, extraOptions);
       } else {
         localStorage.removeItem('step_token');
         localStorage.removeItem('step_refresh_token');

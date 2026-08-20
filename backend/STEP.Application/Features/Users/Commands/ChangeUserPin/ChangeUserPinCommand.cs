@@ -25,7 +25,12 @@ namespace STEP.Application.Features.Users.Commands.ChangeUserPin
 
             if (!string.IsNullOrEmpty(user.PinHash) && !hasher.Verify(request.CurrentPin, user.PinHash))
             {
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CurrentPin", "Incorrect current 6-digit PIN.")]);
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CurrentPin", "Incorrect current 4-digit PIN.")]);
+            }
+
+            if (string.IsNullOrWhiteSpace(request.NewPin) || request.NewPin.Length != 4)
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("NewPin", "New PIN must be exactly 4 numeric digits.")]);
             }
 
             user.PinHash = hasher.Hash(request.NewPin);

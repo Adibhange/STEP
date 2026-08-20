@@ -88,26 +88,26 @@ namespace STEP.Persistence.Seed
             // Central Question Bank Seed Items
             modelBuilder.Entity<MasterQuestion>().HasData(
                 // Aptitude (General)
-                QuestionRow(1, null, "Aptitude", "SINGLE_CHOICE", "Easy", "Fresher", "Aptitude,Logical", "If a car travels 120 km in 2 hours, what is its average speed in m/s?", 1.0m),
-                QuestionRow(2, null, "Aptitude", "SINGLE_CHOICE", "Easy", "Fresher", "Aptitude,Logical", "Find the next number in the series: 3, 6, 12, 24, 48, ?", 1.0m),
-                QuestionRow(3, null, "Aptitude", "SINGLE_CHOICE", "Easy", "Fresher", "Aptitude,Logical", "A train 150m long passes a pole in 15 seconds. What is the speed of the train in km/h?", 1.0m),
-                QuestionRow(4, null, "Aptitude", "SINGLE_CHOICE", "Easy", "Fresher", "Aptitude,Math", "What is 15% of 240 plus 25% of 160?", 1.0m),
-                QuestionRow(5, null, "Aptitude", "SINGLE_CHOICE", "Easy", "Fresher", "Aptitude,Logical", "Pointing to a photograph, a man says: 'He is the son of the only son of my grandfather.' How is he related?", 1.0m),
+                QuestionRow(1, "QB-APT-01", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "If a car travels 120 km in 2 hours, what is its average speed in m/s?", 1.0m),
+                QuestionRow(2, "QB-APT-02", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "Find the next number in the series: 3, 6, 12, 24, 48, ?", 1.0m),
+                QuestionRow(3, "QB-APT-03", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "A train 150m long passes a pole in 15 seconds. What is the speed of the train in km/h?", 1.0m),
+                QuestionRow(4, "QB-APT-04", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "What is 15% of 240 plus 25% of 160?", 1.0m),
+                QuestionRow(5, "QB-APT-05", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "Pointing to a photograph, a man says: 'He is the son of the only son of my grandfather.' How is he related?", 1.0m),
 
-                // .NET / C# MCQs (Role 1)
-                QuestionRow(6, 1, "TechnicalMCQ", "SINGLE_CHOICE", "Medium", "Fresher", "CSharp,DotNet", "What is the primary difference between a 'class' and a 'struct' in C#?", 1.0m),
-                QuestionRow(7, 1, "TechnicalMCQ", "SINGLE_CHOICE", "Medium", "Fresher", "CSharp,DotNet", "Which keyword in C# is used to ensure unmanaged resources are deterministically disposed?", 1.0m),
-                QuestionRow(8, 1, "TechnicalMCQ", "SINGLE_CHOICE", "Medium", "Fresher", "CSharp,DotNet", "What is the purpose of the 'async' and 'await' keywords in modern .NET?", 1.0m),
-                QuestionRow(9, 1, "TechnicalMCQ", "SINGLE_CHOICE", "Medium", "Fresher", "CSharp,DotNet", "In ASP.NET Core Dependency Injection, which lifetime creates an instance per HTTP request?", 1.0m),
-                QuestionRow(10, 1, "TechnicalMCQ", "SINGLE_CHOICE", "Medium", "Fresher", "CSharp,DotNet", "Which interface in C# allows an object to be enumerated using a foreach loop?", 1.0m),
+                // .NET / C# MCQs
+                QuestionRow(6, "QB-DOT-01", "C# (.NET)", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "What is the primary difference between a 'class' and a 'struct' in C#?", 1.0m),
+                QuestionRow(7, "QB-DOT-02", "C# (.NET)", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "Which keyword in C# is used to ensure unmanaged resources are deterministically disposed?", 1.0m),
+                QuestionRow(8, "QB-DOT-03", "C# (.NET)", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "What is the purpose of the 'async' and 'await' keywords in modern .NET?", 1.0m),
+                QuestionRow(9, "QB-DOT-04", "C# (.NET)", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "In ASP.NET Core Dependency Injection, which lifetime creates an instance per HTTP request?", 1.0m),
+                QuestionRow(10, "QB-DOT-05", "C# (.NET)", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "Which interface in C# allows an object to be enumerated using a foreach loop?", 1.0m),
 
-                // SQL Queries (Role 1 / Role 2)
-                QuestionRow(11, 1, "SQLQuery", "SQL", "Medium", "Fresher", "SQL,Joins", "Write an SQL query to find the 2nd highest salary from the Employee table.", 5.0m, "sql", "CREATE TABLE Employee (Id INT PRIMARY KEY, Name NVARCHAR(50), Salary DECIMAL(18,2));"),
-                QuestionRow(12, 1, "SQLQuery", "SQL", "Medium", "Fresher", "SQL,Joins", "Write an SQL query to retrieve Department names along with the count of active employees.", 5.0m, "sql", "CREATE TABLE Department (Id INT, DeptName NVARCHAR(50)); CREATE TABLE Employee (Id INT, DeptId INT);"),
+                // SQL Queries
+                QuestionRow(11, "QB-SQL-01", "SQL", "SQLQuery", "SQL", "Fresher", "Write an SQL query to find the 2nd highest salary from the Employee table.", 5.0m, "CREATE TABLE Employee (Id INT PRIMARY KEY, Name NVARCHAR(50), Salary DECIMAL(18,2));"),
+                QuestionRow(12, "QB-SQL-02", "SQL", "SQLQuery", "SQL", "Fresher", "Write an SQL query to retrieve Department names along with the count of active employees.", 5.0m, "CREATE TABLE Department (Id INT, DeptName NVARCHAR(50)); CREATE TABLE Employee (Id INT, DeptId INT);"),
 
-                // Coding Challenges (Role 1 / Role 3)
-                QuestionRow(13, 1, "Coding", "CODING", "Medium", "Fresher", "CSharp,Algorithms", "Implement a function 'IsPalindrome(string s)' that returns true if a given string reads the same forwards and backwards, ignoring case.", 10.0m, "csharp"),
-                QuestionRow(14, 3, "Coding", "CODING", "Medium", "Fresher", "JavaScript,Algorithms", "Implement a function 'twoSum(nums, target)' that returns the indices of the two numbers that add up to the target.", 10.0m, "javascript")
+                // Coding Challenges
+                QuestionRow(13, "QB-COD-01", "C# (.NET)", "Coding", "CODING", "Fresher", "Implement a function 'IsPalindrome(string s)' that returns true if a given string reads the same forwards and backwards, ignoring case.", 10.0m),
+                QuestionRow(14, "QB-COD-02", "JavaScript / React", "Coding", "CODING", "Fresher", "Implement a function 'twoSum(nums, target)' that returns the indices of the two numbers that add up to the target.", 10.0m)
             );
 
             // Master Question Options
@@ -198,19 +198,17 @@ namespace STEP.Persistence.Seed
             };
 
         private static MasterQuestion QuestionRow(
-            int id, int? roleId, string sectionType, string qType, string diff, string exp, string tags, string text, decimal marks, string? lang = null, string? schema = null)
+            int id, string code, string lang, string sectionType, string qType, string exp, string text, decimal marks, string? schema = null)
             => new()
             {
                 Id = id,
-                MasterRoleId = roleId,
+                Code = code,
+                Language = lang,
                 SectionType = sectionType,
                 QuestionType = qType,
-                Difficulty = diff,
-                ExperienceLevel = exp,
-                Tags = tags,
+                ExperienceTier = exp,
                 QuestionText = text,
                 Marks = marks,
-                ProgrammingLanguage = lang,
                 SqlSchema = schema,
                 IsActive = true,
                 CreatedAt = SeedTimestamp

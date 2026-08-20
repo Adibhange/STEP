@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { TopHeader } from './TopHeader';
@@ -13,10 +12,8 @@ interface DashboardShellProps {
 /**
  * STEP Enterprise DashboardShell
  *
- * Page Transition:
- * - Fade + 12px upward motion
- * - Duration: 220ms
- * - Easing: easeOut
+ * Provides responsive sidebar, sticky header, and immediate content rendering
+ * without blocking layout animations on Next.js client-side route transitions.
  */
 export const DashboardShell: React.FC<DashboardShellProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -35,25 +32,16 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ children }) => {
         {/* Sticky Header */}
         <TopHeader onMobileMenuOpen={handleMobileOpen} />
 
-        {/* Scrollable page content with Smooth Entrance Transition */}
+        {/* Scrollable page content */}
         <main
           id="main-content"
           className="flex-1 overflow-y-auto overflow-x-hidden bg-[var(--canvas)] scrollbar-step"
           tabIndex={-1}
           aria-label="Main content"
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-              className="w-full h-full"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div key={pathname} className="w-full min-h-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

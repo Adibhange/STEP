@@ -20,12 +20,15 @@ namespace STEP.Application.Common.Interfaces
     /// </summary>
     public interface IApplicationDbContext
     {
+        // Identity / RBAC (staff & master schemas)
         DbSet<User> Users { get; }
         DbSet<Role> Roles { get; }
         DbSet<Permission> Permissions { get; }
         DbSet<RolePermission> RolePermissions { get; }
         DbSet<UserRefreshToken> UserRefreshTokens { get; }
+        DbSet<DirectorAccessLink> DirectorAccessLinks { get; }
 
+        // Master Data (master schema)
         DbSet<MasterRole> MasterRoles { get; }
         DbSet<MasterDepartment> MasterDepartments { get; }
         DbSet<MasterHiringLocation> MasterHiringLocations { get; }
@@ -33,12 +36,19 @@ namespace STEP.Application.Common.Interfaces
         DbSet<MasterEmploymentType> MasterEmploymentTypes { get; }
         DbSet<MasterExperienceLevel> MasterExperienceLevels { get; }
         DbSet<RoleHiringProfile> RoleHiringProfiles { get; }
-        DbSet<MasterQuestion> MasterQuestions { get; }
-        DbSet<MasterQuestionOption> MasterQuestionOptions { get; }
         DbSet<RoleAssessmentSectionRule> RoleAssessmentSectionRules { get; }
 
-        DbSet<AuditLog> AuditLogs { get; }
+        // V2 Central Blueprints & Question Bank (examv2 schema)
+        DbSet<AssessmentBlueprint> AssessmentBlueprints { get; }
+        DbSet<AssessmentBlueprintSectionRule> AssessmentBlueprintSectionRules { get; }
+        DbSet<MasterQuestion> MasterQuestions { get; }
+        DbSet<MasterQuestionOption> MasterQuestionOptions { get; }
 
+        // Audit & Outbox
+        DbSet<AuditLog> AuditLogs { get; }
+        DbSet<OutboxMessage> OutboxMessages { get; }
+
+        // Vacancy Engine (vacancy schema)
         DbSet<Vacancy> Vacancies { get; }
         DbSet<VacancyTestLocation> VacancyTestLocations { get; }
         DbSet<VacancyPipelineFlow> VacancyPipelineFlows { get; }
@@ -49,22 +59,32 @@ namespace STEP.Application.Common.Interfaces
         DbSet<VacancyQuestion> VacancyQuestions { get; }
         DbSet<VacancyQuestionOption> VacancyQuestionOptions { get; }
 
+        // Candidate Journey (candidate schema)
         DbSet<CandidateEntity> Candidates { get; }
         DbSet<CandidateDocument> CandidateDocuments { get; }
         DbSet<CandidatePipelineProgress> CandidatePipelineProgresses { get; }
 
+        // V1 Legacy Exam Snapshot Engine (exam schema)
         DbSet<CandidateExamSession> CandidateExamSessions { get; }
         DbSet<CandidateExamSessionQuestion> CandidateExamSessionQuestions { get; }
         DbSet<CandidateExamSessionQuestionOption> CandidateExamSessionQuestionOptions { get; }
         DbSet<CandidateExamAnswer> CandidateExamAnswers { get; }
         DbSet<CandidateExamAnswerOption> CandidateExamAnswerOptions { get; }
 
+        // V2 Isolated Dynamic Exam Engine (examv2 schema)
+        DbSet<CandidateExamSessionV2> CandidateExamSessionsV2 { get; }
+        DbSet<CandidateExamSessionQuestionV2> CandidateExamSessionQuestionsV2 { get; }
+        DbSet<CandidateExamSessionQuestionOptionV2> CandidateExamSessionQuestionOptionsV2 { get; }
+        DbSet<CandidateExamAnswerV2> CandidateExamAnswersV2 { get; }
+        DbSet<CandidateExamAnswerOptionV2> CandidateExamAnswerOptionsV2 { get; }
+        DbSet<ExamProctoringLog> ExamProctoringLogs { get; }
+
+        // Interviews & Offers (interview schema)
         DbSet<Interview> Interviews { get; }
         DbSet<InterviewRoundDetail> InterviewRoundDetails { get; }
         DbSet<OfferLetter> OfferLetters { get; }
 
-        DbSet<OutboxMessage> OutboxMessages { get; }
-
+        // QR Walk-in & Analytics (qr schema)
         DbSet<QRCode> QRCodes { get; }
         DbSet<QRScanAnalytic> QRScanAnalytics { get; }
 

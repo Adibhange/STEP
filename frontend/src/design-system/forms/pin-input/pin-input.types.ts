@@ -1,7 +1,7 @@
 import React from 'react';
 
 export interface PinInputProps {
-  /** Length of the PIN code. Default: 6 */
+  /** Length of the PIN code. Default: 4 */
   length?: number;
   /** Current PIN string value */
   value: string;

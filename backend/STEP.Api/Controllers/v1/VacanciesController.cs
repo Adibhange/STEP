@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +10,10 @@ using STEP.Application.Features.Vacancies.Commands.CreateVacancyPipelineFlow;
 using STEP.Application.Features.Vacancies.Commands.DeleteVacancyPipelineFlow;
 using STEP.Application.Features.Vacancies.Queries.GetVacancies;
 using STEP.Application.Features.Vacancies.Queries.GetVacancyById;
+using STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive;
+using STEP.Application.Features.V2.Vacancies.Commands.CreateRoleHiringProfile;
+using STEP.Application.Features.V2.Vacancies.Commands.UpdateRoleHiringProfile;
+using STEP.Application.Features.V2.Vacancies.Queries.GetRoleHiringProfiles;
 
 namespace STEP.Api.Controllers.v1
 {
@@ -81,6 +86,49 @@ namespace STEP.Api.Controllers.v1
         {
             await mediator.Send(new AssignQuestionPaperToRoundCommand(roundId, body.VacancyQuestionPaperId));
             return Ok(ApiResponse<object>.Ok(new { }, "Question paper linked to pipeline round"));
+        }
+
+        /// <summary>
+        /// 1-Click Recruitment Engine Drive Launch: Creates a vacancy, sets up blueprint & pipeline, and activates live QR code.
+        /// </summary>
+        [HttpPost("instant-drive")]
+        [Authorize(Policy = "Vacancy.Create")]
+        public async Task<IActionResult> CreateInstantDrive([FromBody] CreateInstantDriveCommand command)
+        {
+            var driveResult = await mediator.Send(command);
+            return Ok(ApiResponse<object>.Ok(driveResult, "⚡ Autonomous recruitment drive launched successfully"));
+        }
+
+        /// <summary>
+        /// Retrieves active hiring profile templates for a MasterRole.
+        /// </summary>
+        [HttpGet("roles/{roleId:int}/profiles")]
+        public async Task<IActionResult> GetProfilesForRole(int roleId)
+        {
+            var profiles = await mediator.Send(new GetRoleHiringProfilesQuery(roleId));
+            return Ok(ApiResponse<object>.Ok(profiles, "Hiring profile templates retrieved successfully"));
+        }
+
+        /// <summary>
+        /// Creates a new hiring profile blueprint with relational section rules.
+        /// </summary>
+        [HttpPost("roles/{roleId:int}/profiles")]
+        [Authorize(Policy = "Vacancy.Create")]
+        public async Task<IActionResult> CreateProfile(int roleId, [FromBody] CreateRoleHiringProfileCommand command)
+        {
+            var profile = await mediator.Send(command with { MasterRoleId = roleId });
+            return Ok(ApiResponse<object>.Ok(profile, "Hiring profile created successfully"));
+        }
+
+        /// <summary>
+        /// Updates an existing hiring profile blueprint and refreshes its section rules.
+        /// </summary>
+        [HttpPut("profiles/{profileId:int}")]
+        [Authorize(Policy = "Vacancy.Create")]
+        public async Task<IActionResult> UpdateProfile(int profileId, [FromBody] UpdateRoleHiringProfileCommand command)
+        {
+            var profile = await mediator.Send(command with { ProfileId = profileId });
+            return Ok(ApiResponse<object>.Ok(profile, "Hiring profile updated successfully"));
         }
     }
 
