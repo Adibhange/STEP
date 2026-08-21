@@ -1,26 +1,24 @@
 // ── Central API Barrel & Re-export File ──
-// Re-exports baseApi, all types, and all V1 & V2 endpoint hooks for seamless backward compatibility.
+// Consolidated direct exports for all V2 domain services.
 
 export * from './types';
 export * from './baseApi';
 
-// Common / Platform Core APIs (Shared across V1 & V2)
-export * from './common/authApi';
-export * from './common/usersApi';
+// Core Authentication & Staff
+export * from './authApi';
+export * from './usersApi';
 
-// V1 Domain APIs
-export * from './v1/masterDataApi';
-export * from './v1/vacanciesApi';
-export * from './v1/questionPapersApi';
-export * from './v1/candidatesApi';
-export * from './v1/examsApi';
-export * from './v1/interviewsApi';
-export * from './v1/offersApi';
-export * from './v1/reportsApi';
-export * from './v1/qrCodesApi';
+// Master Data & Configuration
+export * from './masterDataApi';
+export * from './hiringProfilesApi';
+export * from './questionBankApi';
+export * from './questionPapersApi';
 
-// V2 Autonomous Recruitment Engine APIs
-export * from './v2/hiringProfilesApi';
-export * from './v2/questionBankApi';
-export * from './v2/instantDriveApi';
-export * from './v2/examsV2Api';
+// Recruitment Operations
+export * from './vacanciesApi';
+export * from './candidatesApi';
+export * from './examsApi';
+export * from './interviewsApi';
+export * from './offersApi';
+export * from './reportsApi';
+export * from './qrCodesApi';

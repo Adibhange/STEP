@@ -70,20 +70,37 @@ export const VacanciesListView: React.FC = () => {
       const dynamicOffered = vacancyCandidates.filter((c: any) => c.status === 'Offered').length;
       const dynamicJoined = vacancyCandidates.filter((c: any) => c.status === 'Joined').length;
 
+      const rawTitle = v.title || 'Untitled Vacancy';
+      const roleName = v.masterRole || v.roleName || (rawTitle.includes(' - ') ? rawTitle.split(' - ')[0] : rawTitle);
+
+      let expText = v.experienceText || v.experience;
+      if (!expText) {
+        if (v.minExperienceYears !== undefined && v.maxExperienceYears !== undefined) {
+          if (v.minExperienceYears === 0 && v.maxExperienceYears <= 0) expText = 'Fresher (0 Years)';
+          else if (v.minExperienceYears === 0 && v.maxExperienceYears <= 1) expText = 'Junior (0-1 Year)';
+          else if (v.maxExperienceYears >= 90) expText = `${v.minExperienceYears}+ Years`;
+          else expText = `${v.minExperienceYears}-${v.maxExperienceYears} Years`;
+        } else {
+          expText = '0-1 Years';
+        }
+      }
+
+      const totalPositions = v.totalOpenings ?? v.openingsCount ?? v.positionsCount ?? 5;
+
       return {
         id: String(v.id),
         code: v.vacancyCode || `VAC-2026-${v.id}`,
-        title: v.title || 'Untitled Vacancy',
-        role: v.title || 'Engineering',
+        title: rawTitle,
+        role: roleName,
         department: v.department || 'Engineering',
         employmentType: v.employmentType || 'Full-Time Permanent',
-        experience: v.experience || '3-5 Years',
-        hiringLocation: v.hiringLocation || 'Mumbai HQ',
-        testLocation: v.testLocation || 'Mumbai Center',
-        workMode: (v.workMode || 'Hybrid') as any,
-        openPositions: v.openingsCount || v.positionsCount || 1,
-        positionsCount: v.openingsCount || v.positionsCount || 1,
-        status: (v.status || 'Open') as any,
+        experience: expText,
+        hiringLocation: v.hiringLocation || 'Pune Office',
+        testLocation: v.testLocation || 'Pune Office Hub',
+        workMode: (v.workMode || 'On-site') as any,
+        openPositions: totalPositions,
+        positionsCount: totalPositions,
+        status: (v.status || 'Active') as any,
         driveType: v.driveType || 'Walk-in Drive',
         createdAt: v.createdAt ? new Date(v.createdAt).toISOString().split('T')[0] : '',
         closingDate: v.closingDate ? new Date(v.closingDate).toISOString().split('T')[0] : '',

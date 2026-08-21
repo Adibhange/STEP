@@ -14,6 +14,7 @@ namespace STEP.Persistence.Configurations
 
             builder.Property(e => e.Token).HasMaxLength(80).IsRequired();
             builder.Property(e => e.IsRevoked).HasDefaultValue(false);
+            builder.Property(e => e.RowVersion).IsRowVersion();
 
             builder.HasIndex(e => e.Token).IsUnique();
             builder.HasIndex(e => e.CandidateId);

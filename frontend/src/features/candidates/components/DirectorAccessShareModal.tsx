@@ -56,8 +56,12 @@ export const DirectorAccessShareModal: React.FC<DirectorAccessShareModalProps> =
   if (!isOpen) return null;
 
   const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-  // Short URL: origin + /?d=[token]
-  const fullUrl = generatedLinkData ? `${origin}${generatedLinkData.accessUrl}` : '';
+  // Safe URL resolution: if backend returns absolute URL or relative URL
+  const fullUrl = generatedLinkData
+    ? generatedLinkData.accessUrl.startsWith('http')
+      ? generatedLinkData.accessUrl
+      : `${origin}${generatedLinkData.accessUrl.startsWith('/') ? '' : '/'}${generatedLinkData.accessUrl}`
+    : '';
 
   const handleCopyLink = () => {
     if (!fullUrl) return;

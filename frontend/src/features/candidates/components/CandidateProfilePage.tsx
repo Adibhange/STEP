@@ -1089,7 +1089,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const handleDownloadDocument = (docName: string, docId?: number) => {
     const targetId = docId || selectedDocPreview?.id;
     if (targetId) {
-      window.open(`/api/v1/candidates/${numericId}/documents/${targetId}/download`, '_blank');
+      window.open(`/api/v2/candidates/${numericId}/documents/${targetId}/download`, '_blank');
       toast.success('Downloading Document', { description: `Downloading ${docName}...` });
     } else {
       toast.info('Downloading File', { description: `Downloading ${docName}...` });

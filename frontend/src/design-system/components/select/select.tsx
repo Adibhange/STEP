@@ -17,6 +17,8 @@ export interface SelectProps {
   options?: SelectOption[];
   onChange?: (val: string) => void;
   widthClass?: string;
+  className?: string;
+  size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   menuPlacement?: 'bottom' | 'top' | 'auto';
   children?: React.ReactNode;
@@ -43,6 +45,8 @@ export const Select: React.FC<SelectProps> & {
   options = [],
   onChange,
   widthClass = 'w-auto',
+  className = '',
+  size = 'md',
   disabled = false,
   children,
 }) => {
@@ -60,6 +64,12 @@ export const Select: React.FC<SelectProps> & {
     ? options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()))
     : options;
 
+  const sizeStyles = {
+    sm: 'h-8 px-2.5 rounded-lg text-[11.5px]',
+    md: 'h-10 px-3.5 rounded-xl text-xs',
+    lg: 'h-11 px-4 rounded-xl text-sm',
+  }[size];
+
   return (
     <SelectPrimitive.Root
       value={value}
@@ -73,11 +83,11 @@ export const Select: React.FC<SelectProps> & {
     >
       <SelectPrimitive.Trigger
         aria-label={label}
-        className={`h-8 px-2.5 rounded-lg border flex items-center justify-between gap-1.5 ${widthClass} text-[11.5px] transition-all duration-150 ease-out cursor-pointer select-none focus-ring-step outline-none ${
+        className={`${sizeStyles} border flex items-center justify-between gap-1.5 ${widthClass} transition-all duration-150 ease-out cursor-pointer select-none focus-ring-step outline-none ${
           value
             ? 'bg-[var(--surface-2)] border-[var(--accent-indigo)]/50 text-[var(--text-primary)] font-semibold shadow-2xs'
             : 'bg-[var(--surface-2)] border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] font-medium shadow-2xs'
-        }`}
+        } ${open ? 'border-[var(--accent-indigo)] ring-2 ring-[var(--accent-indigo)]/20' : ''} ${className}`}
       >
         <span className="truncate">
           {selectedOption ? selectedOption.label : placeholder}

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Icon,
   CustomSelect,
+  CustomCalendarPicker,
   elasticDialogVariant,
   dialogBackdropVariant,
   dialogContentBlossomVariant,
@@ -183,6 +184,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
 
     try {
       const result = await createInstantDrive({
+        masterRoleId: selectedRoleId,
         roleId: selectedRoleId,
         experienceLevelId: selectedExperienceLevelId || undefined,
         blueprintId: selectedBlueprintId || undefined,
@@ -220,6 +222,11 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
     }
   };
 
+  const qrImageUrl = useMemo(() => {
+    if (!resolvedRegistrationUrl) return '';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=8&data=${encodeURIComponent(resolvedRegistrationUrl)}`;
+  }, [resolvedRegistrationUrl]);
+
   const handleCopyLink = () => {
     if (resolvedRegistrationUrl) {
       navigator.clipboard.writeText(resolvedRegistrationUrl);
@@ -227,6 +234,16 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
       setTimeout(() => setCopiedLink(false), 2500);
       dispatch(notifySuccess({ title: 'Link Copied', description: 'Candidate apply URL copied to clipboard.' }));
     }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrImageUrl) return;
+    const a = document.createElement('a');
+    a.href = qrImageUrl;
+    a.download = `QR-${createdDrive?.qrCodeString || 'walkin-drive'}.png`;
+    a.target = '_blank';
+    a.click();
+    dispatch(notifySuccess({ title: 'Downloading QR', description: 'High-res QR image is downloading.' }));
   };
 
   const handleResetAndClose = () => {
@@ -591,9 +608,12 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                 })()}
 
                 {/* 4. Secondary Options: Openings, Location, Date */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10.5px] sm:text-[11px] font-bold text-[var(--text-tertiary)] uppercase">Open Positions</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5 truncate">
+                      <Icon name="users" size="xs" className="text-[var(--accent-indigo)] shrink-0" />
+                      <span>Open Positions</span>
+                    </label>
                     <input
                       type="number"
                       min={1}
@@ -601,12 +621,15 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                       value={totalOpenings}
                       onChange={(e) => setTotalOpenings(Number(e.target.value))}
                       disabled={isLaunching}
-                      className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)] focus:border-[var(--accent-indigo)] focus:outline-none"
+                      className="w-full h-10 px-3.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-primary)] focus:border-[var(--accent-indigo)] focus:ring-2 focus:ring-[var(--accent-indigo)]/20 focus:outline-none transition-all"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10.5px] sm:text-[11px] font-bold text-[var(--text-tertiary)] uppercase">Hiring Location</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5 truncate">
+                      <Icon name="map-pin" size="xs" className="text-[var(--accent-indigo)] shrink-0" />
+                      <span>Hiring Location</span>
+                    </label>
                     <CustomSelect
                       label="Location"
                       value={String(selectedLocationId)}
@@ -617,16 +640,18 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10.5px] sm:text-[11px] font-bold text-[var(--text-tertiary)] uppercase">
-                      {driveType === 'Walk-in Drive' ? 'Drive Date' : 'Target Start Date'}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5 truncate">
+                      <Icon name="calendar" size="xs" className="text-[var(--accent-indigo)] shrink-0" />
+                      <span>{driveType === 'Walk-in Drive' ? 'Drive Date' : 'Target Start Date'}</span>
                     </label>
-                    <input
-                      type="date"
+                    <CustomCalendarPicker
                       value={walkinDate}
-                      onChange={(e) => setWalkinDate(e.target.value)}
+                      onChange={(val) => setWalkinDate(val)}
                       disabled={isLaunching}
-                      className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-primary)] focus:border-[var(--accent-indigo)] focus:outline-none"
+                      placeholder="Select Date"
+                      minYear={new Date().getFullYear()}
+                      maxYear={new Date().getFullYear() + 3}
                     />
                   </div>
                 </div>
@@ -647,73 +672,94 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                 </div>
 
                 {/* QR Code & Candidate Apply Box */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 p-3.5 sm:p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-default)]">
-                  {/* Visual QR Display for Walk-in Drive */}
+                <div className="flex flex-col md:flex-row items-center gap-5 p-4 sm:p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-default)]">
+                  {/* Visual High-Res QR Display for Walk-in Drive */}
                   {driveType === 'Walk-in Drive' ? (
-                    <div className="w-32 h-32 sm:w-36 sm:h-36 bg-white p-2 rounded-xl border border-[var(--border-default)] flex flex-col items-center justify-center shadow-xs shrink-0">
-                      <div className="w-full h-full border border-dashed border-[var(--border-default)] rounded-lg flex flex-col items-center justify-center p-2 text-center">
-                        <Icon name="qr-code" size="lg" className="text-[var(--text-primary)]" />
-                        <span className="text-[8.5px] sm:text-[9px] font-mono font-bold text-[var(--text-secondary)] mt-1 uppercase">
-                          {createdDrive.qrCodeString}
+                    <div className="flex flex-col items-center gap-2.5 shrink-0 w-full md:w-auto">
+                      <div className="w-44 h-44 sm:w-48 sm:h-48 bg-white p-2.5 rounded-2xl border-2 border-[var(--border-default)] flex items-center justify-center shadow-md relative group">
+                        <img
+                          src={qrImageUrl}
+                          alt={`QR Code for ${createdDrive.vacancyCode}`}
+                          className="w-full h-full object-contain rounded-xl"
+                          loading="eager"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-mono font-bold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-3 py-1 rounded-full border border-[var(--accent-indigo)]/30 flex items-center gap-1.5 shadow-2xs">
+                          <Icon name="qr-code" size="xs" />
+                          <span>{createdDrive.qrCodeString}</span>
                         </span>
+                        <button
+                          type="button"
+                          onClick={handleDownloadQr}
+                          title="Download High-Res QR"
+                          className="h-7 px-2.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Icon name="download" size="xs" />
+                          <span>Save QR</span>
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="w-32 h-32 sm:w-36 sm:h-36 bg-[var(--surface-1)] p-3 rounded-xl border border-[var(--border-default)] flex flex-col items-center justify-center shadow-xs shrink-0 text-center">
-                      <Icon name="users" size="lg" className="text-[var(--accent-indigo)]" />
-                      <span className="text-[11px] font-bold text-[var(--text-primary)] mt-2">
+                    <div className="w-44 h-44 sm:w-48 sm:h-48 bg-[var(--surface-1)] p-4 rounded-2xl border border-[var(--border-default)] flex flex-col items-center justify-center shadow-xs shrink-0 text-center">
+                      <div className="w-12 h-12 rounded-2xl bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 text-[var(--accent-indigo)] flex items-center justify-center mb-2">
+                        <Icon name="users" size="md" />
+                      </div>
+                      <span className="text-xs font-bold text-[var(--text-primary)]">
                         HR Direct Sourced
                       </span>
-                      <span className="text-[9.5px] text-[var(--text-tertiary)] mt-0.5">
+                      <span className="text-[10.5px] text-[var(--text-tertiary)] mt-0.5">
                         Direct Portal Link
                       </span>
                     </div>
                   )}
 
                   {/* Apply Link & Quick Actions */}
-                  <div className="flex-1 space-y-2.5 sm:space-y-3 w-full min-w-0">
-                    <div className="space-y-1">
-                      <span className="text-[10.5px] sm:text-[11px] font-bold text-[var(--text-tertiary)] uppercase block">
-                        {driveType === 'Walk-in Drive' ? 'Walk-in Registration URL (QR)' : 'Direct Screening Link'}
+                  <div className="flex-1 space-y-3 w-full min-w-0">
+                    <div className="space-y-1.5">
+                      <span className="text-[10.5px] sm:text-[11px] font-bold text-[var(--text-tertiary)] uppercase block tracking-wider font-mono">
+                        {driveType === 'Walk-in Drive' ? 'Walk-in Registration URL (Candidate Portal)' : 'Direct Screening Link'}
                       </span>
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
                           readOnly
                           value={resolvedRegistrationUrl}
-                          className="flex-1 h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] text-xs font-mono text-[var(--text-primary)] select-all outline-none min-w-0"
+                          className="flex-1 h-10 px-3.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] text-xs font-mono text-[var(--text-primary)] select-all outline-none min-w-0 focus:border-[var(--accent-indigo)]"
                         />
                         <button
                           type="button"
                           onClick={handleCopyLink}
-                          className="h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] border border-[var(--border-default)] text-[var(--text-primary)] shadow-2xs shrink-0"
+                          className="h-10 px-3.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] border border-[var(--border-default)] text-[var(--text-primary)] shadow-2xs shrink-0"
                         >
                           <Icon name={copiedLink ? 'check' : 'copy'} size="xs" />
-                          <span>{copiedLink ? 'Copied' : 'Copy'}</span>
+                          <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
                         </button>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      <div className="p-2 rounded-lg bg-[var(--surface-1)] border border-[var(--border-default)]">
-                        <span className="text-[10px] text-[var(--text-tertiary)] block">Cutoff</span>
-                        <span className="font-bold text-[var(--text-primary)]">{createdDrive.passingPercentage}% Pass</span>
+                      <div className="p-2.5 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)]">
+                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase font-mono block">Passing Cutoff</span>
+                        <span className="font-bold text-xs text-[var(--text-primary)]">{createdDrive.passingPercentage}% Minimum</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-[var(--surface-1)] border border-[var(--border-default)]">
-                        <span className="text-[10px] text-[var(--text-tertiary)] block">Questions</span>
-                        <span className="font-bold text-[var(--text-primary)]">{createdDrive.totalQuestions} Questions</span>
+                      <div className="p-2.5 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)]">
+                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase font-mono block">Test Composition</span>
+                        <span className="font-bold text-xs text-[var(--text-primary)]">{createdDrive.totalQuestions} Qs ({createdDrive.durationMinutes}m)</span>
                       </div>
                     </div>
 
-                    <a
-                      href={resolvedRegistrationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--accent-indigo)] hover:underline"
-                    >
-                      <Icon name="external-link" size="xs" />
-                      <span>Open Candidate Portal</span>
-                    </a>
+                    <div className="flex items-center justify-between pt-1">
+                      <a
+                        href={resolvedRegistrationUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--accent-indigo)] hover:underline"
+                      >
+                        <Icon name="external-link" size="xs" />
+                        <span>Open & Test Candidate Registration Portal →</span>
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>

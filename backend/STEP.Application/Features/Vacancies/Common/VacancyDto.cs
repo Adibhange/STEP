@@ -13,12 +13,18 @@ namespace STEP.Application.Features.Vacancies.Common
         int Id,
         string VacancyCode,
         string Title,
+        string MasterRole,
         string Department,
         string HiringLocation,
         string DriveType,
         string Status,
+        string WorkMode,
         int TotalOpenings,
-        DateTime? ClosingDate);
+        decimal MinExperienceYears,
+        decimal MaxExperienceYears,
+        string ExperienceText,
+        DateTime? ClosingDate,
+        DateTime? WalkinDriveDate = null);
 
     public record VacancyDto(
         int Id,

@@ -7,6 +7,10 @@ import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { TablePagination } from '@/features/dashboard/shared/TablePagination';
 import { CandidateProgressModal } from '@/features/dashboard/candidates/CandidateProgressModal';
+import { exportCandidatesToExcel } from '@/features/dashboard/candidates/utils/candidateExcelExporter';
+import {
+  useGetCandidatesQuery,
+} from '@/store/services/api';
 import type { DashboardCandidate } from '@/features/dashboard/types/dashboard.types';
 import type { VacancyItem } from '../types/vacancy.types';
 
@@ -34,115 +38,65 @@ interface CandidateRow {
   isTechAuthorized?: boolean;
 }
 
-// Generate realistic unique 128 candidates matching the Drive count
-const generateCandidatesDataset = (): CandidateRow[] => {
-  const FIRST_NAMES = [
-    'Aditya', 'Rohan', 'Priya', 'Amit', 'Sneha', 'Vikram', 'Ananya', 'Rahul',
-    'Pooja', 'Karan', 'Neha', 'Siddharth', 'Divya', 'Manish', 'Kavita', 'Suresh',
-    'Deepak', 'Meera', 'Gaurav', 'Shweta', 'Tanvi', 'Varun', 'Nikhil', 'Isha',
-    'Arjun', 'Bhavna', 'Chetan', 'Geeta', 'Harish', 'Jyoti', 'Kapil', 'Lata',
-    'Mayur', 'Nandini', 'Omkar', 'Pranav', 'Ritu', 'Sameer', 'Tarun', 'Umesh',
-    'Vandana', 'Yash', 'Zoya', 'Alok', 'Barkha', 'Dev', 'Esha', 'Farhan'
-  ];
-
-  const LAST_NAMES = [
-    'Bhange', 'Deshmukh', 'Sharma', 'Patel', 'Kulkarni', 'Joshi', 'Verma', 'Nair',
-    'Iyer', 'Mehta', 'Gupta', 'Rao', 'Reddy', 'Singh', 'Chauhan', 'Pandey',
-    'Kadam', 'Bhide', 'Shinde', 'Pawar', 'Bhat', 'Dube', 'Gokhale', 'Jadhav',
-    'Kamble', 'Lohar', 'Mishra', 'Navale', 'Oak', 'Paranjpe', 'Rane', 'Sawant',
-    'Trivedi', 'Upadhyay', 'Vaidya', 'Wagh', 'Yadav', 'Zende', 'Bose', 'Chatterjee'
-  ];
-
-  const rows: CandidateRow[] = [];
-
-  for (let i = 1; i <= 128; i++) {
-    const fn = FIRST_NAMES[(i * 7) % FIRST_NAMES.length];
-    const ln = LAST_NAMES[(i * 11) % LAST_NAMES.length];
-    const exp = Number((1.5 + ((i * 3.7) % 8.5)).toFixed(1));
-
-    let currentRoundName = 'Round 1: Aptitude (Elimination)';
-    let currentRoundScore: number | null = null;
-    let currentRoundStatus: 'Passed' | 'Failed' | 'In-Progress' = 'In-Progress';
-    let status = 'In Screening';
-    let aptScore: number | null = null;
-    let techScore: number | null = null;
-    let isTechAuthorized = false;
-
-    if (i <= 18) {
-      // Cleared Aptitude, awaiting HR Tech Authorization
-      currentRoundName = 'Round 2: Technical Assessment';
-      aptScore = 78 + (i % 18);
-      currentRoundScore = aptScore;
-      currentRoundStatus = 'Passed';
-      status = 'Awaiting Tech Auth';
-      isTechAuthorized = false;
-    } else if (i <= 41) {
-      // In Test (either currently taking Aptitude or Tech)
-      currentRoundName = i % 2 === 0 ? 'Round 1: Aptitude (Elimination)' : 'Round 2: Technical Assessment';
-      currentRoundStatus = 'In-Progress';
-      status = i % 2 === 0 ? 'Taking Aptitude Test' : 'Taking Technical Test';
-      isTechAuthorized = i % 2 !== 0;
-    } else if (i <= 53) {
-      // Eliminated in Aptitude
-      currentRoundName = 'Round 1: Aptitude (Elimination)';
-      currentRoundScore = 45 + (i % 22);
-      currentRoundStatus = 'Failed';
-      status = 'Eliminated (Aptitude)';
-      aptScore = currentRoundScore;
-    } else if (i <= 118) {
-      // Interview Stage
-      currentRoundName = 'Round 3: Tech Interview';
-      currentRoundScore = 80 + (i % 16);
-      currentRoundStatus = 'Passed';
-      status = 'Interview Scheduled';
-      aptScore = 85 + (i % 10);
-      techScore = currentRoundScore;
-      isTechAuthorized = true;
-    } else {
-      // Offered
-      currentRoundName = 'Round 4: Executive Decision';
-      currentRoundScore = 92 + (i % 7);
-      currentRoundStatus = 'Passed';
-      status = 'Offered';
-      aptScore = 94;
-      techScore = 91;
-      isTechAuthorized = true;
-    }
-
-    const hour = 9 + Math.floor(((i * 7) % 180) / 45);
-    const min = (i * 13) % 60;
-    const timeStr = `Today, ${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
-
-    rows.push({
-      id: i,
-      code: `CWD-2026-${1000 + i}`,
-      name: `${fn} ${ln}`,
-      email: `${fn.toLowerCase()}.${ln.toLowerCase()}@example.com`,
-      phone: `+91 98${(10000000 + i * 83719).toString().slice(0, 8)}`,
-      experienceYears: exp,
-      score: currentRoundScore,
-      aptitudeScore: aptScore,
-      technicalScore: techScore,
-      currentRoundName,
-      currentRoundScore,
-      currentRoundStatus,
-      status,
-      registeredAt: timeStr,
-      rawTime: hour * 100 + min,
-      sourceChannel: i % 5 === 0 ? 'Direct Sourced' : 'Walk-in QR',
-      isTechAuthorized,
-    });
-  }
-
-  return rows;
-};
-
 export const VacancyCandidatesTab: React.FC<VacancyCandidatesTabProps> = ({ vacancy }) => {
   const router = useRouter();
   const isDirectHiring = vacancy.driveType === 'Direct / Sourced Hiring';
+  const numVacId = Number(vacancy.id);
 
-  // Candidate Data State (mutable for authorizing rounds)
-  const [candidates, setCandidates] = useState<CandidateRow[]>(() => generateCandidatesDataset());
+  const { data: candidatesRes, isLoading: isCandidatesLoading, refetch } = useGetCandidatesQuery(
+    numVacId ? { vacancyId: numVacId } : undefined
+  );
+
+  // Local overrides for optimistic UI updates (e.g. Authorize Tech)
+  const [localOverrides, setLocalOverrides] = useState<Record<number, Partial<CandidateRow>>>({});
+
+  const candidates: CandidateRow[] = useMemo(() => {
+    const list = candidatesRes?.data || [];
+    return list.map((c: any) => {
+      const fullName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name || 'Candidate';
+      const exp = Number(c.totalExperienceYears ?? c.experienceYears ?? 0);
+      const aptScore = c.examScore ?? c.aptitudeScore ?? null;
+      const techScore = c.techScore ?? c.technicalScore ?? null;
+      const currentScore = techScore ?? aptScore ?? c.score ?? null;
+
+      const currentRoundName = c.currentRound?.name || c.currentRoundName || c.currentStage || 'Round 1: Aptitude (Elimination)';
+      let currentRoundStatus: 'Passed' | 'Failed' | 'In-Progress' = 'In-Progress';
+      if (c.status === 'Rejected' || c.status?.includes('Eliminated') || (aptScore !== null && aptScore < 70)) {
+        currentRoundStatus = 'Failed';
+      } else if (c.status === 'Offered' || c.status === 'Selected' || (aptScore !== null && aptScore >= 70)) {
+        currentRoundStatus = 'Passed';
+      }
+
+      const timeStr = c.createdAt
+        ? `Today, ${new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : 'Today';
+
+      const baseRow: CandidateRow = {
+        id: c.id,
+        code: c.candidateCode || `CND-2026-${c.id}`,
+        name: fullName,
+        email: c.email || '',
+        phone: c.phoneNumber || c.mobile || '',
+        experienceYears: exp,
+        score: currentScore,
+        aptitudeScore: aptScore,
+        technicalScore: techScore,
+        currentRoundName,
+        currentRoundScore: currentScore,
+        currentRoundStatus,
+        status: c.status || c.currentStage || 'In Screening',
+        registeredAt: timeStr,
+        rawTime: c.createdAt ? new Date(c.createdAt).getTime() : 0,
+        sourceChannel: c.sourceChannel || (isDirectHiring ? 'Direct Sourced' : 'Walk-in QR'),
+        isTechAuthorized: !!c.isTechAuthorized,
+      };
+
+      return {
+        ...baseRow,
+        ...(localOverrides[c.id] || {}),
+      };
+    });
+  }, [candidatesRes, isDirectHiring, localOverrides]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -263,18 +217,14 @@ export const VacancyCandidatesTab: React.FC<VacancyCandidatesTabProps> = ({ vaca
       return;
     }
 
-    setCandidates((prev) =>
-      prev.map((c) =>
-        c.id === candidate.id
-          ? {
-              ...c,
-              isTechAuthorized: true,
-              status: 'Tech Round Authorized',
-              currentRoundName: 'Round 2: Technical Assessment',
-            }
-          : c
-      )
-    );
+    setLocalOverrides((prev) => ({
+      ...prev,
+      [candidate.id]: {
+        isTechAuthorized: true,
+        status: 'Tech Round Authorized',
+        currentRoundName: 'Round 2: Technical Assessment',
+      },
+    }));
     toast.success('Technical Round Authorized', {
       description: `Unlocked Round 2 for ${candidate.name}. Candidate can now start Technical Assessment.`,
     });
@@ -290,18 +240,15 @@ export const VacancyCandidatesTab: React.FC<VacancyCandidatesTabProps> = ({ vaca
       return;
     }
 
-    setCandidates((prev) =>
-      prev.map((c) =>
-        eligibleIds.has(c.id)
-          ? {
-              ...c,
-              isTechAuthorized: true,
-              status: 'Tech Round Authorized',
-              currentRoundName: 'Round 2: Technical Assessment',
-            }
-          : c
-      )
-    );
+    const updates: Record<number, Partial<CandidateRow>> = {};
+    eligibleIds.forEach((id) => {
+      updates[id] = {
+        isTechAuthorized: true,
+        status: 'Tech Round Authorized',
+        currentRoundName: 'Round 2: Technical Assessment',
+      };
+    });
+    setLocalOverrides((prev) => ({ ...prev, ...updates }));
 
     setSelectedIds(new Set());
     toast.success('Bulk Authorization Complete', {
@@ -329,38 +276,41 @@ export const VacancyCandidatesTab: React.FC<VacancyCandidatesTabProps> = ({ vaca
     setCurrentPage(1);
   };
 
-  const handleLiveSync = () => {
+  const handleLiveSync = async () => {
     setIsSyncing(true);
-    setTimeout(() => {
-      setIsSyncing(false);
+    try {
+      await refetch();
       toast.success('Live Sync Complete', { description: 'Roster synced with live assessment engine.' });
-    }, 600);
+    } catch {
+      toast.error('Sync Failed', { description: 'Could not refresh candidate roster.' });
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
-  const handleExportCSV = () => {
-    const headers = ['Candidate Code', 'Name', 'Email', 'Phone', 'Experience (Yrs)', 'Registered At', 'Current Round', 'Score (%)', 'Status'];
-    const rows = processedCandidates.map((c) => [
-      c.code,
-      `"${c.name}"`,
-      c.email,
-      c.phone,
-      c.experienceYears,
-      `"${c.registeredAt}"`,
-      `"${c.currentRoundName}"`,
-      c.currentRoundScore ?? 'In-Progress',
-      `"${c.status}"`,
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Drive_Candidates_${vacancy.id || '2026'}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success('CSV Exported', { description: `Exported ${processedCandidates.length} candidate records.` });
+  const handleExportExcel = async () => {
+    try {
+      await exportCandidatesToExcel(processedCandidates, {
+        filenamePrefix: `STEP_Roster_${vacancy.code || vacancy.id}`,
+        vacancyContext: {
+          code: vacancy.code || `VAC-${vacancy.id}`,
+          title: vacancy.title,
+          role: vacancy.role || vacancy.title,
+          driveType: vacancy.driveType || 'Walk-in Drive',
+          department: vacancy.department,
+          location: vacancy.hiringLocation,
+          openings: vacancy.openPositions || 5,
+          passingPercentage: vacancy.passingCriteriaPercentage || 70,
+        },
+      });
+      toast.success('Excel Report Ready', {
+        description: `Exported ${processedCandidates.length} candidate records to multi-sheet workbook.`,
+      });
+    } catch (err: any) {
+      toast.error('Export Failed', {
+        description: err?.message || 'Failed to export candidate records to Excel.',
+      });
+    }
   };
 
   const dashboardCandidateModalData: DashboardCandidate | null = useMemo(() => {
@@ -435,12 +385,12 @@ export const VacancyCandidatesTab: React.FC<VacancyCandidatesTabProps> = ({ vaca
 
             <button
               type="button"
-              onClick={handleExportCSV}
-              title="Export roster to CSV"
+              onClick={handleExportExcel}
+              title="Export roster to Excel (.xlsx)"
               className="h-8.5 px-3.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Icon name="download" size="xs" className="text-[var(--accent-indigo)]" />
-              <span>Export CSV</span>
+              <span>Export Excel</span>
             </button>
           </div>
         </div>
@@ -555,21 +505,34 @@ export const VacancyCandidatesTab: React.FC<VacancyCandidatesTabProps> = ({ vaca
             <tbody className="divide-y divide-[var(--border-soft)]">
               {paginatedCandidates.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[var(--text-tertiary)] text-xs">
-                    <div className="flex flex-col items-center gap-2">
-                      <Icon name="search" size="md" className="opacity-40" />
-                      <p>No candidates found matching the selected filter.</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatusFilter('ALL');
-                          setSearchQuery('');
-                          setCurrentPage(1);
-                        }}
-                        className="text-[var(--accent-indigo)] hover:underline text-xs font-semibold mt-1 cursor-pointer"
-                      >
-                        Reset filters
-                      </button>
+                  <td colSpan={7} className="py-14 text-center text-[var(--text-tertiary)] text-xs">
+                    <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
+                      <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent-indigo)] border border-[var(--border-default)] shadow-xs">
+                        <Icon name="users" size="md" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-[var(--text-primary)] text-sm font-heading">
+                          {candidates.length === 0 ? 'No Candidates Registered Yet' : 'No Matching Candidates'}
+                        </h4>
+                        <p className="text-[11.5px] text-[var(--text-tertiary)] mt-1">
+                          {candidates.length === 0
+                            ? 'This hiring drive is active. Share the registration QR code or link to start receiving candidates in real time.'
+                            : 'Try adjusting your search query or filter criteria.'}
+                        </p>
+                      </div>
+                      {candidates.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStatusFilter('ALL');
+                            setSearchQuery('');
+                            setCurrentPage(1);
+                          }}
+                          className="text-[var(--accent-indigo)] hover:underline text-xs font-semibold mt-1 cursor-pointer"
+                        >
+                          Reset filters
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

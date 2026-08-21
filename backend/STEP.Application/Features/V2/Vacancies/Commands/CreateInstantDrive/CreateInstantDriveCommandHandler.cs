@@ -23,9 +23,10 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
         public async Task<InstantDriveResultDto> Handle(CreateInstantDriveCommand request, CancellationToken cancellationToken)
         {
             // 1. Resolve MasterRole
+            var targetRoleId = request.MasterRoleId > 0 ? request.MasterRoleId : (request.RoleId ?? 0);
             var masterRole = await db.MasterRoles
-                .FirstOrDefaultAsync(r => r.Id == request.MasterRoleId, cancellationToken)
-                ?? throw new NotFoundException(nameof(MasterRole), request.MasterRoleId);
+                .FirstOrDefaultAsync(r => r.Id == targetRoleId, cancellationToken)
+                ?? throw new NotFoundException(nameof(MasterRole), targetRoleId);
 
             // 2. Resolve Experience Level (Direct master.ExperienceLevels)
             MasterExperienceLevel? expLevel = null;
@@ -91,11 +92,13 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
             if (expLevel != null)
             {
                 var code = (expLevel.Code ?? "").ToUpperInvariant();
-                if (code.Contains("0") || code.Contains("FRESH")) { minExp = 0.0m; maxExp = 1.0m; }
-                else if (code.Contains("1-3") || code.Contains("1-2") || code.Contains("JR")) { minExp = 1.0m; maxExp = 3.0m; }
-                else if (code.Contains("3-5") || code.Contains("2-4") || code.Contains("MID")) { minExp = 3.0m; maxExp = 5.0m; }
-                else if (code.Contains("5-8") || code.Contains("4-7") || code.Contains("SR")) { minExp = 5.0m; maxExp = 8.0m; }
-                else if (code.Contains("8") || code.Contains("LEAD") || code.Contains("PLUS")) { minExp = 8.0m; maxExp = 99.0m; }
+                var name = (expLevel.Name ?? "").ToUpperInvariant();
+                if (code == "EXP-0" || name.Contains("FRESHER") || name.Contains("(0 YEARS)")) { minExp = 0.0m; maxExp = 0.0m; }
+                else if (code == "EXP-1" || (code.Contains("1") && !code.Contains("3") && !code.Contains("5")) || name.Contains("0-1")) { minExp = 0.0m; maxExp = 1.0m; }
+                else if (code == "EXP-3" || name.Contains("1-3")) { minExp = 1.0m; maxExp = 3.0m; }
+                else if (code == "EXP-5" || name.Contains("3-5")) { minExp = 3.0m; maxExp = 5.0m; }
+                else if (code == "EXP-8" || name.Contains("5-8")) { minExp = 5.0m; maxExp = 8.0m; }
+                else if (code.Contains("8") || name.Contains("8+") || name.Contains("LEAD") || name.Contains("PRINCIPAL")) { minExp = 8.0m; maxExp = 99.0m; }
             }
 
             var vacancy = new VacancyEntity

@@ -4,7 +4,8 @@ using MediatR;
 namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
 {
     public record CreateInstantDriveCommand(
-        int MasterRoleId,
+        int MasterRoleId = 0,
+        int? RoleId = null,
         int? ExperienceLevelId = null,
         int? RoleHiringProfileId = null,
         int? BlueprintId = null,

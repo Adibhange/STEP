@@ -248,9 +248,15 @@ export const CandidateWorkspace: React.FC = () => {
               onClick={async () => {
                 try {
                   const listToExport = (apiCandidatesResponse?.data || filteredCandidates || []);
-                  await exportCandidatesToExcel(listToExport);
+                  await exportCandidatesToExcel(listToExport, {
+                    filenamePrefix: `STEP_Candidates_${filterKey}`,
+                    vacancyContext: {
+                      role: 'All Candidates',
+                      driveType: filterKey,
+                    },
+                  });
                   toast.success("Candidates Exported", {
-                    description: `Generated Excel for ${listToExport.length} candidate(s).`,
+                    description: `Generated multi-sheet report for ${listToExport.length} candidate(s).`,
                   });
                 } catch (err: any) {
                   toast.error("Export Failed", {
@@ -324,14 +330,15 @@ export const CandidateWorkspace: React.FC = () => {
             type="button"
             onClick={async () => {
               try {
-                await exportCandidatesToExcel(
-                  filteredCandidates,
-                  `STEP_Candidates_${filterKey}_${
-                    new Date().toISOString().split("T")[0]
-                  }.xlsx`
-                );
+                await exportCandidatesToExcel(filteredCandidates, {
+                  filenamePrefix: `STEP_Candidates_${filterKey}`,
+                  vacancyContext: {
+                    role: search ? `Search Filter: "${search}"` : 'All Job Openings',
+                    driveType: filterKey !== 'all' ? `Category: ${filterKey}` : 'All Recruitment Streams',
+                  },
+                });
                 toast.success("Excel Export Ready", {
-                  description: `Exported ${filteredCandidates.length} candidate records to .xlsx file.`,
+                  description: `Generated multi-sheet report for ${filteredCandidates.length} candidate(s).`,
                 });
               } catch (err: any) {
                 toast.error("Export Failed", {

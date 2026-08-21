@@ -16,6 +16,7 @@ import {
   useGetQRCodeByVacancyQuery,
   useGetQRCodeAnalyticsQuery,
   useGenerateQRCodeMutation,
+  useGetCandidatesQuery,
 } from '@/store/services/api';
 
 import { getAppOrigin } from '@/lib/utils/url-helper';
@@ -104,7 +105,21 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
     }
   };
 
-  const candidateCount = activeVacancy?.appliedCount || 128;
+  const { data: candidatesRes } = useGetCandidatesQuery({ vacancyId: vacancyIdNum }, { skip: !vacancyIdNum });
+  const candidateList = candidatesRes?.data || [];
+  const candidateCount = candidateList.length;
+
+  const dynamicScreening = candidateList.filter((c: any) => c.currentStage === 'Screening' || c.currentStage === 'Applied' || c.status === 'In Screening').length;
+  const dynamicInterview = candidateList.filter((c: any) => c.currentStage?.toLowerCase().includes('interview') || c.status?.toLowerCase().includes('interview')).length;
+  const dynamicOffered = candidateList.filter((c: any) => c.status === 'Offered').length;
+
+  const totalScans = qrAnalytics?.totalScans ?? (candidateCount > 0 ? candidateCount * 2 : 0);
+  const conversionRate = qrAnalytics?.conversionRate
+    ? `${qrAnalytics.conversionRate}%`
+    : candidateCount > 0 && totalScans > 0
+      ? `${Math.round((candidateCount / totalScans) * 100)}%`
+      : '0%';
+
   const TABS = [
     { id: 'overview', label: isDirectHiring ? 'Overview & Direct Apply' : 'Overview & QR Hub', icon: isDirectHiring ? 'file-text' : 'grid' },
     { id: 'candidates', label: `Candidates (${candidateCount})`, icon: 'users' },
@@ -278,15 +293,15 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-[var(--text-secondary)]">Assessment Stage</span>
-                          <span className="font-mono font-bold text-amber-400">23</span>
+                          <span className="font-mono font-bold text-amber-400">{dynamicScreening}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-[var(--text-secondary)]">Interviewing</span>
-                          <span className="font-mono font-bold text-indigo-400">75</span>
+                          <span className="font-mono font-bold text-indigo-400">{dynamicInterview}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-[var(--text-secondary)]">Offered</span>
-                          <span className="font-mono font-bold text-emerald-400">9</span>
+                          <span className="font-mono font-bold text-emerald-400">{dynamicOffered}</span>
                         </div>
                       </div>
                     </div>
@@ -341,7 +356,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                       <div className="flex-1 grid grid-cols-2 gap-2.5 sm:gap-3 w-full">
                         <div className="p-3 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)]">
                           <span className="text-[10px] sm:text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Total Scans</span>
-                          <span className="text-base sm:text-lg font-black text-[var(--text-primary)] font-mono block mt-0.5">342</span>
+                          <span className="text-base sm:text-lg font-black text-[var(--text-primary)] font-mono block mt-0.5">{totalScans}</span>
                         </div>
                         <div className="p-3 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)]">
                           <span className="text-[10px] sm:text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Registrations</span>
@@ -349,11 +364,11 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                         </div>
                         <div className="p-3 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)]">
                           <span className="text-[10px] sm:text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Conversion Rate</span>
-                          <span className="text-base sm:text-lg font-black text-indigo-400 font-mono block mt-0.5">37.4%</span>
+                          <span className="text-base sm:text-lg font-black text-indigo-400 font-mono block mt-0.5">{conversionRate}</span>
                         </div>
                         <div className="p-3 rounded-xl bg-[var(--surface-1)] border border-[var(--border-default)]">
                           <span className="text-[10px] sm:text-[10.5px] font-bold text-[var(--text-tertiary)] uppercase font-mono block">Walk-in Venue</span>
-                          <span className="text-xs font-bold text-[var(--text-primary)] block mt-1 truncate">Pune Assessment Hub</span>
+                          <span className="text-xs font-bold text-[var(--text-primary)] block mt-1 truncate">{activeVacancy.hiringLocation || 'Pune Assessment Hub'}</span>
                         </div>
                       </div>
                     </div>
