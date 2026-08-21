@@ -34,7 +34,7 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
         int? AssignedRecruiterId,
         int? HiringManagerId,
         string Status,
-        List<int> TestLocationIds,
         List<CreatePipelineFlowInput> PipelineFlows,
-        List<CreateAssessmentSectionInput> AssessmentSections) : IRequest<VacancyDto>;
+        List<CreateAssessmentSectionInput> AssessmentSections,
+        List<int>? TestLocationIds = null) : IRequest<VacancyDto>;
 }

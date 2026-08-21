@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Icon } from "@/design-system";
+import { Icon, staggerFastContainer, fadeSlideUpVariant } from "@/design-system";
 import { CandidateAssessmentEvaluationView } from "./CandidateAssessmentEvaluationView";
 import { TempExamLinkModalV2 } from "./TempExamLinkModalV2";
 import { useGetCandidatesQuery } from "@/store/services/api";
@@ -112,10 +112,7 @@ export const AssessmentsView: React.FC = () => {
               className="divide-y divide-(--border-default) text-(--text-secondary)"
               initial="hidden"
               animate="show"
-              variants={{
-                hidden: {},
-                show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
-              }}
+              variants={staggerFastContainer}
             >
               {isLoading && (
                 <tr>
@@ -153,10 +150,7 @@ export const AssessmentsView: React.FC = () => {
                     <motion.tr
                       key={row.id}
                       layout
-                      variants={{
-                        hidden: { opacity: 0, y: 8 },
-                        show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
-                      }}
+                      variants={fadeSlideUpVariant}
                       exit={{ opacity: 0, scale: 0.98 }}
                       className="hover:bg-(--surface-hover) transition-colors"
                     >

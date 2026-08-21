@@ -32,7 +32,6 @@ namespace STEP.Application.Common.Interfaces
         DbSet<MasterRole> MasterRoles { get; }
         DbSet<MasterDepartment> MasterDepartments { get; }
         DbSet<MasterHiringLocation> MasterHiringLocations { get; }
-        DbSet<MasterTestLocation> MasterTestLocations { get; }
         DbSet<MasterEmploymentType> MasterEmploymentTypes { get; }
         DbSet<MasterExperienceLevel> MasterExperienceLevels { get; }
         DbSet<RoleHiringProfile> RoleHiringProfiles { get; }
@@ -50,7 +49,6 @@ namespace STEP.Application.Common.Interfaces
 
         // Vacancy Engine (vacancy schema)
         DbSet<Vacancy> Vacancies { get; }
-        DbSet<VacancyTestLocation> VacancyTestLocations { get; }
         DbSet<VacancyPipelineFlow> VacancyPipelineFlows { get; }
         DbSet<VacancyPipelineFlowRound> VacancyPipelineFlowRounds { get; }
         DbSet<VacancyAssessmentSection> VacancyAssessmentSections { get; }

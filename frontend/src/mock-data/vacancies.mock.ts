@@ -29,7 +29,7 @@ export interface MockVacancy {
   experienceYearsMin: number;
   experienceYearsMax: number;
   hiringLocation: string;
-  testLocation: string;
+  testLocation?: string;
   workMode: 'Onsite' | 'Hybrid' | 'Remote';
   openingsCount: number;
   positionsCount: number;

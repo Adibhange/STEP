@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Icon } from '@/design-system';
+import { Icon, staggerFastContainer, fadeSlideUpVariant } from '@/design-system';
 import { type UserItem } from '../types/user.types';
 
 interface UsersTableProps {
@@ -52,20 +52,14 @@ export const UsersTable: React.FC<UsersTableProps> = ({ users, isLoading, onEdit
             className="divide-y divide-[var(--border-default)] text-[var(--text-primary)] font-medium"
             initial="hidden"
             animate="show"
-            variants={{
-              hidden: {},
-              show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
-            }}
+            variants={staggerFastContainer}
           >
             <AnimatePresence mode="popLayout">
               {users.map((user, idx) => (
                 <motion.tr
                   key={user.id}
                   layout
-                  variants={{
-                    hidden: { opacity: 0, y: 8 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
-                  }}
+                  variants={fadeSlideUpVariant}
                   exit={{ opacity: 0, scale: 0.98 }}
                   className="hover:bg-[var(--surface-hover)] transition-colors"
                 >

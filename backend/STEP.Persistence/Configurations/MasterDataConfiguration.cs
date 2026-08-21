@@ -37,11 +37,6 @@ namespace STEP.Persistence.Configurations
         public void Configure(EntityTypeBuilder<MasterHiringLocation> builder) => MasterDataConfiguration.ConfigureMaster(builder, "MasterHiringLocations");
     }
 
-    public class MasterTestLocationConfiguration : IEntityTypeConfiguration<MasterTestLocation>
-    {
-        public void Configure(EntityTypeBuilder<MasterTestLocation> builder) => MasterDataConfiguration.ConfigureMaster(builder, "MasterTestLocations");
-    }
-
     public class MasterEmploymentTypeConfiguration : IEntityTypeConfiguration<MasterEmploymentType>
     {
         public void Configure(EntityTypeBuilder<MasterEmploymentType> builder) => MasterDataConfiguration.ConfigureMaster(builder, "MasterEmploymentTypes");
@@ -49,6 +44,11 @@ namespace STEP.Persistence.Configurations
 
     public class MasterExperienceLevelConfiguration : IEntityTypeConfiguration<MasterExperienceLevel>
     {
-        public void Configure(EntityTypeBuilder<MasterExperienceLevel> builder) => MasterDataConfiguration.ConfigureMaster(builder, "MasterExperienceLevels");
+        public void Configure(EntityTypeBuilder<MasterExperienceLevel> builder)
+        {
+            MasterDataConfiguration.ConfigureMaster(builder, "MasterExperienceLevels");
+            builder.Property(e => e.MinYears).HasColumnType("decimal(4,1)").HasDefaultValue(0.0m);
+            builder.Property(e => e.MaxYears).HasColumnType("decimal(4,1)").HasDefaultValue(99.0m);
+        }
     }
 }

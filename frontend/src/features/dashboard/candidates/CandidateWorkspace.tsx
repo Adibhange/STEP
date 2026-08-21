@@ -276,7 +276,7 @@ export const CandidateWorkspace: React.FC = () => {
               whileTap={{ scale: 0.98 }}
               type="button"
               onClick={() => setIsAddModalOpen(true)}
-              className="h-8 px-3 flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white text-xs font-bold shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 cursor-pointer"
+              className="h-8 px-3 flex items-center gap-1.5 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-xs font-bold shadow-[var(--shadow-sm)] border border-[var(--accent-indigo)]/30 cursor-pointer"
               title="Add Candidate"
             >
               <Icon name="user-plus" size="xs" />
@@ -365,9 +365,9 @@ export const CandidateWorkspace: React.FC = () => {
             type="button"
             onClick={() => setIsAddModalOpen(true)}
             className="hidden sm:inline-flex h-8.5 px-3.5 items-center justify-center gap-1.5 rounded-xl
-              bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white
-              shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset]
-              border border-indigo-400/30 hover:border-indigo-300/50
+              bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white
+              shadow-[var(--shadow-sm)]
+              border border-[var(--accent-indigo)]/30
               text-[12px] font-bold transition-all cursor-pointer shrink-0"
             aria-label="Add new candidate"
             title="Add new candidate"

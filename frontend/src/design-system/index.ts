@@ -50,6 +50,9 @@ export {
   DialogDescription,
 } from './components/dialog';
 
+export { EnterpriseModal } from './components/modal';
+export type { EnterpriseModalProps, EnterpriseModalMaxWidth } from './components/modal';
+
 export {
   Drawer,
   DrawerPortal,
@@ -229,6 +232,8 @@ export {
   tactilePopItemVariant,
   fadeSlideUpVariant,
   scalePopVariant,
+  cardVariants,
+  questionCardSliderVariant,
   elasticDialogVariant,
   dialogBackdropVariant,
   dialogContentBlossomVariant,

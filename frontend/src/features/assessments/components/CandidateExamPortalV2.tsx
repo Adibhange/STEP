@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { Icon } from '@/design-system';
+import { Icon, questionCardSliderVariant } from '@/design-system';
 import { CodeEditorIDE } from './CodeEditorIDE';
 import { ExamSubmissionModal } from './ExamSubmissionModal';
 import {
@@ -39,38 +39,6 @@ const SECTION_TYPE_MAP: Record<string, { title: string; shortTitle: string; icon
   CODING: { title: 'Coding Challenge', shortTitle: 'Coding', icon: 'code-2', sectionType: 'Coding' },
   SQL: { title: 'SQL Queries', shortTitle: 'SQL', icon: 'file-spreadsheet', sectionType: 'SQLQuery' },
   SUBJECTIVE: { title: 'Subjective Questions', shortTitle: 'Theory', icon: 'layers', sectionType: 'SubjectiveTheory' },
-};
-
-const QUESTION_CARD_VARIANTS: Variants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 55 : -55,
-    opacity: 0,
-    scale: 0.98,
-    filter: 'blur(3px)',
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    scale: 1,
-    filter: 'blur(0px)',
-    transition: {
-      x: { type: 'spring' as const, stiffness: 360, damping: 28 },
-      opacity: { duration: 0.28 },
-      scale: { duration: 0.28 },
-      filter: { duration: 0.2 },
-    },
-  },
-  exit: (direction: number) => ({
-    x: direction < 0 ? 55 : -55,
-    opacity: 0,
-    scale: 0.98,
-    filter: 'blur(3px)',
-    transition: {
-      x: { type: 'spring' as const, stiffness: 360, damping: 28 },
-      opacity: { duration: 0.2 },
-      filter: { duration: 0.15 },
-    },
-  }),
 };
 
 export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
@@ -1566,7 +1534,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
               <motion.div
                 key={currentQuestion.id}
                 custom={navigationDirection}
-                variants={QUESTION_CARD_VARIANTS}
+                variants={questionCardSliderVariant}
                 initial="enter"
                 animate="center"
                 exit="exit"

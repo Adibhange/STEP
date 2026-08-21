@@ -314,8 +314,8 @@
   --focus-glow:             rgba(99, 102, 241, 0.35);
 
   /* 11. Overlays & Modals */
-  --overlay:                rgba(4, 6, 10, 0.75);
-  --scrim:                  rgba(4, 6, 10, 0.50);
+  --overlay:                rgba(0, 0, 0, 0.55);
+  --scrim:                  rgba(0, 0, 0, 0.40);
 
   /* 12. Disabled */
   --disabled-surface:       #111622;

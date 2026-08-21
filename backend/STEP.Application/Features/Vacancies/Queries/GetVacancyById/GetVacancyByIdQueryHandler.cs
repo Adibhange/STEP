@@ -19,7 +19,6 @@ namespace STEP.Application.Features.Vacancies.Queries.GetVacancyById
                 .Include(v => v.Department)
                 .Include(v => v.HiringLocation)
                 .Include(v => v.EmploymentType)
-                .Include(v => v.TestLocations).ThenInclude(t => t.MasterTestLocation)
                 .Include(v => v.PipelineFlows).ThenInclude(f => f.Rounds)
                 .Include(v => v.AssessmentSections)
                 .AsNoTracking()
@@ -62,7 +61,7 @@ namespace STEP.Application.Features.Vacancies.Queries.GetVacancyById
                 vacancy.JobDescription,
                 vacancy.ClosingDate,
                 vacancy.WalkinDriveDate,
-                vacancy.TestLocations.Select(t => t.MasterTestLocation.Name).ToList(),
+                [vacancy.HiringLocation.Name],
                 vacancy.PipelineFlows.Select(f => new PipelineFlowDto(
                     f.Id, f.VersionName, f.Description, f.IsDefault,
                     f.Rounds.OrderBy(r => r.RoundOrder).Select(r => new PipelineRoundDto(r.Id, r.RoundOrder, r.Name, r.RoundType, r.CutoffPercent)).ToList(),

@@ -1350,8 +1350,8 @@ class MockDatabaseService {
         const expLevel = this.state.masterData['experiencelevels']?.find((e) => String(e.id) === String(expId));
         const blueprint = MOCK_BLUEPRINTS.find((b) => b.id === bpId) || MOCK_BLUEPRINTS[0];
 
-        const minExp = expId === 1 ? 0 : expId === 2 ? 1 : expId === 3 ? 3 : expId === 4 ? 5 : 8;
-        const maxExp = expId === 1 ? 1 : expId === 2 ? 3 : expId === 3 ? 5 : expId === 4 ? 8 : 15;
+        const minExp = expLevel?.minYears ?? 0;
+        const maxExp = expLevel?.maxYears ?? 99;
 
         const locId = Number(body.hiringLocationId) || 1;
         const locName = this.state.masterData['hiringlocations']?.find((l) => String(l.id) === String(locId))?.name || 'Pune Center (Hinjawadi)';
@@ -1388,7 +1388,7 @@ class MockDatabaseService {
         const newVac: MockVacancy = {
           id: newId,
           vacancyCode: code,
-          title: `${roleName} - ⚡ 1-Click Drive`,
+          title: roleName,
           role: roleName,
           department: deptName,
           employmentType: 'Full-Time Permanent',
@@ -1396,7 +1396,7 @@ class MockDatabaseService {
           experienceYearsMin: minExp,
           experienceYearsMax: maxExp,
           hiringLocation: locName,
-          testLocation: 'Pune Assessment Hub',
+          testLocation: locName,
           workMode: 'Onsite',
           openingsCount: body.totalOpenings || 5,
           positionsCount: body.totalOpenings || 5,

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Icon } from '@/design-system';
+import { Icon, EnterpriseModal } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { type UserItem, type UserRole, type UserStatus } from '@/features/users/types/user.types';
 import { useGetUsersQuery, useCreateUserMutation, useUpdateUserMutation, useGetMasterDataByCategoryQuery } from '@/store/services/api';
@@ -307,335 +307,283 @@ export const UsersView: React.FC = () => {
       <UsersTable users={filteredUsers} isLoading={isLoading} onEditUser={handleOpenEdit} />
 
       {/* Add User Modal Dialog */}
-      {isAddOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setIsAddOpen(false)}
-        >
-          <div
-            className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-xl)] w-full max-w-lg p-5 sm:p-6 flex flex-col gap-4 cursor-default"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-              <div>
-                <h4 className="text-base font-extrabold text-[var(--text-primary)] font-heading">Add New User</h4>
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">Create system credentials and assign role access.</p>
-              </div>
-              <button type="button" onClick={() => setIsAddOpen(false)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                <Icon name="x" size="sm" />
-              </button>
+      <EnterpriseModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        title="Add New User"
+        subtitle="Create system credentials and assign role access."
+        icon="user-plus"
+        maxWidth="lg"
+        submitText="Save User"
+        cancelText="Cancel"
+        onSubmit={handleSaveAdd}
+      >
+        <div className="flex flex-col gap-3.5">
+          {/* First Name & Last Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">First Name *</label>
+              <input
+                type="text"
+                required
+                autoFocus
+                placeholder="e.g. John"
+                value={formFirstName}
+                onChange={(e) => setFormFirstName(e.target.value)}
+                className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
             </div>
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Last Name *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Doe"
+                value={formLastName}
+                onChange={(e) => setFormLastName(e.target.value)}
+                className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
+            </div>
+          </div>
 
-            <form onSubmit={handleSaveAdd} className="flex flex-col gap-4">
-              {/* First Name & Last Name */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    placeholder="e.g. John"
-                    value={formFirstName}
-                    onChange={(e) => setFormFirstName(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Doe"
-                    value={formLastName}
-                    onChange={(e) => setFormLastName(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-              </div>
+          {/* Employee ID & Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Employee ID *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. EMP-1006"
+                value={formEmpId}
+                onChange={(e) => setFormEmpId(e.target.value)}
+                className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] font-mono text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
+            </div>
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Email Address *</label>
+              <input
+                type="email"
+                required
+                placeholder="john.doe@sthapatya.com"
+                value={formEmail}
+                onChange={(e) => setFormEmail(e.target.value)}
+                className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
+            </div>
+          </div>
 
-              {/* Employee ID & Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Employee ID *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. EMP-1006"
-                    value={formEmpId}
-                    onChange={(e) => setFormEmpId(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] font-mono text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="john.doe@sthapatya.com"
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-              </div>              {/* Role & Department */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Role *</label>
-                  <CustomSelect
-                    label="Role"
-                    value={formRole}
-                    options={[
-                      { value: 'Director', label: 'Director' },
-                      { value: 'HR', label: 'HR' },
-                      { value: 'Interviewer', label: 'Interviewer' },
-                    ]}
-                    onChange={(val) => {
-                      const role = (val || 'Interviewer') as UserRole;
-                      setFormRole(role);
-                      // Auto-set department based on role
-                      if (role === 'Director') setFormDept('Administration');
-                      else if (role === 'HR') setFormDept('Human Resources');
-                      else setFormDept('Engineering');
-                    }}
-                    widthClass="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Department *</label>
-                  {formRole === 'Director' ? (
-                    <div className="h-9.5 px-3 flex items-center rounded-md border border-[var(--border-default)] bg-[var(--surface-2)]/60 text-[12.5px] text-[var(--text-tertiary)] font-medium cursor-not-allowed select-none">
-                      Administration
-                    </div>
-                  ) : (
-                    <CustomSelect
-                      label="Department"
-                      value={formDept}
-                      options={(DEPT_BY_ROLE[formRole] as string[]).map((d) => ({ value: d, label: d }))}
-                      onChange={(val) => setFormDept(val || (DEPT_BY_ROLE[formRole] as string[])[0])}
-                      widthClass="w-full"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Password (non-Director) or PIN (Director) */}
+          {/* Role & Department */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Role *</label>
+              <CustomSelect
+                label="Role"
+                value={formRole}
+                options={[
+                  { value: 'Director', label: 'Director' },
+                  { value: 'HR', label: 'HR' },
+                  { value: 'Interviewer', label: 'Interviewer' },
+                ]}
+                onChange={(val) => {
+                  const role = (val || 'Interviewer') as UserRole;
+                  setFormRole(role);
+                  // Auto-set department based on role
+                  if (role === 'Director') setFormDept('Administration');
+                  else if (role === 'HR') setFormDept('Human Resources');
+                  else setFormDept('Engineering');
+                }}
+                widthClass="w-full"
+              />
+            </div>
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Department *</label>
               {formRole === 'Director' ? (
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Temporary Director PIN *</label>
-                  <div className="relative flex items-center mt-1">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      inputMode="numeric"
-                      minLength={6}
-                      maxLength={6}
-                      placeholder="6-digit PIN"
-                      value={formPin}
-                      onChange={(e) => setFormPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="w-full h-9.5 pl-3 pr-10 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] font-mono outline-none focus:border-[var(--accent-indigo)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
-                      title={showPassword ? 'Hide PIN' : 'Show PIN'}
-                    >
-                      <Icon name="eye" size="xs" className={showPassword ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'} />
-                    </button>
-                  </div>
+                <div className="h-9.5 px-3 flex items-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)]/60 text-[12.5px] text-[var(--text-tertiary)] font-medium cursor-not-allowed select-none">
+                  Administration
                 </div>
               ) : (
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Temporary Password *</label>
-                  <div className="relative flex items-center mt-1">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={formTempPassword}
-                      onChange={(e) => setFormTempPassword(e.target.value)}
-                      className="w-full h-9.5 pl-3 pr-10 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] font-mono outline-none focus:border-[var(--accent-indigo)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      <Icon name="eye" size="xs" className={showPassword ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Initial Status */}
-              <div>
-                <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Status</label>
                 <CustomSelect
-                  label="Initial Status"
-                  value={formStatus}
-                  options={[
-                    { value: 'Active', label: 'Active' },
-                    { value: 'Inactive', label: 'Inactive' },
-                  ]}
-                  onChange={(val) => setFormStatus((val || 'Active') as UserStatus)}
+                  label="Department"
+                  value={formDept}
+                  options={(DEPT_BY_ROLE[formRole] as string[]).map((d) => ({ value: d, label: d }))}
+                  onChange={(val) => setFormDept(val || (DEPT_BY_ROLE[formRole] as string[])[0])}
                   widthClass="w-full"
                 />
-              </div>
+              )}
+            </div>
+          </div>
 
-              {/* 50/50 Action Buttons */}
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[var(--border-default)] mt-1 w-full">
+          {/* Password (non-Director) or PIN (Director) */}
+          {formRole === 'Director' ? (
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Temporary Director PIN *</label>
+              <div className="relative flex items-center mt-1">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  inputMode="numeric"
+                  minLength={6}
+                  maxLength={6}
+                  placeholder="6-digit PIN"
+                  value={formPin}
+                  onChange={(e) => setFormPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full h-9.5 pl-3 pr-10 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] font-mono outline-none focus:border-[var(--accent-indigo)]"
+                />
                 <button
                   type="button"
-                  onClick={() => setIsAddOpen(false)}
-                  className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
+                  title={showPassword ? 'Hide PIN' : 'Show PIN'}
                 >
-                  <span>Cancel</span>
-                </button>
-                <button
-                  type="submit"
-                  className="h-11 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full"
-                >
-                  <span>Save User</span>
+                  <Icon name="eye" size="xs" className={showPassword ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'} />
                 </button>
               </div>
-            </form>
+            </div>
+          ) : (
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Temporary Password *</label>
+              <div className="relative flex items-center mt-1">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={formTempPassword}
+                  onChange={(e) => setFormTempPassword(e.target.value)}
+                  className="w-full h-9.5 pl-3 pr-10 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] font-mono outline-none focus:border-[var(--accent-indigo)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <Icon name="eye" size="xs" className={showPassword ? 'text-[var(--accent-indigo)]' : 'text-[var(--text-tertiary)]'} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Initial Status */}
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Status</label>
+            <CustomSelect
+              label="Initial Status"
+              value={formStatus}
+              options={[
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ]}
+              onChange={(val) => setFormStatus((val || 'Active') as UserStatus)}
+              widthClass="w-full"
+            />
           </div>
         </div>
-      )}
+      </EnterpriseModal>
 
       {/* Edit User Modal Dialog */}
-      {editingUser && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setEditingUser(null)}
-        >
-          <div
-            className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-xl)] w-full max-w-lg p-5 sm:p-6 flex flex-col gap-4 cursor-default"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-              <div>
-                <h4 className="text-base font-extrabold text-[var(--text-primary)] font-heading">Edit User Details</h4>
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">Update role permissions, department, or employee status.</p>
-              </div>
-              <button type="button" onClick={() => setEditingUser(null)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                <Icon name="x" size="sm" />
-              </button>
+      <EnterpriseModal
+        isOpen={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        title="Edit User Details"
+        subtitle="Update role permissions, department, or employee status."
+        icon="user-check"
+        maxWidth="lg"
+        submitText="Update User"
+        cancelText="Cancel"
+        onSubmit={handleSaveEdit}
+      >
+        <div className="flex flex-col gap-3.5">
+          {/* First Name & Last Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">First Name *</label>
+              <input
+                type="text"
+                required
+                value={formFirstName}
+                onChange={(e) => setFormFirstName(e.target.value)}
+                className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
             </div>
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Last Name *</label>
+              <input
+                type="text"
+                required
+                value={formLastName}
+                onChange={(e) => setFormLastName(e.target.value)}
+                className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
+            </div>
+          </div>
 
-            <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
-              {/* First Name & Last Name */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formFirstName}
-                    onChange={(e) => setFormFirstName(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formLastName}
-                    onChange={(e) => setFormLastName(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-              </div>
+          {/* Employee ID & Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Employee ID *</label>
+              <input
+                type="text"
+                required
+                value={formEmpId}
+                onChange={(e) => setFormEmpId(e.target.value)}
+                className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] font-mono text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
+            </div>
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Email Address *</label>
+              <input
+                type="email"
+                required
+                value={formEmail}
+                onChange={(e) => setFormEmail(e.target.value)}
+                className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
+            </div>
+          </div>
 
-              {/* Employee ID & Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Employee ID *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formEmpId}
-                    onChange={(e) => setFormEmpId(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] font-mono text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-              </div>
+          {/* Role & Department */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Role *</label>
+              <CustomSelect
+                label="Role"
+                value={formRole}
+                options={[
+                  { value: 'Director', label: 'Director' },
+                  { value: 'HR', label: 'HR' },
+                  { value: 'Interviewer', label: 'Interviewer' },
+                ]}
+                onChange={(val) => setFormRole((val || 'Interviewer') as UserRole)}
+                widthClass="w-full"
+              />
+            </div>
+            <div>
+              <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Department *</label>
+              <CustomSelect
+                label="Department"
+                value={formDept}
+                options={departmentOptions.map((d: string) => ({ value: d, label: d }))}
+                onChange={(val) => setFormDept(val || 'Engineering')}
+                widthClass="w-full"
+              />
+            </div>
+          </div>
 
-              {/* Role & Department */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Role *</label>
-                  <CustomSelect
-                    label="Role"
-                    value={formRole}
-                    options={[
-                      { value: 'Director', label: 'Director' },
-                      { value: 'HR', label: 'HR' },
-                      { value: 'Interviewer', label: 'Interviewer' },
-                    ]}
-                    onChange={(val) => setFormRole((val || 'Interviewer') as UserRole)}
-                    widthClass="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Department *</label>
-                  <CustomSelect
-                    label="Department"
-                    value={formDept}
-                    options={departmentOptions.map((d: string) => ({ value: d, label: d }))}
-                    onChange={(val) => setFormDept(val || 'Engineering')}
-                    widthClass="w-full"
-                  />
-                </div>
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Status</label>
-                <CustomSelect
-                  label="Status"
-                  value={formStatus}
-                  options={[
-                    { value: 'Active', label: 'Active' },
-                    { value: 'Inactive', label: 'Inactive' },
-                  ]}
-                  onChange={(val) => setFormStatus((val || 'Active') as UserStatus)}
-                  widthClass="w-full"
-                />
-              </div>
-
-              {/* 50/50 Action Buttons */}
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[var(--border-default)] mt-1 w-full">
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
-                >
-                  <span>Cancel</span>
-                </button>
-                <button
-                  type="submit"
-                  className="h-11 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full"
-                >
-                  <span>Update User</span>
-                </button>
-              </div>
-            </form>
+          {/* Status */}
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Status</label>
+            <CustomSelect
+              label="Status"
+              value={formStatus}
+              options={[
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ]}
+              onChange={(val) => setFormStatus((val || 'Active') as UserStatus)}
+              widthClass="w-full"
+            />
           </div>
         </div>
-      )}
+      </EnterpriseModal>
     </div>
   );
 };

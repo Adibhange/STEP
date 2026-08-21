@@ -100,19 +100,10 @@ export const CONFIG_CATEGORIES: CategoryDef[] = [
     exampleName: 'Senior (3-5 Years)',
     exampleCode: 'EXP-5',
   },
-  {
-    key: 'testlocations',
-    title: 'Test Locations',
-    icon: 'map-pin',
-    description: 'Physical assessment centers & evaluation hubs',
-    group: 'locations',
-    exampleName: 'Mumbai Center',
-    exampleCode: 'MCTR',
-  },
 ];
 
 export const ConfigurationPanel: React.FC = () => {
-  const [activeCategoryKey, setActiveCategoryKey] = useState<string>('roles');
+  const [activeCategoryKey, setActiveCategoryKey] = useState<string>('hiringprofiles');
   const shouldSkipMasterQuery = activeCategoryKey === 'hiringprofiles' || activeCategoryKey === 'questionbank';
   const { data: masterResponse, isLoading, isError } = useGetMasterDataByCategoryQuery(activeCategoryKey, {
     skip: shouldSkipMasterQuery,
@@ -135,6 +126,8 @@ export const ConfigurationPanel: React.FC = () => {
         name: m.name || '',
         description: m.description || '',
         displayOrder: m.displayOrder || 1,
+        minYears: m.minYears,
+        maxYears: m.maxYears,
         status: recStatus,
         isActive: recStatus === 'Active',
         updatedAt: m.updatedAt || new Date().toISOString().split('T')[0],
@@ -193,8 +186,10 @@ export const ConfigurationPanel: React.FC = () => {
         name: updated.name,
         code: updated.code,
         description: updated.description || '',
+        minYears: updated.minYears,
+        maxYears: updated.maxYears,
         isActive: updated.status === 'Active',
-      }).unwrap();
+      } as any).unwrap();
 
       toast.success(`Updated ${updated.name}`, {
         description: `Master record changes saved successfully.`,
@@ -214,6 +209,8 @@ export const ConfigurationPanel: React.FC = () => {
       code: newRec.code,
       name: newRec.name,
       description: newRec.description || '',
+      minYears: newRec.minYears,
+      maxYears: newRec.maxYears,
       status: newRec.status || 'Active',
       isActive: (newRec.status || 'Active') === 'Active',
       updatedAt: new Date().toISOString().split('T')[0],
@@ -226,8 +223,10 @@ export const ConfigurationPanel: React.FC = () => {
         name: newRec.name,
         code: newRec.code,
         description: newRec.description || '',
+        minYears: newRec.minYears,
+        maxYears: newRec.maxYears,
         isActive: (newRec.status || 'Active') === 'Active',
-      }).unwrap();
+      } as any).unwrap();
 
       toast.success(`Created ${newRec.name}`, {
         description: `New master taxonomy record added successfully.`,

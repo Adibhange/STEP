@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Icon,
@@ -33,6 +34,11 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
   onDriveCreated,
 }) => {
   const dispatch = useAppDispatch();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ESC key handler
   useEffect(() => {
@@ -199,7 +205,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
         setCreatedDrive(result.data);
         dispatch(
           notifySuccess({
-            title: driveType === 'Walk-in Drive' ? '⚡ Walk-in Drive Live!' : '⚡ Direct Hiring Vacancy Live!',
+            title: driveType === 'Walk-in Drive' ? 'Walk-in Drive Live!' : 'Direct Hiring Vacancy Live!',
             description: `Created vacancy ${result.data.vacancyCode} with assessment & registration portal.`,
           })
         );
@@ -208,7 +214,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
         dispatch(
           notifyError({
             title: 'Drive Launch Failed',
-            description: result.message || 'Could not spawn instant drive.',
+            description: result.message || 'Could not create vacancy.',
           })
         );
       }
@@ -216,7 +222,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
       dispatch(
         notifyError({
           title: 'Error',
-          description: err?.data?.message || 'Failed to spawn instant drive.',
+          description: err?.data?.message || 'Failed to create vacancy.',
         })
       );
     }
@@ -251,10 +257,12 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
     onClose();
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto isolate">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto">
           {/* Theme-Aware Backdrop */}
           <motion.div
             key="backdrop"
@@ -263,7 +271,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
             animate="show"
             exit="exit"
             onClick={handleResetAndClose}
-            className="fixed inset-0 bg-[var(--overlay)] backdrop-blur-xs transform-gpu"
+            className="fixed inset-0 bg-[var(--overlay)] backdrop-blur-xs"
             aria-hidden="true"
           />
 
@@ -275,7 +283,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
             animate="show"
             exit="exit"
             style={{ transformOrigin: '50% 40%' }}
-            className="relative w-full max-w-2xl bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl shadow-[0_25px_70px_-15px_rgba(99,102,241,0.22),0_0_0_1px_rgba(255,255,255,0.06)] overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh] z-10 transform-gpu my-auto"
+            className="relative w-full max-w-2xl bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl shadow-[var(--shadow-2xl)] overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh] z-10 my-auto"
             onClick={(e) => e.stopPropagation()}
           >
           {/* Responsive Header */}
@@ -287,16 +295,16 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
           >
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 flex items-center justify-center text-[var(--accent-indigo)] shadow-2xs shrink-0">
-                <Icon name="zap" size="sm" />
+                <Icon name="briefcase" size="sm" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   <h2 className="text-xs sm:text-base font-extrabold text-[var(--text-primary)] font-heading leading-tight truncate">
-                    1-Click Autonomous Drive
+                    Create Vacancy
                   </h2>
                 </div>
                 <p className="text-[10.5px] sm:text-xs text-[var(--text-tertiary)] mt-0.5 truncate sm:whitespace-normal">
-                  Instant drive initialization, assessment blueprint &amp; QR hub.
+                  Initialize vacancy profile, assessment blueprint &amp; applicant QR hub.
                 </p>
               </div>
             </div>
@@ -773,7 +781,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                 type="button"
                 onClick={handleLaunch}
                 disabled={isLaunching || !selectedRoleId}
-                className="w-full h-10 sm:h-10.5 px-5 rounded-xl bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-[0_2px_10px_rgba(99,102,241,0.38),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 hover:border-indigo-300/50 transition-all duration-150 cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
+                className="w-full h-10 sm:h-10.5 px-5 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-[13px] font-bold flex items-center justify-center gap-2.5 shadow-[var(--shadow-md)] border border-[var(--accent-indigo)]/30 transition-all duration-150 cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group"
               >
                 {isLaunching ? (
                   <>
@@ -785,7 +793,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
                     <div className="w-5 h-5 rounded-md bg-white/15 flex items-center justify-center text-white shrink-0 group-hover:bg-white/25 transition-colors">
                       <Icon name="zap" size="xs" />
                     </div>
-                    <span>{driveType === 'Walk-in Drive' ? 'Launch Instant Walk-in Drive' : 'Publish Direct Hiring Vacancy'}</span>
+                    <span>{driveType === 'Walk-in Drive' ? 'Launch Walk-in Drive' : 'Publish Direct Hiring Vacancy'}</span>
                     <Icon name="chevron-right" size="xs" className="text-white/70 group-hover:translate-x-0.5 group-hover:text-white transition-all" />
                   </>
                 )}
@@ -794,7 +802,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
               <button
                 type="button"
                 onClick={handleResetAndClose}
-                className="w-full h-10 sm:h-10.5 px-5 rounded-xl bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-[0_2px_10px_rgba(99,102,241,0.38),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 hover:border-indigo-300/50 transition-all duration-150 cursor-pointer active:scale-[0.99]"
+                className="w-full h-10 sm:h-10.5 px-5 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-[var(--shadow-md)] border border-[var(--accent-indigo)]/30 transition-all duration-150 cursor-pointer active:scale-[0.99]"
               >
                 <Icon name="check" size="xs" />
                 <span>Done & Close</span>
@@ -802,8 +810,9 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
             )}
           </div>
         </motion.div>
-      </div>
+        </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

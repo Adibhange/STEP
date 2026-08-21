@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Icon } from '@/design-system';
+import { Icon, EnterpriseModal } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { PipelineRound } from '../types/vacancy.types';
@@ -437,72 +437,49 @@ export const PipelineFlowVersions: React.FC<PipelineFlowVersionsProps> = ({ vaca
       </div>
 
       {/* Add Flow Version Modal */}
-      {isAddModalOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setIsAddModalOpen(false)}
-        >
-          <div
-            className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-xl)] w-full max-w-md p-5 flex flex-col gap-4 cursor-default"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-              <h4 className="text-base font-extrabold text-[var(--text-primary)] font-heading">
-                Create Pipeline Flow Version
-              </h4>
-              <button type="button" onClick={() => setIsAddModalOpen(false)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                <Icon name="x" size="xs" />
-              </button>
-            </div>
+      {/* Create Pipeline Flow Version Modal */}
+      <EnterpriseModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Create Pipeline Flow Version"
+        subtitle="Define a distinct round sequence track for candidate evaluation."
+        icon="git-branch"
+        maxWidth="lg"
+        submitText={isCreating ? 'Creating…' : 'Create Flow Version'}
+        cancelText="Cancel"
+        isSubmitting={isCreating}
+        onSubmit={handleAddFlowVersion}
+      >
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-mono uppercase">
+              Flow Version Name *
+            </label>
+            <input
+              type="text"
+              required
+              autoFocus
+              placeholder="e.g. Flow Version 3 (Fast-Track Senior)"
+              value={newVersionName}
+              onChange={(e) => setNewVersionName(e.target.value)}
+              className="w-full h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+            />
+          </div>
 
-            <form onSubmit={handleAddFlowVersion} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-mono uppercase">
-                  Flow Version Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Flow Version 3 (Fast-Track Senior)"
-                  value={newVersionName}
-                  onChange={(e) => setNewVersionName(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-mono uppercase">
-                  Description / Sequence Overview
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="e.g. Round 1: Coding Challenge → Round 2: System Design"
-                  value={newVersionDesc}
-                  onChange={(e) => setNewVersionDesc(e.target.value)}
-                  className="w-full p-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none resize-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-default)]">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="h-9 px-4 rounded-lg text-[12px] font-bold border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="h-9 px-4 rounded-lg text-[12px] font-bold bg-[var(--accent-indigo)] text-white hover:bg-[var(--accent-indigo-hover)] cursor-pointer shadow-2xs disabled:opacity-50"
-                >
-                  {isCreating ? 'Creating…' : 'Create Flow Version'}
-                </button>
-              </div>
-            </form>
+          <div>
+            <label className="block text-[11.5px] font-bold text-[var(--text-secondary)] mb-1 font-mono uppercase">
+              Description / Sequence Overview
+            </label>
+            <textarea
+              rows={3}
+              placeholder="e.g. Round 1: Coding Challenge → Round 2: System Design"
+              value={newVersionDesc}
+              onChange={(e) => setNewVersionDesc(e.target.value)}
+              className="w-full p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none resize-none focus:border-[var(--accent-indigo)]"
+            />
           </div>
         </div>
-      )}
+      </EnterpriseModal>
     </div>
   );
 };

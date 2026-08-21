@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -89,14 +89,14 @@ namespace STEP.Api.Controllers
         }
 
         /// <summary>
-        /// 1-Click Recruitment Engine Drive Launch: Creates a vacancy, sets up blueprint & pipeline, and activates live QR code.
+        /// Recruitment Engine Drive Launch: Creates a vacancy, sets up blueprint & pipeline, and activates live QR code.
         /// </summary>
         [HttpPost("instant-drive")]
         [Authorize(Policy = "Vacancy.Create")]
         public async Task<IActionResult> CreateInstantDrive([FromBody] CreateInstantDriveCommand command)
         {
             var driveResult = await mediator.Send(command);
-            return Ok(ApiResponse<object>.Ok(driveResult, "âš¡ Autonomous recruitment drive launched successfully"));
+            return Ok(ApiResponse<object>.Ok(driveResult, "Recruitment drive launched successfully"));
         }
 
         /// <summary>

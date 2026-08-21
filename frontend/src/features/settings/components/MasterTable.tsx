@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Icon, tactilePopCardVariant } from '@/design-system';
+import { Icon, EnterpriseModal, tactilePopCardVariant } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import type { MasterRecord } from '@/types/master.types';
 
@@ -84,7 +84,11 @@ export const MasterTable: React.FC<MasterTableProps> = ({
   const [formName, setFormName] = useState('');
   const [formCode, setFormCode] = useState('');
   const [formDescription, setFormDescription] = useState('');
+  const [formMinYears, setFormMinYears] = useState<string>('');
+  const [formMaxYears, setFormMaxYears] = useState<string>('');
   const [formStatus, setFormStatus] = useState<'Active' | 'Inactive'>('Active');
+
+  const isExperience = title.toLowerCase().includes('experience');
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -102,6 +106,8 @@ export const MasterTable: React.FC<MasterTableProps> = ({
     setFormName('');
     setFormCode('');
     setFormDescription('');
+    setFormMinYears('');
+    setFormMaxYears('');
     setFormStatus('Active');
     setIsAddOpen(true);
   };
@@ -111,6 +117,8 @@ export const MasterTable: React.FC<MasterTableProps> = ({
     setFormName(record.name);
     setFormCode(record.code || '');
     setFormDescription(record.description || '');
+    setFormMinYears(record.minYears !== undefined && record.minYears !== null ? String(record.minYears) : '');
+    setFormMaxYears(record.maxYears !== undefined && record.maxYears !== null ? String(record.maxYears) : '');
     setFormStatus(record.status || 'Active');
   };
 
@@ -125,6 +133,8 @@ export const MasterTable: React.FC<MasterTableProps> = ({
       name: formName.trim(),
       code: finalCode,
       description: formDescription.trim(),
+      minYears: formMinYears ? parseFloat(formMinYears) : undefined,
+      maxYears: formMaxYears ? parseFloat(formMaxYears) : undefined,
       status: formStatus,
     });
     setIsAddOpen(false);
@@ -145,6 +155,8 @@ export const MasterTable: React.FC<MasterTableProps> = ({
       name: formName.trim(),
       code: finalCode,
       description: formDescription.trim(),
+      minYears: formMinYears ? parseFloat(formMinYears) : undefined,
+      maxYears: formMaxYears ? parseFloat(formMaxYears) : undefined,
       status: formStatus,
       updatedAt: new Date().toISOString().split('T')[0],
     });
@@ -166,6 +178,19 @@ export const MasterTable: React.FC<MasterTableProps> = ({
         </div>
       ),
     },
+    ...(isExperience
+      ? [
+          {
+            key: 'experienceRange',
+            label: 'Experience Bounds',
+            render: (r: MasterRecord) => (
+              <span className="inline-flex items-center gap-1 font-mono text-[11.5px] font-bold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-2.5 py-0.5 rounded border border-[var(--accent-indigo)]/20">
+                {r.minYears ?? 0} – {r.maxYears ?? 99} yrs
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       key: 'code',
       label: 'Short Code',
@@ -339,185 +364,185 @@ export const MasterTable: React.FC<MasterTableProps> = ({
         <span className="font-mono text-[10.5px]">STEP Enterprise Master Schema v1.0</span>
       </div>
 
-      {/* Add Modal with Spring Entrance */}
-      <AnimatePresence>
-        {isAddOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[var(--overlay)] backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
-            onClick={() => setIsAddOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 12 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-xl)] w-full max-w-md p-5 flex flex-col gap-4 cursor-default"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-                <h4 className="text-base font-bold text-[var(--text-primary)]">Add New {title}</h4>
-                <button type="button" onClick={() => setIsAddOpen(false)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                  <Icon name="x" size="sm" />
-                </button>
+      {/* Add Modal with Enterprise Spring Dialog */}
+      <EnterpriseModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        title={`Add New ${title}`}
+        subtitle={`Create a new master ${title.toLowerCase()} taxonomy record.`}
+        icon="plus-circle"
+        maxWidth="md"
+        submitText="Save Record"
+        cancelText="Cancel"
+        onSubmit={handleSaveAdd}
+      >
+        <div className="flex flex-col gap-3.5">
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Record Name *</label>
+            <input
+              type="text"
+              required
+              autoFocus
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder={`Enter ${title.toLowerCase()} name... (e.g. ${exampleName})`}
+              className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+            />
+          </div>
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Short Code (Optional)</label>
+            <input
+              type="text"
+              value={formCode}
+              onChange={(e) => setFormCode(e.target.value)}
+              placeholder={`Auto-generated if left blank (e.g. ${exampleCode})`}
+              className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono"
+            />
+          </div>
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Description (Optional)</label>
+            <input
+              type="text"
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder="Enter optional description..."
+              className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+            />
+          </div>
+          {isExperience && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Min Experience (Years)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="99"
+                  value={formMinYears}
+                  onChange={(e) => setFormMinYears(e.target.value)}
+                  placeholder="e.g. 1.0"
+                  className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono"
+                />
               </div>
-              <form onSubmit={handleSaveAdd} className="flex flex-col gap-4">
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Record Name *</label>
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder={`Enter ${title.toLowerCase()} name... (e.g. ${exampleName})`}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Short Code (Optional)</label>
-                  <input
-                    type="text"
-                    value={formCode}
-                    onChange={(e) => setFormCode(e.target.value)}
-                    placeholder={`Auto-generated if left blank (e.g. ${exampleCode})`}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Description (Optional)</label>
-                  <input
-                    type="text"
-                    value={formDescription}
-                    onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder="Enter optional description..."
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Status</label>
-                  <CustomSelect
-                    label="Initial Status"
-                    value={formStatus}
-                    options={[
-                      { value: 'Active', label: 'Active' },
-                      { value: 'Inactive', label: 'Inactive' },
-                    ]}
-                    onChange={(val) => setFormStatus((val || 'Active') as any)}
-                    widthClass="w-full"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[var(--border-default)] mt-1 w-full">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddOpen(false)}
-                    className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
-                  >
-                    <span>Cancel</span>
-                  </button>
-                  <button
-                    type="submit"
-                    className="h-11 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full"
-                  >
-                    <span>Save Record</span>
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div>
+                <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Max Experience (Years)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="99"
+                  value={formMaxYears}
+                  onChange={(e) => setFormMaxYears(e.target.value)}
+                  placeholder="e.g. 3.0"
+                  className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono"
+                />
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Status</label>
+            <CustomSelect
+              label="Initial Status"
+              value={formStatus}
+              options={[
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ]}
+              onChange={(val) => setFormStatus((val || 'Active') as any)}
+              widthClass="w-full"
+            />
+          </div>
+        </div>
+      </EnterpriseModal>
 
-      {/* Edit Modal with Spring Entrance */}
-      <AnimatePresence>
-        {editingRecord && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[var(--overlay)] backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
-            onClick={() => setEditingRecord(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 12 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-xl)] w-full max-w-md p-5 flex flex-col gap-4 cursor-default"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-                <h4 className="text-base font-bold text-[var(--text-primary)]">Edit {title} Record</h4>
-                <button type="button" onClick={() => setEditingRecord(null)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                  <Icon name="x" size="sm" />
-                </button>
+      {/* Edit Modal with Enterprise Spring Dialog */}
+      <EnterpriseModal
+        isOpen={!!editingRecord}
+        onClose={() => setEditingRecord(null)}
+        title={`Edit ${title} Record`}
+        subtitle={`Update master code, title, description, or status.`}
+        icon="edit-3"
+        maxWidth="md"
+        submitText="Update Record"
+        cancelText="Cancel"
+        onSubmit={handleSaveEdit}
+      >
+        <div className="flex flex-col gap-3.5">
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Record Name *</label>
+            <input
+              type="text"
+              required
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+            />
+          </div>
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Short Code</label>
+            <input
+              type="text"
+              value={formCode}
+              onChange={(e) => setFormCode(e.target.value)}
+              placeholder="Short Code"
+              className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono"
+            />
+          </div>
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Description (Optional)</label>
+            <input
+              type="text"
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder="Enter optional description..."
+              className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+            />
+          </div>
+          {isExperience && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Min Experience (Years)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="99"
+                  value={formMinYears}
+                  onChange={(e) => setFormMinYears(e.target.value)}
+                  placeholder="e.g. 1.0"
+                  className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono"
+                />
               </div>
-              <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Record Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Short Code</label>
-                  <input
-                    type="text"
-                    value={formCode}
-                    onChange={(e) => setFormCode(e.target.value)}
-                    placeholder="Short Code"
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Description (Optional)</label>
-                  <input
-                    type="text"
-                    value={formDescription}
-                    onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder="Enter optional description..."
-                    className="w-full mt-1 h-9.5 px-3 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Status</label>
-                  <CustomSelect
-                    label="Status"
-                    value={formStatus}
-                    options={[
-                      { value: 'Active', label: 'Active' },
-                      { value: 'Inactive', label: 'Inactive' },
-                    ]}
-                    onChange={(val) => setFormStatus((val || 'Active') as any)}
-                    widthClass="w-full"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[var(--border-default)] mt-1 w-full">
-                  <button
-                    type="button"
-                    onClick={() => setEditingRecord(null)}
-                    className="h-11 px-5 rounded-lg text-[13px] font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] shadow-2xs flex items-center justify-center gap-2 hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all cursor-pointer select-none w-full"
-                  >
-                    <span>Cancel</span>
-                  </button>
-                  <button
-                    type="submit"
-                    className="h-11 px-5 rounded-lg text-[13px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md flex items-center justify-center gap-2 hover:from-indigo-700 hover:to-purple-700 transition-all cursor-pointer select-none w-full"
-                  >
-                    <span>Update Record</span>
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div>
+                <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase">Max Experience (Years)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="99"
+                  value={formMaxYears}
+                  onChange={(e) => setFormMaxYears(e.target.value)}
+                  placeholder="e.g. 3.0"
+                  className="w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono"
+                />
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Status</label>
+            <CustomSelect
+              label="Status"
+              value={formStatus}
+              options={[
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ]}
+              onChange={(val) => setFormStatus((val || 'Active') as any)}
+              widthClass="w-full"
+            />
+          </div>
+        </div>
+      </EnterpriseModal>
     </motion.div>
   );
 };

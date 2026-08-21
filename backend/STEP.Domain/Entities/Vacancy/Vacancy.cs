@@ -55,7 +55,6 @@ namespace STEP.Domain.Entities.Vacancy
         public Exam.AssessmentBlueprint? AssessmentBlueprint { get; set; }
         public decimal? PassingPercentageOverride { get; set; }
 
-        public ICollection<VacancyTestLocation> TestLocations { get; set; } = new List<VacancyTestLocation>();
         public ICollection<VacancyPipelineFlow> PipelineFlows { get; set; } = new List<VacancyPipelineFlow>();
         public ICollection<VacancyAssessmentSection> AssessmentSections { get; set; } = new List<VacancyAssessmentSection>();
         public ICollection<VacancyQuestionPaper> QuestionPapers { get; set; } = new List<VacancyQuestionPaper>();

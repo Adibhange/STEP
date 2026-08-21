@@ -177,17 +177,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           </button>
         )}
 
-        {/* Theme Toggle Trigger with Top-Right to Bottom-Left Circular Expansion */}
+        {/* Theme Toggle Trigger */}
         <button
           type="button"
           id="theme-toggle-trigger"
-          className="w-8.5 h-8.5 flex items-center justify-center rounded-full text-[var(--text-secondary)]
-            hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] hover:scale-[1.04] active:scale-95 transition-all duration-150 focus-ring-step cursor-pointer"
+          className="w-8.5 h-8.5 flex items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)]/60 hover:bg-[var(--surface-2)] hover:border-[var(--accent-indigo)]/40 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:scale-[1.02] active:scale-95 transition-all duration-150 focus-ring-step cursor-pointer shadow-2xs"
           onClick={(e) => toggleTheme(e)}
           aria-label={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} theme`}
           title={`Current theme: ${theme}. Click to toggle.`}
         >
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size="sm" />
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size="xs" />
         </button>
 
         {/* Notification Bell Trigger */}
@@ -195,8 +194,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           <button
             type="button"
             id="notifications-trigger"
-            className="relative w-8.5 h-8.5 flex items-center justify-center rounded-full text-[var(--text-secondary)]
-              hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] hover:scale-[1.04] active:scale-95 transition-all duration-150 focus-ring-step cursor-pointer"
+            className="relative w-8.5 h-8.5 flex items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)]/60 hover:bg-[var(--surface-2)] hover:border-[var(--accent-indigo)]/40 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:scale-[1.02] active:scale-95 transition-all duration-150 focus-ring-step cursor-pointer shadow-2xs"
             onClick={() => {
               setNotifOpen((o) => !o);
               setProfileOpen(false);
@@ -205,7 +203,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
             aria-expanded={notifOpen}
             aria-haspopup="true"
           >
-            <Icon name="bell" size="sm" />
+            <Icon name="bell" size="xs" />
             {unreadCount > 0 && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--status-danger)] ring-2 ring-[var(--surface-1)]" />
             )}
@@ -274,7 +272,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           <button
             type="button"
             id="profile-menu-trigger"
-            className="flex items-center gap-2.5 p-1 pr-2 rounded-full hover:bg-[var(--surface-hover)] transition-colors focus-ring-step cursor-pointer"
+            className="h-8.5 pl-1 pr-2.5 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)]/60 hover:bg-[var(--surface-2)] hover:border-[var(--accent-indigo)]/40 transition-all focus-ring-step cursor-pointer flex items-center gap-2 shadow-2xs"
             onClick={() => {
               setProfileOpen((o) => !o);
               setNotifOpen(false);
@@ -283,23 +281,23 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
             aria-haspopup="true"
           >
             <div
-              className="w-7.5 h-7.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-[12px] flex items-center justify-center shadow-xs"
+              className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-[var(--accent-indigo)] to-[#4f46e5] text-white font-bold text-[11px] font-mono flex items-center justify-center shadow-xs border border-indigo-400/30 shrink-0"
               suppressHydrationWarning
             >
               {user.avatarInitials}
             </div>
-            <div className="hidden sm:flex flex-col text-left" suppressHydrationWarning>
-              <span className="text-[12.5px] font-bold text-[var(--text-primary)] leading-none font-heading" suppressHydrationWarning>
+            <div className="hidden sm:flex flex-col text-left justify-center min-w-0" suppressHydrationWarning>
+              <span className="text-[12px] font-bold text-[var(--text-primary)] leading-none font-heading truncate max-w-[130px]" suppressHydrationWarning>
                 {user.name}
               </span>
-              <span className="text-[10.5px] text-[var(--text-tertiary)] font-medium leading-tight" suppressHydrationWarning>
+              <span className="text-[10px] text-[var(--text-tertiary)] font-medium leading-none mt-0.5 truncate" suppressHydrationWarning>
                 {user.role}
               </span>
             </div>
             <Icon
               name="chevron-down"
               size="xs"
-              className={`text-[var(--text-tertiary)] transition-transform duration-150 ${profileOpen ? 'rotate-180 text-[var(--text-primary)]' : ''
+              className={`text-[var(--text-tertiary)] transition-transform duration-150 shrink-0 ${profileOpen ? 'rotate-180 text-[var(--text-primary)]' : ''
                 }`}
             />
           </button>

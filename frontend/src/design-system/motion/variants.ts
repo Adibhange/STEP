@@ -184,3 +184,62 @@ export const dialogContentBlossomVariant: Variants = {
   },
 };
 
+/**
+ * Standard tactile spring card variant for vacancy cards, stage flow cards, and dashboard panels
+ */
+export const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 16, scale: 0.98 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: 'spring' as const,
+      damping: 26,
+      stiffness: 320,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.96,
+    transition: { duration: 0.15 },
+  },
+};
+
+/**
+ * Question card directional carousel slider variant for candidate exam assessments
+ */
+export const questionCardSliderVariant: Variants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 55 : -55,
+    opacity: 0,
+    scale: 0.98,
+    filter: 'blur(3px)',
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: {
+      x: { type: 'spring' as const, stiffness: 360, damping: 28 },
+      opacity: { duration: 0.28 },
+      scale: { duration: 0.28 },
+      filter: { duration: 0.2 },
+    },
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 55 : -55,
+    opacity: 0,
+    scale: 0.98,
+    filter: 'blur(3px)',
+    transition: {
+      x: { type: 'spring' as const, stiffness: 360, damping: 28 },
+      opacity: { duration: 0.2 },
+      filter: { duration: 0.15 },
+    },
+  }),
+};
+
+
+

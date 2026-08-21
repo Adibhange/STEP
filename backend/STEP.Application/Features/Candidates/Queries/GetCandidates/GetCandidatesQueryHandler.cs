@@ -15,7 +15,6 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
         {
             var query = db.Candidates
                 .Include(c => c.Vacancy).ThenInclude(v => v.HiringLocation)
-                .Include(c => c.Vacancy).ThenInclude(v => v.TestLocations).ThenInclude(tl => tl.MasterTestLocation)
                 .Include(c => c.PipelineProgressHistory)
                 .AsNoTracking().AsQueryable();
 
@@ -113,7 +112,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
                 string effectiveStatus = c.Status is "Offered" or "Hired" or "Rejected" ? c.Status : "In-Progress";
 
                 string hiringLocation = c.Vacancy?.HiringLocation?.Name ?? c.CurrentLocation ?? "Primary Center";
-                string testLocation = c.Vacancy?.TestLocations?.Select(tl => tl.MasterTestLocation?.Name).FirstOrDefault(name => name != null) ?? c.CurrentLocation ?? "Test Center";
+                string testLocation = hiringLocation;
 
                 items.Add(new CandidateSummaryDto(
                     c.Id, c.CandidateCode, c.FirstName, c.LastName, c.Email, c.Phone,

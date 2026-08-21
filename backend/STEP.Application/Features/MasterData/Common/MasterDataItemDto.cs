@@ -6,5 +6,7 @@ namespace STEP.Application.Features.MasterData.Common
         string Code,
         string? Description,
         string Status,
-        string UpdatedAt);
+        string UpdatedAt,
+        decimal? MinYears = null,
+        decimal? MaxYears = null);
 }

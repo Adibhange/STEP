@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Icon, Skeleton, CustomCalendarPicker } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
-import { staggerContainer, staggerFastContainer, fadeSlideUpVariant, scalePopVariant } from '@/design-system/motion';
+import {
+  staggerContainer,
+  staggerFastContainer,
+  fadeSlideUpVariant,
+  scalePopVariant,
+  cardVariants,
+  tactilePopCardVariant,
+  tactilePopItemVariant,
+} from '@/design-system/motion';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 import { TempExamLinkModalV2 } from '@/features/assessments/components/TempExamLinkModalV2';
 import { DirectorAccessShareModal } from './DirectorAccessShareModal';
@@ -184,103 +192,6 @@ const REFERENCE_TYPE_OPTIONS: SelectOption[] = [
   { value: 'Internal', label: 'Internal Employee Referral' },
   { value: 'External', label: 'External Referral / Agency' },
 ];
-
-// ── Option 2: Tactile Pop-In (Scale: 0.90 ➔ 1.0 Spring Pop) ────────────────
-const applePopContainer: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.02,
-    },
-  },
-};
-
-const applePopCardLeft: Variants = {
-  hidden: { opacity: 0, scale: 0.88, y: 24 },
-  show: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      damping: 20,
-      stiffness: 280,
-      mass: 0.8,
-    },
-  },
-};
-
-const applePopCardRight: Variants = {
-  hidden: { opacity: 0, scale: 0.88, y: 24 },
-  show: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      damping: 20,
-      stiffness: 280,
-      mass: 0.8,
-      delay: 0.04,
-    },
-  },
-};
-
-const applePopCardDocs: Variants = {
-  hidden: { opacity: 0, scale: 0.90, y: 20 },
-  show: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      damping: 20,
-      stiffness: 280,
-      mass: 0.8,
-      delay: 0.08,
-    },
-  },
-};
-
-const applePopStageItem: Variants = {
-  hidden: { opacity: 0, scale: 0.92, y: 14 },
-  show: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      damping: 18,
-      stiffness: 300,
-      mass: 0.7,
-    },
-  },
-};
-
-const applePopDocItem: Variants = {
-  hidden: { opacity: 0, scale: 0.92, x: -10 },
-  show: {
-    opacity: 1,
-    scale: 1,
-    x: 0,
-    transition: {
-      type: 'spring',
-      damping: 18,
-      stiffness: 300,
-    },
-  },
-};
-
-const applePopInfoSection: Variants = {
-  hidden: { opacity: 0, y: 8 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const },
-  },
-};
 
 /**
  * High-fidelity Skeleton Placeholder loader for Candidate Profile Page
@@ -1570,7 +1481,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     <motion.div
       initial="hidden"
       animate="show"
-      variants={applePopContainer}
+      variants={staggerContainer}
       className="flex flex-col gap-4 pb-6 p-3.5 sm:p-5 bg-[var(--canvas)] min-h-screen text-[13px] font-sans relative"
     >
       {/* ── Main 2-Column Section ────────────────────────────────────────── */}
@@ -1578,7 +1489,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         {/* LEFT COLUMN (4 cols / ~30%): Candidate Profile Overview & Documents */}
         <div className="lg:col-span-4 flex flex-col gap-3.5">
           {/* Card 1: Unified Candidate Profile Card */}
-          <motion.div variants={applePopCardLeft} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] flex flex-col gap-3.5 relative overflow-hidden">
+          <motion.div variants={tactilePopCardVariant} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] flex flex-col gap-3.5 relative overflow-hidden">
             {/* Top Inset Highlight Catch */}
             <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
 
@@ -1817,7 +1728,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           </motion.div>
 
           {/* Card 2: Documents Section (Resume, Application Form, Profile Photo) */}
-          <motion.div variants={applePopCardDocs} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] flex flex-col gap-2.5 relative overflow-hidden">
+          <motion.div variants={tactilePopCardVariant} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] flex flex-col gap-2.5 relative overflow-hidden">
             {/* Top Inset Highlight Catch */}
             <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
 
@@ -1870,7 +1781,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 documentsData.map((doc) => (
                   <motion.div
                     key={doc.id}
-                    variants={applePopDocItem}
+                    variants={tactilePopItemVariant}
                     whileHover={{ x: 2, transition: { duration: 0.12 } }}
                     className="flex items-center justify-between p-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] transition-colors"
                   >
@@ -1925,7 +1836,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         {/* RIGHT COLUMN (8 cols / ~70%): Hiring Stage Progress Cards */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           {/* Header Card: Icon, Title, Subtitle, Badges & Action — Perfectly Aligned with Card 1 */}
-          <motion.div variants={applePopCardRight} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] relative overflow-hidden">
+          <motion.div variants={tactilePopCardVariant} className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-xs)] relative overflow-hidden">
             {/* Top Inset Highlight Catch */}
             <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
 
@@ -2001,7 +1912,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               const isInProgress = stage.status === 'In-Progress';
 
               return (
-                <motion.div key={stage.id} variants={applePopStageItem} className="relative">
+                <motion.div key={stage.id} variants={cardVariants} className="relative">
                   {/* Vertical Track Line connecting to the next milestone */}
                   {!isLast && (
                     <div
@@ -2049,10 +1960,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     )}
                   </div>
 
-                  {/* Stage Card */}
+                  {/* Stage Card with Vacancy Card Spring & Hover Dynamics */}
                   <motion.div
-                    whileHover={{ y: -2, transition: { duration: 0.15 } }}
-                    className={`bg-[var(--surface-1)] border rounded-[var(--radius-lg)] p-4 sm:p-5 shadow-[var(--shadow-xs)] flex flex-col gap-3.5 transition-all ${
+                    layout
+                    whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                    whileTap={{ scale: 0.995 }}
+                    className={`group bg-[var(--surface-1)] border rounded-[var(--radius-lg)] p-4 sm:p-5 shadow-2xs hover:shadow-[0_12px_30px_-10px_rgba(99,102,241,0.15)] flex flex-col gap-3.5 transition-all duration-200 ${
                       stage.isTerminated
                         ? 'border-[var(--border-default)] opacity-60 bg-[var(--surface-2)]'
                         : isPassed
@@ -2061,7 +1974,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                         ? 'border-[var(--status-danger)]/40 hover:border-[var(--status-danger)]'
                         : isInProgress
                         ? 'border-[var(--status-warning)] shadow-xs ring-1 ring-[var(--status-warning)]/30'
-                        : 'border-[var(--border-default)] opacity-85 hover:opacity-100'
+                        : 'border-[var(--border-default)] opacity-85 hover:opacity-100 hover:border-[var(--accent-indigo)]'
                     }`}
                   >
                     <div className="flex items-center justify-between flex-wrap gap-2.5">

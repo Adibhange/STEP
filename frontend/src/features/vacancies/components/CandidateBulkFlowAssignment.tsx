@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Icon } from '@/design-system';
+import { Icon, staggerFastContainer, fadeSlideUpVariant } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CandidateBulkItem } from '../types/vacancy.types';
 import { useGetCandidatesQuery, useGetVacancyByIdQuery, useAssignPipelineFlowMutation } from '@/store/services/api';
@@ -222,22 +222,19 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
             className="divide-y divide-[var(--border-default)] font-medium text-[var(--text-primary)]"
             initial="hidden"
             animate="show"
-            variants={{
-              hidden: {},
-              show: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
-            }}
+            variants={staggerFastContainer}
           >
             {isLoading && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-xs text-[var(--text-tertiary)] font-mono">
-                  Loading candidates from database...
+                <td colSpan={7} className="py-8 text-center text-xs text-[var(--text-tertiary)] font-mono">
+                  Loading vacancy candidates...
                 </td>
               </tr>
             )}
             {!isLoading && paginatedCandidates.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-xs text-[var(--text-tertiary)] font-mono">
-                  No candidates found for this vacancy.
+                <td colSpan={7} className="py-8 text-center text-xs text-[var(--text-tertiary)]">
+                  No candidates found matching filter criteria.
                 </td>
               </tr>
             )}
@@ -247,10 +244,7 @@ export const CandidateBulkFlowAssignment: React.FC<CandidateBulkFlowAssignmentPr
                 return (
                   <motion.tr
                     key={c.id}
-                    variants={{
-                      hidden: { opacity: 0, y: 8 },
-                      show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
-                    }}
+                    variants={fadeSlideUpVariant}
                     className={`hover:bg-[var(--surface-hover)] transition-colors ${isSelected ? 'bg-[var(--accent-indigo-dim)]' : ''}`}
                   >
                     <td className="py-3 px-4">

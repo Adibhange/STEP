@@ -30,11 +30,6 @@ namespace STEP.Persistence.Seed
                 Row<MasterHiringLocation>(1, "Pune Office", "PUNE", "Pune Corporate HQ & Assessment Hub")
             );
 
-            modelBuilder.Entity<MasterTestLocation>().HasData(
-                Row<MasterTestLocation>(1, "Pune Office - Main Center", "TC-PUNE-1", "Lab A & B (Capacity 150)"),
-                Row<MasterTestLocation>(2, "Online Remote Proctored", "TC-ONLINE", "Webcam AI Proctored Assessment")
-            );
-
             modelBuilder.Entity<MasterEmploymentType>().HasData(
                 Row<MasterEmploymentType>(1, "Full-Time Permanent", "FT", "Standard employee contract"),
                 Row<MasterEmploymentType>(2, "Contractual (6-12 Months)", "CON", "Fixed term contract"),
@@ -42,12 +37,12 @@ namespace STEP.Persistence.Seed
             );
 
             modelBuilder.Entity<MasterExperienceLevel>().HasData(
-                Row<MasterExperienceLevel>(1, "Fresher (0 Years)", "EXP-0", "No prior professional experience"),
-                Row<MasterExperienceLevel>(2, "Junior (0-1 Year)", "EXP-1", "Up to 1 year of experience"),
-                Row<MasterExperienceLevel>(3, "Mid-Level (1-3 Years)", "EXP-3", "1 to 3 years of experience"),
-                Row<MasterExperienceLevel>(4, "Senior (3-5 Years)", "EXP-5", "3 to 5 years of experience"),
-                Row<MasterExperienceLevel>(5, "Lead (5-8 Years)", "EXP-8", "5 to 8 years of experience"),
-                Row<MasterExperienceLevel>(6, "Principal (8+ Years)", "EXP-8P", "8 or more years of experience")
+                ExpLevelRow(1, "Fresher (0 Years)", "EXP-0", "No prior professional experience", 0.0m, 0.0m),
+                ExpLevelRow(2, "Junior (0-1 Year)", "EXP-1", "Up to 1 year of experience", 0.0m, 1.0m),
+                ExpLevelRow(3, "Mid-Level (1-3 Years)", "EXP-3", "1 to 3 years of experience", 1.0m, 3.0m),
+                ExpLevelRow(4, "Senior (3-5 Years)", "EXP-5", "3 to 5 years of experience", 3.0m, 5.0m),
+                ExpLevelRow(5, "Lead (5-8 Years)", "EXP-8", "5 to 8 years of experience", 5.0m, 8.0m),
+                ExpLevelRow(6, "Principal (8+ Years)", "EXP-8P", "8 or more years of experience", 8.0m, 99.0m)
             );
 
             modelBuilder.Entity<RoleHiringProfile>().HasData(
@@ -152,6 +147,19 @@ namespace STEP.Persistence.Seed
                 Name = name,
                 Code = code,
                 Description = description,
+                IsActive = isActive,
+                CreatedAt = SeedTimestamp
+            };
+
+        private static MasterExperienceLevel ExpLevelRow(int id, string name, string code, string description, decimal minYears, decimal maxYears, bool isActive = true)
+            => new()
+            {
+                Id = id,
+                Name = name,
+                Code = code,
+                Description = description,
+                MinYears = minYears,
+                MaxYears = maxYears,
                 IsActive = isActive,
                 CreatedAt = SeedTimestamp
             };

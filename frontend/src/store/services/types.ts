@@ -37,6 +37,8 @@ export interface MasterRecord {
   name: string;
   description?: string;
   displayOrder?: number;
+  minYears?: number;
+  maxYears?: number;
   isActive: boolean;
 }
 

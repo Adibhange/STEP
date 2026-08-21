@@ -2,17 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-  Button,
   Input,
   PinInput,
   Icon,
+  EnterpriseModal,
 } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 
@@ -93,143 +86,116 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     : 'Update your account credentials securely';
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden shadow-2xl rounded-2xl border border-[var(--border-default)]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border-default)] bg-[var(--surface-2,#f8fafc)]">
-          <div className="flex items-center gap-3.5">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isDirector ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' : 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'}`}>
-              <Icon name={isDirector ? 'shield' : 'lock'} size="md" />
-            </div>
-            <DialogHeader className="mb-0 gap-0.5 text-left">
-              <DialogTitle className="text-base font-bold font-heading text-[var(--text-primary)]">{title}</DialogTitle>
-              <DialogDescription className="text-xs text-[var(--text-secondary)]">{subtitle}</DialogDescription>
-            </DialogHeader>
+    <EnterpriseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      subtitle={subtitle}
+      icon={isDirector ? 'shield' : 'lock'}
+      iconColorClass={isDirector ? 'text-amber-500' : 'text-[var(--accent-indigo)]'}
+      iconBgClass={isDirector ? 'bg-amber-500/10 border-amber-500/30' : 'bg-[var(--accent-indigo)]/10 border-[var(--accent-indigo)]/30'}
+      maxWidth="md"
+      submitText={isDirector ? 'Update 4-Digit PIN' : 'Update Password'}
+      cancelText="Cancel"
+      isSubmitting={isSubmitting}
+      onSubmit={handleSubmit}
+    >
+      <div className="flex flex-col gap-4">
+        {error && (
+          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs font-semibold flex items-center gap-2.5 animate-shake">
+            <Icon name="alert-triangle" size="xs" className="shrink-0 text-red-500" />
+            <span>{error}</span>
           </div>
-          <DialogClose asChild>
-            <button
-              type="button"
-              className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-            >
-              <Icon name="x" size="sm" />
-            </button>
-          </DialogClose>
-        </div>
+        )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {error && (
-            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs font-semibold flex items-center gap-2.5 animate-shake">
-              <Icon name="alert-triangle" size="xs" className="shrink-0 text-red-500" />
-              <span>{error}</span>
+        {isDirector ? (
+          /* ── 4-Digit PIN Mode ── */
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Security Keypad Mode</span>
+              <button
+                type="button"
+                onClick={() => setMaskPin(!maskPin)}
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Icon name={maskPin ? 'eye' : 'unlock'} size="xs" />
+                <span>{maskPin ? 'Show Digits' : 'Mask Digits'}</span>
+              </button>
             </div>
-          )}
 
-          {isDirector ? (
-            /* ── 4-Digit PIN Mode ── */
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Security Keypad Mode</span>
-                <button
-                  type="button"
-                  onClick={() => setMaskPin(!maskPin)}
-                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
-                >
-                  <Icon name={maskPin ? 'eye' : 'unlock'} size="xs" />
-                  <span>{maskPin ? 'Show Digits' : 'Mask Digits'}</span>
+            <div>
+              <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
+                Current 4-Digit PIN
+              </label>
+              <PinInput length={4} value={currentPin} onChange={setCurrentPin} masked={maskPin} autoFocus />
+            </div>
+
+            <div className="pt-2 border-t border-[var(--border-default)]">
+              <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
+                New 4-Digit PIN
+              </label>
+              <PinInput length={4} value={newPin} onChange={setNewPin} masked={maskPin} />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
+                Confirm New PIN
+              </label>
+              <PinInput length={4} value={confirmPin} onChange={setConfirmPin} masked={maskPin} />
+            </div>
+
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs">
+              <Icon name="info" size="xs" className="shrink-0 mt-0.5" />
+              <span>Your PIN must be exactly <strong>4 numeric digits</strong> (e.g. 1234) and is required for secure candidate review and offer rollouts.</span>
+            </div>
+          </div>
+        ) : (
+          /* ── Password Mode ── */
+          <div className="space-y-3.5">
+            <Input
+              label="Current Password"
+              type={showCurrent ? 'text' : 'password'}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Enter current password"
+              sizeToken="lg"
+              rightSlot={
+                <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
+                  <Icon name={showCurrent ? 'unlock' : 'lock'} size="xs" />
                 </button>
-              </div>
+              }
+            />
 
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
-                  Current 4-Digit PIN
-                </label>
-                <PinInput length={4} value={currentPin} onChange={setCurrentPin} masked={maskPin} autoFocus />
-              </div>
+            <Input
+              label="New Password"
+              type={showNew ? 'text' : 'password'}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password (min. 6 chars)"
+              sizeToken="lg"
+              rightSlot={
+                <button type="button" onClick={() => setShowNew(!showNew)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
+                  <Icon name={showNew ? 'unlock' : 'lock'} size="xs" />
+                </button>
+              }
+            />
 
-              <div className="pt-2 border-t border-[var(--border-subtle)]">
-                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
-                  New 4-Digit PIN
-                </label>
-                <PinInput length={4} value={newPin} onChange={setNewPin} masked={maskPin} />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 text-center">
-                  Confirm New PIN
-                </label>
-                <PinInput length={4} value={confirmPin} onChange={setConfirmPin} masked={maskPin} />
-              </div>
-
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/8 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs">
-                <Icon name="info" size="xs" className="shrink-0 mt-0.5" />
-                <span>Your PIN must be exactly <strong>4 numeric digits</strong> (e.g. 1234) and is required for instant 1-click candidate review and offer rollouts.</span>
-              </div>
-            </div>
-          ) : (
-            /* ── Password Mode ── */
-            <div className="space-y-3.5">
-              <Input
-                label="Current Password"
-                type={showCurrent ? 'text' : 'password'}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-                sizeToken="lg"
-                rightSlot={
-                  <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                    <Icon name={showCurrent ? 'unlock' : 'lock'} size="xs" />
-                  </button>
-                }
-              />
-
-              <Input
-                label="New Password"
-                type={showNew ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password (min. 6 chars)"
-                sizeToken="lg"
-                rightSlot={
-                  <button type="button" onClick={() => setShowNew(!showNew)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                    <Icon name={showNew ? 'unlock' : 'lock'} size="xs" />
-                  </button>
-                }
-              />
-
-              <Input
-                label="Confirm New Password"
-                type={showConfirm ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
-                sizeToken="lg"
-                rightSlot={
-                  <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
-                    <Icon name={showConfirm ? 'unlock' : 'lock'} size="xs" />
-                  </button>
-                }
-              />
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <DialogFooter className="pt-4 mt-2 border-t border-[var(--border-default)] flex items-center justify-end gap-2.5">
-            <Button type="button" variant="ghost" size="md" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              loading={isSubmitting}
-              className={isDirector ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md shadow-amber-500/20 text-white font-semibold' : 'bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-md shadow-indigo-500/20 text-white font-semibold'}
-            >
-              {isDirector ? 'Update 4-Digit PIN' : 'Update Password'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <Input
+              label="Confirm New Password"
+              type={showConfirm ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter new password"
+              sizeToken="lg"
+              rightSlot={
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer">
+                  <Icon name={showConfirm ? 'unlock' : 'lock'} size="xs" />
+                </button>
+              }
+            />
+          </div>
+        )}
+      </div>
+    </EnterpriseModal>
   );
 };

@@ -18,7 +18,6 @@ namespace STEP.Application.Features.MasterData.Commands.ToggleMasterDataStatus
                 "roles" => await db.MasterRoles.FindAsync(new object[] { request.Id }, cancellationToken),
                 "departments" => await db.MasterDepartments.FindAsync(new object[] { request.Id }, cancellationToken),
                 "hiringlocations" => await db.MasterHiringLocations.FindAsync(new object[] { request.Id }, cancellationToken),
-                "testlocations" => await db.MasterTestLocations.FindAsync(new object[] { request.Id }, cancellationToken),
                 "employmenttypes" => await db.MasterEmploymentTypes.FindAsync(new object[] { request.Id }, cancellationToken),
                 "experiencelevels" or "experiences" => await db.MasterExperienceLevels.FindAsync(new object[] { request.Id }, cancellationToken),
                 _ => throw new NotFoundException("MasterDataCategory", request.Category)

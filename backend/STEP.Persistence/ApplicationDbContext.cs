@@ -39,7 +39,6 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<MasterRole> MasterRoles => Set<MasterRole>();
     public DbSet<MasterDepartment> MasterDepartments => Set<MasterDepartment>();
     public DbSet<MasterHiringLocation> MasterHiringLocations => Set<MasterHiringLocation>();
-    public DbSet<MasterTestLocation> MasterTestLocations => Set<MasterTestLocation>();
     public DbSet<MasterEmploymentType> MasterEmploymentTypes => Set<MasterEmploymentType>();
     public DbSet<MasterExperienceLevel> MasterExperienceLevels => Set<MasterExperienceLevel>();
     public DbSet<RoleHiringProfile> RoleHiringProfiles => Set<RoleHiringProfile>();
@@ -57,7 +56,6 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     // Vacancy Engine (vacancy schema)
     public DbSet<Vacancy> Vacancies => Set<Vacancy>();
-    public DbSet<VacancyTestLocation> VacancyTestLocations => Set<VacancyTestLocation>();
     public DbSet<VacancyPipelineFlow> VacancyPipelineFlows => Set<VacancyPipelineFlow>();
     public DbSet<VacancyPipelineFlowRound> VacancyPipelineFlowRounds => Set<VacancyPipelineFlowRound>();
     public DbSet<VacancyAssessmentSection> VacancyAssessmentSections => Set<VacancyAssessmentSection>();

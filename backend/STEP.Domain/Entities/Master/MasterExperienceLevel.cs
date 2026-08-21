@@ -6,5 +6,7 @@ namespace STEP.Domain.Entities.Master
     /// </summary>
     public class MasterExperienceLevel : MasterDataEntity
     {
+        public decimal MinYears { get; set; } = 0.0m;
+        public decimal MaxYears { get; set; } = 99.0m;
     }
 }

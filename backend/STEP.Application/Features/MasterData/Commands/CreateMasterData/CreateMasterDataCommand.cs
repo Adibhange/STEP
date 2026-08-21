@@ -8,5 +8,7 @@ namespace STEP.Application.Features.MasterData.Commands.CreateMasterData
         string Name,
         string Code,
         string? Description,
-        bool IsActive = true) : IRequest<MasterDataItemDto>;
+        bool IsActive = true,
+        decimal? MinYears = null,
+        decimal? MaxYears = null) : IRequest<MasterDataItemDto>;
 }

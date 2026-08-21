@@ -27,15 +27,7 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
             var employmentType = await db.MasterEmploymentTypes.FirstOrDefaultAsync(e => e.Id == request.EmploymentTypeId, cancellationToken)
                 ?? throw new NotFoundException(nameof(MasterEmploymentType), request.EmploymentTypeId);
 
-            var testLocations = await db.MasterTestLocations
-                .Where(t => request.TestLocationIds.Contains(t.Id))
-                .ToListAsync(cancellationToken);
-            if (testLocations.Count != request.TestLocationIds.Distinct().Count())
-            {
-                throw new NotFoundException(nameof(MasterTestLocation), string.Join(",", request.TestLocationIds));
-            }
-
-            var nextSequence = await db.Vacancies.IgnoreQueryFilters().CountAsync(cancellationToken) + 101;
+            var nextSequence = (await db.Vacancies.IgnoreQueryFilters().MaxAsync(v => (int?)v.Id, cancellationToken) ?? 0) + 101;
             var vacancyCode = $"VAC-{DateTime.UtcNow:yyyy}-{nextSequence}";
 
             var vacancy = new VacancyEntity
@@ -60,11 +52,6 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
                 AssignedRecruiterId = request.AssignedRecruiterId,
                 HiringManagerId = request.HiringManagerId,
             };
-
-            foreach (var loc in testLocations)
-            {
-                vacancy.TestLocations.Add(new VacancyTestLocation { MasterTestLocationId = loc.Id });
-            }
 
             foreach (var flow in request.PipelineFlows)
             {
@@ -132,7 +119,7 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
                 vacancy.JobDescription,
                 vacancy.ClosingDate,
                 vacancy.WalkinDriveDate,
-                testLocations.Select(t => t.Name).ToList(),
+                [hiringLocation.Name],
                 vacancy.PipelineFlows.Select(f => new PipelineFlowDto(
                     f.Id, f.VersionName, f.Description, f.IsDefault,
                     f.Rounds.OrderBy(r => r.RoundOrder).Select(r => new PipelineRoundDto(r.Id, r.RoundOrder, r.Name, r.RoundType, r.CutoffPercent)).ToList()

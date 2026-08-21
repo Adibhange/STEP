@@ -80,14 +80,26 @@ namespace STEP.Application.Features.MasterData.Queries.GetMasterData
                 return [];
             }
 
+            if (category is "experiencelevels" or "experiences")
+            {
+                var expRows = await db.MasterExperienceLevels.OrderBy(e => e.MinYears).ThenBy(e => e.MaxYears).ToListAsync(cancellationToken);
+                return expRows.Select(m => new MasterDataItemDto(
+                    m.Id.ToString(),
+                    m.Name,
+                    m.Code,
+                    m.Description,
+                    m.IsActive ? "Active" : "Inactive",
+                    (m.ModifiedAt ?? m.CreatedAt).ToString("yyyy-MM-dd"),
+                    m.MinYears,
+                    m.MaxYears)).ToList();
+            }
+
             IQueryable<MasterDataEntity> query = category switch
             {
                 "roles" => db.MasterRoles,
                 "departments" => db.MasterDepartments,
                 "hiringlocations" => db.MasterHiringLocations,
-                "testlocations" => db.MasterTestLocations,
                 "employmenttypes" => db.MasterEmploymentTypes,
-                "experiencelevels" or "experiences" => db.MasterExperienceLevels,
                 _ => throw new NotFoundException("MasterDataCategory", request.Category)
             };
 

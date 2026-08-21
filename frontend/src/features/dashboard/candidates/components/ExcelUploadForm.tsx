@@ -446,7 +446,7 @@ export const ExcelUploadForm: React.FC<ExcelUploadFormProps> = ({ onSuccess, onC
           type="button"
           disabled={!excelFile || parsedRows.length === 0 || isProcessing}
           onClick={handleImport}
-          className="h-9 px-5 rounded-xl text-xs font-bold bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-9 px-5 rounded-xl text-xs font-bold bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white shadow-[var(--shadow-sm)] border border-[var(--accent-indigo)]/30 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isProcessing ? (
             <>

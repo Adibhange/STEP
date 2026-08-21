@@ -80,6 +80,13 @@ import {
   FileCheck,
   FileStack,
   RotateCw,
+  PlusCircle,
+  Edit3,
+  UserCheck,
+  HelpCircle,
+  GitBranch,
+  GitCommit,
+  Key,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -169,7 +176,14 @@ export type IconName =
   | 'sparkles'
   | 'copy'
   | 'qr-code'
-  | 'share';
+  | 'share'
+  | 'plus-circle'
+  | 'edit-3'
+  | 'user-check'
+  | 'help-circle'
+  | 'git-branch'
+  | 'git-commit'
+  | 'key';
 
 export const iconRegistry: Record<IconName, LucideIcon> = {
   'search': Search,
@@ -258,4 +272,11 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'share': Share2,
   'refresh': RotateCw,
   'rotate-cw': RotateCw,
+  'plus-circle': PlusCircle,
+  'edit-3': Edit3,
+  'user-check': UserCheck,
+  'help-circle': HelpCircle,
+  'git-branch': GitBranch,
+  'git-commit': GitCommit,
+  'key': Key,
 };

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { Icon } from '@/design-system';
+import { Icon, cardVariants, staggerContainer } from '@/design-system';
 import { VacancyDetailDialog } from './VacancyDetailDialog';
 import { InstantDriveModalV2 } from './InstantDriveModalV2';
 import type { VacancyItem } from '../types/vacancy.types';
@@ -10,36 +10,6 @@ import {
   useGetVacanciesQuery,
   useGetCandidatesQuery,
 } from '@/store/services/api';
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.04,
-    },
-  },
-};
-
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 16, scale: 0.98 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: 'spring' as const,
-      damping: 26,
-      stiffness: 320,
-    },
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.96,
-    transition: { duration: 0.15 },
-  },
-};
 
 /**
  * STEP Enterprise VacanciesListView
@@ -166,10 +136,10 @@ export const VacanciesListView: React.FC = () => {
             whileTap={{ scale: 0.98 }}
             type="button"
             onClick={() => setIsInstantDriveOpen(true)}
-            className="h-9 px-4 flex items-center gap-2 rounded-xl bg-gradient-to-b from-[var(--accent-indigo)] to-[#4f46e5] hover:from-[#6b6ff5] hover:to-[#4338ca] text-white text-xs font-bold transition-all cursor-pointer shadow-[0_2px_8px_rgba(99,102,241,0.35),0_1px_0_rgba(255,255,255,0.2)_inset] border border-indigo-400/30 hover:border-indigo-300/50"
+            className="h-9 px-4 flex items-center gap-2 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-xs font-bold transition-all cursor-pointer shadow-[var(--shadow-sm)] border border-[var(--accent-indigo)]/30"
           >
-            <Icon name="zap" size="xs" className="text-amber-300" />
-            <span>Create Vacancy / 1-Click Drive</span>
+            <Icon name="plus" size="xs" />
+            <span>Create Vacancy</span>
           </motion.button>
         </div>
       </motion.div>
@@ -276,7 +246,7 @@ export const VacanciesListView: React.FC = () => {
       {!isLoading && !isError && filteredVacancies.length > 0 && (
         <motion.div
           key="list"
-          variants={containerVariants}
+          variants={staggerContainer}
           initial="hidden"
           animate="show"
           className="grid grid-cols-1 gap-3.5 sm:gap-4"
@@ -293,7 +263,7 @@ export const VacanciesListView: React.FC = () => {
                 whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
                 whileTap={{ scale: 0.995 }}
                 onClick={() => setSelectedVacancy(v)}
-                className="group bg-[var(--surface-1)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)] rounded-[var(--radius-lg)] p-5 cursor-pointer shadow-2xs hover:shadow-[0_12px_30px_-10px_rgba(99,102,241,0.15)] flex flex-col gap-4 transition-colors duration-200"
+                className="group bg-[var(--surface-1)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)] rounded-[var(--radius-lg)] p-5 cursor-pointer shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-md)] flex flex-col gap-4 transition-all duration-200"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
@@ -368,7 +338,7 @@ export const VacanciesListView: React.FC = () => {
         </motion.div>
       )}
 
-      {/* 1-Click Instant Drive V2 Modal */}
+      {/* Create Vacancy Modal */}
       <InstantDriveModalV2
         isOpen={isInstantDriveOpen}
         onClose={() => setIsInstantDriveOpen(false)}

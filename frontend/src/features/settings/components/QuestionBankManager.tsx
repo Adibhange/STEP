@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Icon, staggerContainer, kpiCardVariant, tactilePopCardVariant } from '@/design-system';
+import { Icon, EnterpriseModal, staggerContainer, kpiCardVariant, tactilePopCardVariant } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { TierBadge } from '@/features/shared';
@@ -917,319 +917,238 @@ export const QuestionBankManager: React.FC = () => {
       </motion.div>
 
       {/* ────────────────── BULK IMPORT MODAL ────────────────── */}
-      <AnimatePresence>
-        {isBulkOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-lg bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-xl)] shadow-2xl overflow-hidden p-6 space-y-4"
+      <EnterpriseModal
+        isOpen={isBulkOpen}
+        onClose={() => setIsBulkOpen(false)}
+        title="Bulk Upload Questions"
+        subtitle="Upload structured Excel (.xlsx) or CSV file with questions categorized by Language/Domain, Section Type, and Format."
+        icon="upload"
+        maxWidth="lg"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="text-xs font-bold text-[var(--accent-indigo)] hover:underline cursor-pointer flex items-center gap-1.5 bg-[var(--surface-1)] px-3.5 py-2 rounded-xl border border-[var(--border-default)] shadow-2xs"
+              title="Download standard template with sample rows and headers"
             >
-              <div className="flex items-center justify-between border-b border-[var(--border-default)] pb-3">
-                <h3 className="text-base font-extrabold text-[var(--text-primary)] font-heading flex items-center gap-2">
-                  <Icon name="upload" size="sm" className="text-[var(--accent-indigo)]" />
-                  <span>Bulk Upload Questions</span>
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsBulkOpen(false)}
-                  className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
-                >
-                  <Icon name="x" size="sm" />
-                </button>
-              </div>
+              <Icon name="download" size="xs" />
+              <span>Download Sample Template</span>
+            </button>
 
-              <p className="text-xs text-[var(--text-secondary)]">
-                Upload a structured Excel (.xlsx) or CSV file with questions categorized by Language/Domain, Section Type, and Format.
-              </p>
-
-              {/* Upload Dropzone */}
-              <div className="p-8 border-2 border-dashed border-[var(--border-default)] rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-center space-y-2 cursor-pointer hover:border-[var(--accent-indigo)] transition-all">
-                <div className="w-10 h-10 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] flex items-center justify-center mx-auto">
-                  <Icon name="file-text" size="sm" />
-                </div>
-                <span className="text-xs font-bold text-[var(--text-primary)] block">
-                  Drag & Drop Excel / CSV file here or click to browse
-                </span>
-                <span className="text-[11px] text-[var(--text-tertiary)] font-mono block">
-                  Supports: Language, SectionType, QuestionType, Difficulty, QuestionStatement, OptionA, OptionB, OptionC, OptionD, CorrectOption, Marks
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={handleDownloadTemplate}
-                  className="text-xs font-bold text-[var(--accent-indigo)] hover:underline cursor-pointer flex items-center gap-1.5 bg-[var(--surface-2)] px-3 py-1.5 rounded-full border border-[var(--border-default)]"
-                  title="Download standard template with sample rows and headers"
-                >
-                  <Icon name="download" size="xs" />
-                  <span>Download Sample Template</span>
-                </button>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsBulkOpen(false)}
-                    className="h-8.5 px-4 rounded-full border border-[var(--border-default)] text-xs font-bold text-[var(--text-secondary)] cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleBulkImport}
-                    className="h-8.5 px-5 rounded-full bg-[var(--accent-indigo)] text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
-                  >
-                    Import Questions
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsBulkOpen(false)}
+                className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl text-xs font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkImport}
+                className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md hover:from-indigo-700 hover:to-purple-700 active:scale-95"
+              >
+                Import Questions
+              </button>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-[var(--text-secondary)]">
+            Upload a structured Excel (.xlsx) or CSV file with questions categorized by Language/Domain, Section Type, and Format.
+          </p>
+
+          {/* Upload Dropzone */}
+          <div className="p-8 border-2 border-dashed border-[var(--border-default)] rounded-2xl bg-[var(--surface-2)] text-center space-y-2.5 cursor-pointer hover:border-[var(--accent-indigo)] transition-all">
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 text-[var(--accent-indigo)] flex items-center justify-center mx-auto shadow-2xs">
+              <Icon name="file-text" size="sm" />
+            </div>
+            <span className="text-xs font-bold text-[var(--text-primary)] block">
+              Drag & Drop Excel / CSV file here or click to browse
+            </span>
+            <span className="text-[11px] text-[var(--text-tertiary)] font-mono block">
+              Supports: Language, SectionType, QuestionType, Difficulty, QuestionStatement, OptionA, OptionB, OptionC, OptionD, CorrectOption, Marks
+            </span>
+          </div>
+        </div>
+      </EnterpriseModal>
 
       {/* ────────────────── ADD / EDIT SINGLE QUESTION MODAL ────────────────── */}
-      <AnimatePresence>
-        {isModalOpen && editingQuestion && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-2xl bg-[var(--surface-1)] border border-[var(--border-default)] rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden flex flex-col max-h-[88vh]"
-            >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-default)] bg-[var(--surface-2)]">
-                <div>
-                  <h3 className="text-base font-extrabold text-[var(--text-primary)] font-heading">
-                    {editingQuestion.id ? 'Edit Question Bank Item' : 'Add Question to Central Bank'}
-                  </h3>
-                  <p className="text-xs text-[var(--text-tertiary)]">Configure language / domain, format, statement, and marks</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer"
+      <EnterpriseModal
+        isOpen={isModalOpen && !!editingQuestion}
+        onClose={() => setIsModalOpen(false)}
+        title={editingQuestion?.id ? 'Edit Question Bank Item' : 'Add Question to Central Bank'}
+        subtitle="Configure language / domain, format, statement, and marks"
+        icon="help-circle"
+        maxWidth="3xl"
+        submitText="Save Question"
+        cancelText="Cancel"
+        onSubmit={handleSaveQuestion}
+      >
+        {editingQuestion && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[var(--text-secondary)]">Language / Domain *</label>
+                <select
+                  value={editingQuestion.language ?? 'C# (.NET)'}
+                  onChange={(e) =>
+                    setEditingQuestion({ ...editingQuestion, language: e.target.value })
+                  }
+                  className="w-full h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
                 >
-                  <Icon name="x" size="sm" />
-                </button>
+                  {languagesList.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {lang}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <form onSubmit={handleSaveQuestion} className="p-6 space-y-4 overflow-y-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[var(--text-secondary)]">Language / Domain *</label>
-                    <select
-                      value={editingQuestion.language ?? 'C# (.NET)'}
-                      onChange={(e) =>
-                        setEditingQuestion({ ...editingQuestion, language: e.target.value })
-                      }
-                      className="w-full h-9 px-2.5 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)]"
-                    >
-                      {languagesList.map((l) => (
-                        <option key={l} value={l}>
-                          {l}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[var(--text-secondary)]">Section Track *</label>
+                <select
+                  value={editingQuestion.sectionType}
+                  onChange={(e) =>
+                    setEditingQuestion({
+                      ...editingQuestion,
+                      sectionType: e.target.value as any,
+                    })
+                  }
+                  className="w-full h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+                >
+                  <option value="Aptitude">General Aptitude (Elimination)</option>
+                  <option value="TechnicalMCQ">Technical Domain MCQ</option>
+                  <option value="Coding">Hands-on Coding Assessment</option>
+                  <option value="SQLQuery">Database / SQL Problem</option>
+                  <option value="SubjectiveTheory">Subjective / Theory</option>
+                </select>
+              </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[var(--text-secondary)]">Section Type</label>
-                    <select
-                      value={editingQuestion.sectionType}
-                      onChange={(e) =>
-                        setEditingQuestion({
-                          ...editingQuestion,
-                          sectionType: e.target.value as any,
-                        })
-                      }
-                      className="w-full h-9 px-2.5 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)]"
-                    >
-                      <option value="Aptitude">Aptitude & Logic</option>
-                      <option value="TechnicalMCQ">Technical MCQ</option>
-                      <option value="SQLQuery">SQL Query Challenge</option>
-                      <option value="Coding">Coding IDE Challenge</option>
-                    </select>
-                  </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[var(--text-secondary)]">Target Experience Band</label>
+                <select
+                  value={editingQuestion.experienceTier ?? 'Fresher'}
+                  onChange={(e) =>
+                    setEditingQuestion({
+                      ...editingQuestion,
+                      experienceTier: e.target.value,
+                    })
+                  }
+                  className="w-full h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+                >
+                  <option value="Fresher">Fresher</option>
+                  <option value="Junior">Junior</option>
+                  <option value="Mid-Level">Mid-Level</option>
+                  <option value="Senior">Senior</option>
+                  <option value="Lead">Lead / Architect</option>
+                </select>
+              </div>
+            </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[var(--text-secondary)]">Experience Tier *</label>
-                    <select
-                      value={editingQuestion.experienceTier || 'Junior'}
-                      onChange={(e) =>
-                        setEditingQuestion({ ...editingQuestion, experienceTier: e.target.value })
-                      }
-                      className="w-full h-9 px-2.5 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)]"
-                    >
-                      {experienceTiersList.map((tier) => (
-                        <option key={tier} value={tier}>
-                          {tier}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[var(--text-secondary)]">Question Format</label>
+                <select
+                  value={editingQuestion.questionType ?? 'SINGLE_CHOICE'}
+                  onChange={(e) =>
+                    setEditingQuestion({
+                      ...editingQuestion,
+                      questionType: e.target.value as any,
+                    })
+                  }
+                  className="w-full h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+                >
+                  <option value="SINGLE_CHOICE">Single Choice (Radio)</option>
+                  <option value="MULTI_CHOICE">Multiple Choice (Checkboxes)</option>
+                  <option value="CODING">Live Coding Sandbox</option>
+                  <option value="SQL">SQL Query Executor</option>
+                  <option value="SUBJECTIVE">Subjective Essay / Explanation</option>
+                </select>
+              </div>
 
-                {/* Question Type: Single Choice vs Multi Choice */}
-                {(editingQuestion.sectionType === 'TechnicalMCQ' ||
-                  editingQuestion.sectionType === 'Aptitude') && (
-                  <div className="flex items-center gap-4 p-2.5 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-default)]">
-                    <span className="text-xs font-bold text-[var(--text-secondary)]">Question Format:</span>
-                    <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
-                      <input
-                        type="radio"
-                        name="questionType"
-                        checked={editingQuestion.questionType !== 'MULTI_CHOICE'}
-                        onChange={() =>
-                          setEditingQuestion({ ...editingQuestion, questionType: 'SINGLE_CHOICE' })
-                        }
-                        className="text-[var(--accent-indigo)]"
-                      />
-                      <span>Single Choice (Radio)</span>
-                    </label>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[var(--text-secondary)]">Marks / Score Weight</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  value={editingQuestion.marks ?? 1}
+                  onChange={(e) =>
+                    setEditingQuestion({ ...editingQuestion, marks: Number(e.target.value) })
+                  }
+                  className="w-full h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+                />
+              </div>
+            </div>
 
-                    <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
-                      <input
-                        type="radio"
-                        name="questionType"
-                        checked={editingQuestion.questionType === 'MULTI_CHOICE'}
-                        onChange={() =>
-                          setEditingQuestion({ ...editingQuestion, questionType: 'MULTI_CHOICE' })
-                        }
-                        className="text-[var(--accent-indigo)]"
-                      />
-                      <span>Multiple Choice (Checkbox)</span>
-                    </label>
-                  </div>
-                )}
+            {/* Question Statement */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-[var(--text-secondary)]">Question Statement *</label>
+              <textarea
+                required
+                rows={3}
+                value={editingQuestion.questionText ?? ''}
+                onChange={(e) =>
+                  setEditingQuestion({ ...editingQuestion, questionText: e.target.value })
+                }
+                placeholder="Enter the problem statement or question prompt..."
+                className="w-full p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
+              />
+            </div>
 
-                {/* Question Text */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[var(--text-secondary)]">Question Statement *</label>
-                  <textarea
-                    required
-                    rows={3}
-                    placeholder="Enter the problem statement or question description..."
-                    value={editingQuestion.questionText || ''}
-                    onChange={(e) => setEditingQuestion({ ...editingQuestion, questionText: e.target.value })}
-                    className="w-full p-3 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)] font-medium focus:border-[var(--accent-indigo)] focus:outline-none"
-                  />
-                </div>
-
-                {/* SQL Target Schema DDL */}
-                {editingQuestion.sectionType === 'SQLQuery' && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[var(--text-secondary)]">
-                      SQL Target Table Schema (DDL)
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="CREATE TABLE Employee (Id INT PRIMARY KEY, Name NVARCHAR(50), Salary DECIMAL(18,2));"
-                      value={editingQuestion.sqlSchema || ''}
-                      onChange={(e) => setEditingQuestion({ ...editingQuestion, sqlSchema: e.target.value })}
-                      className="w-full p-3 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-mono text-[var(--text-primary)] focus:border-[var(--accent-indigo)] focus:outline-none"
+            {/* Options for MCQ */}
+            {(editingQuestion.questionType === 'SINGLE_CHOICE' ||
+              editingQuestion.questionType === 'MULTI_CHOICE') && (
+              <div className="space-y-2 border-t border-[var(--border-default)] pt-3">
+                <label className="text-xs font-bold text-[var(--text-secondary)] block">
+                  Options & Correct Answer
+                </label>
+                {(editingQuestion.options || []).map((opt, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type={editingQuestion.questionType === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
+                      name="correctOption"
+                      checked={opt.isCorrect}
+                      onChange={(e) => {
+                        const newOptions = (editingQuestion.options || []).map((o, i) => {
+                          if (editingQuestion.questionType === 'SINGLE_CHOICE') {
+                            return { ...o, isCorrect: i === idx };
+                          }
+                          return i === idx ? { ...o, isCorrect: e.target.checked } : o;
+                        });
+                        setEditingQuestion({ ...editingQuestion, options: newOptions });
+                      }}
+                      className="cursor-pointer"
+                    />
+                    <span className="font-mono text-xs font-bold text-[var(--text-tertiary)] w-5">
+                      {String.fromCharCode(65 + idx)}.
+                    </span>
+                    <input
+                      type="text"
+                      value={opt.text}
+                      onChange={(e) => {
+                        const newOptions = [...(editingQuestion.options || [])];
+                        newOptions[idx] = { ...newOptions[idx], text: e.target.value };
+                        setEditingQuestion({ ...editingQuestion, options: newOptions });
+                      }}
+                      placeholder={`Option ${String.fromCharCode(65 + idx)} text`}
+                      className="flex-1 h-8.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]"
                     />
                   </div>
-                )}
+                ))}
+              </div>
+            )}
 
-                {/* MCQ Choices Builder */}
-                {editingQuestion.sectionType !== 'Coding' && editingQuestion.sectionType !== 'SQLQuery' && (
-                  <div className="space-y-2 pt-2">
-                    <label className="text-xs font-bold text-[var(--text-secondary)]">
-                      Option Choices ({editingQuestion.questionType === 'MULTI_CHOICE' ? 'Check all correct choices' : 'Select single correct choice'}):
-                    </label>
-                    <div className="space-y-2">
-                      {editingQuestion.options?.map((opt, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          {editingQuestion.questionType === 'MULTI_CHOICE' ? (
-                            <input
-                              type="checkbox"
-                              checked={opt.isCorrect}
-                              onChange={() => {
-                                const updated = [...editingQuestion.options!];
-                                updated[idx].isCorrect = !updated[idx].isCorrect;
-                                setEditingQuestion({ ...editingQuestion, options: updated });
-                              }}
-                              className="w-4 h-4 rounded text-[var(--accent-indigo)] cursor-pointer"
-                              title="Check if this option is correct"
-                            />
-                          ) : (
-                            <input
-                              type="radio"
-                              name="correctOption"
-                              checked={opt.isCorrect}
-                              onChange={() => {
-                                const updated = editingQuestion.options!.map((o, i) => ({
-                                  ...o,
-                                  isCorrect: i === idx,
-                                }));
-                                setEditingQuestion({ ...editingQuestion, options: updated });
-                              }}
-                              className="w-4 h-4 text-[var(--accent-indigo)] cursor-pointer"
-                              title="Mark as single correct option"
-                            />
-                          )}
-                          <span className="w-6 h-6 rounded bg-[var(--surface-2)] text-[11px] font-mono font-bold flex items-center justify-center shrink-0 text-[var(--text-primary)]">
-                            {opt.label}
-                          </span>
-                          <input
-                            type="text"
-                            required
-                            placeholder={`Option ${opt.label} text`}
-                            value={opt.text}
-                            onChange={(e) => {
-                              const updated = [...editingQuestion.options!];
-                              updated[idx].text = e.target.value;
-                              setEditingQuestion({ ...editingQuestion, options: updated });
-                            }}
-                            className="w-full h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)]"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Marks */}
-                <div className="space-y-1 pt-2">
-                  <label className="text-xs font-bold text-[var(--text-secondary)]">Marks Awarded</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    value={editingQuestion.marks ?? 1}
-                    onChange={(e) =>
-                      setEditingQuestion({ ...editingQuestion, marks: Number(e.target.value) })
-                    }
-                    className="w-full sm:w-48 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text-primary)]"
-                  />
-                  <p className="text-[11px] text-[var(--text-tertiary)]">
-                    Note: Assessment time limit is controlled by the Section Rules in the Hiring Profile.
-                  </p>
-                </div>
-
-                <div className="pt-3 flex justify-end gap-3 border-t border-[var(--border-default)]">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="h-9 px-4 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--text-secondary)] cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="h-9 px-5 rounded-full bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-xs font-bold transition-all cursor-pointer shadow-md"
-                  >
-                    Save Question
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+            {/* Assessment Section Rules Note */}
+            <p className="text-[11px] text-[var(--text-tertiary)] pt-1 border-t border-[var(--border-default)]">
+              Note: Assessment time limits and cutoffs are dynamically governed by the Hiring Profile section rules.
+            </p>
           </div>
         )}
-      </AnimatePresence>
+      </EnterpriseModal>
     </motion.div>
   );
 };

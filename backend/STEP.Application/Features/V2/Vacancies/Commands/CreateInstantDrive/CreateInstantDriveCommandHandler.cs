@@ -75,31 +75,15 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 : await db.MasterEmploymentTypes.FirstOrDefaultAsync(cancellationToken);
             employmentType ??= await db.MasterEmploymentTypes.FirstAsync(cancellationToken);
 
-            var testLocation = request.TestLocationId.HasValue
-                ? await db.MasterTestLocations.FirstOrDefaultAsync(t => t.Id == request.TestLocationId.Value, cancellationToken)
-                : await db.MasterTestLocations.FirstOrDefaultAsync(cancellationToken);
-            testLocation ??= await db.MasterTestLocations.FirstAsync(cancellationToken);
-
-            // 5. Generate Vacancy Code & Title
-            var sequence = await db.Vacancies.IgnoreQueryFilters().CountAsync(cancellationToken) + 101;
-            var vacancyCode = $"VAC-{DateTime.UtcNow:yyyy}-{sequence}";
+            // 5. Generate Vacancy Code & Title (Using Max Id to prevent duplicate code collisions)
+            var maxId = await db.Vacancies.IgnoreQueryFilters().MaxAsync(v => (int?)v.Id, cancellationToken) ?? 0;
+            var vacancyCode = $"VAC-{DateTime.UtcNow:yyyy}-{(maxId + 101)}";
             var driveType = string.IsNullOrWhiteSpace(request.DriveType) ? "Walk-in Drive" : request.DriveType.Trim();
-            var driveTitle = $"{masterRole.Name} - ⚡ 1-Click Drive";
+            var driveTitle = masterRole.Name;
 
-            decimal minExp = 0.0m;
-            decimal maxExp = 99.0m;
-
-            if (expLevel != null)
-            {
-                var code = (expLevel.Code ?? "").ToUpperInvariant();
-                var name = (expLevel.Name ?? "").ToUpperInvariant();
-                if (code == "EXP-0" || name.Contains("FRESHER") || name.Contains("(0 YEARS)")) { minExp = 0.0m; maxExp = 0.0m; }
-                else if (code == "EXP-1" || (code.Contains("1") && !code.Contains("3") && !code.Contains("5")) || name.Contains("0-1")) { minExp = 0.0m; maxExp = 1.0m; }
-                else if (code == "EXP-3" || name.Contains("1-3")) { minExp = 1.0m; maxExp = 3.0m; }
-                else if (code == "EXP-5" || name.Contains("3-5")) { minExp = 3.0m; maxExp = 5.0m; }
-                else if (code == "EXP-8" || name.Contains("5-8")) { minExp = 5.0m; maxExp = 8.0m; }
-                else if (code.Contains("8") || name.Contains("8+") || name.Contains("LEAD") || name.Contains("PRINCIPAL")) { minExp = 8.0m; maxExp = 99.0m; }
-            }
+            // 100% Dynamic Master Data Bounds (Zero Hardcoding)
+            decimal minExp = expLevel?.MinYears ?? 0.0m;
+            decimal maxExp = expLevel?.MaxYears ?? 99.0m;
 
             var vacancy = new VacancyEntity
             {
@@ -115,7 +99,7 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 TotalOpenings = request.TotalOpenings > 0 ? request.TotalOpenings : 5,
                 MinExperienceYears = minExp,
                 MaxExperienceYears = maxExp,
-                JobDescription = $"Autonomous 1-Click Recruitment Drive for {masterRole.Name} ({blueprintName} - {expLevel?.Name ?? "All Tiers"}).",
+                JobDescription = $"Recruitment Drive for {masterRole.Name} ({blueprintName} - {expLevel?.Name ?? "All Tiers"}).",
                 ClosingDate = DateTime.UtcNow.AddDays(30),
                 WalkinDriveDate = request.WalkinDriveDate ?? DateTime.UtcNow.Date,
                 WalkinStartTime = request.WalkinStartTime ?? new TimeSpan(9, 30, 0),
@@ -123,11 +107,6 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 AssessmentBlueprintId = blueprint?.Id,
                 PassingPercentageOverride = passingCutoff
             };
-
-            if (testLocation != null)
-            {
-                vacancy.TestLocations.Add(new VacancyTestLocation { MasterTestLocationId = testLocation.Id });
-            }
 
             // 5. Build 4-Round Pipeline Flow
             var flow = new VacancyPipelineFlow
@@ -181,8 +160,8 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 VacancyId = vacancy.Id,
                 Code = qrCodeString,
                 RegistrationUrl = registrationUrl,
-                VenueName = testLocation?.Name ?? "Pune Assessment Hub",
-                VenueAddress = testLocation?.Description,
+                VenueName = hiringLocation.Name,
+                VenueAddress = hiringLocation.Description,
                 DriveDate = vacancy.WalkinDriveDate ?? DateTime.UtcNow.Date,
                 DriveStartTime = vacancy.WalkinStartTime,
                 DriveEndTime = vacancy.WalkinEndTime,

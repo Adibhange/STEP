@@ -19,12 +19,6 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
             RuleFor(x => x.MaxExperienceYears).GreaterThanOrEqualTo(x => x.MinExperienceYears)
                 .WithMessage("Maximum experience must be greater than or equal to minimum experience.");
 
-            RuleFor(x => x.TestLocationIds).NotEmpty().WithMessage("At least one test location is required.");
-            RuleFor(x => x.TestLocationIds)
-                .Must(ids => ids.Count <= 1)
-                .When(x => x.DriveType == "Walk-in")
-                .WithMessage("Walk-in drives may only have a single test location.");
-
             RuleFor(x => x.PipelineFlows).NotEmpty().WithMessage("At least one pipeline flow version is required.");
             RuleFor(x => x.PipelineFlows)
                 .Must(flows => flows.Count(f => f.IsDefault) == 1)

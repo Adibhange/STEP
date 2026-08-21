@@ -13,7 +13,6 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
         int? DepartmentId = null,
         int? HiringLocationId = null,
         int? EmploymentTypeId = null,
-        int? TestLocationId = null,
         int TotalOpenings = 5,
         DateTime? WalkinDriveDate = null,
         TimeSpan? WalkinStartTime = null,
