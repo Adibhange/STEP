@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Icon, CustomCalendarPicker } from "@/design-system";
+import { Icon, CustomDateRangePicker } from "@/design-system";
 import { CustomSelect } from "@/features/shared/select/CustomSelect";
 
 interface FilterOption {
@@ -53,9 +53,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 			}`}>
 			{filters.map((filter) => {
 				const widthClass =
-					filter.type === "select" ?
-						"w-[140px] sm:w-[150px]"
-					:	"w-[150px] sm:w-[160px]";
+					inline ? "w-[112px] xl:w-[124px]" : "w-[145px] sm:w-[155px]";
 
 				return (
 					<div
@@ -70,7 +68,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 								onChange={(val) => onFilterChange(filter.id, val)}
 								widthClass={widthClass}
 							/>
-						:	<CustomCalendarPicker
+						:	<CustomDateRangePicker
 								placeholder={filter.placeholder}
 								value={activeFilters[filter.id] || ""}
 								onChange={(val) => onFilterChange(filter.id, val)}

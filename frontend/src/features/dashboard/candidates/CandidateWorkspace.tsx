@@ -109,14 +109,12 @@ export const CandidateWorkspace: React.FC = () => {
 		const rolesSet = new Set<string>();
 		const stagesSet = new Set<string>();
 		const hiringLocsSet = new Set<string>();
-		const testLocsSet = new Set<string>();
 		const statusesSet = new Set<string>();
 
 		apiCandidates.forEach((c) => {
 			if (c.role) rolesSet.add(c.role.trim());
 			if (c.stage) stagesSet.add(c.stage.trim());
 			if (c.hiringLocation) hiringLocsSet.add(c.hiringLocation.trim());
-			if (c.testLocation) testLocsSet.add(c.testLocation.trim());
 			if (c.status) statusesSet.add(c.status.trim());
 		});
 
@@ -159,18 +157,9 @@ export const CandidateWorkspace: React.FC = () => {
 			{
 				id: "hiringLocation",
 				label: "Hiring Location",
-				placeholder: "All Cities",
+				placeholder: "All Locations",
 				type: "select",
 				options: Array.from(hiringLocsSet)
-					.sort()
-					.map((l) => ({ value: l, label: l })),
-			},
-			{
-				id: "testLocation",
-				label: "Test Location",
-				placeholder: "All Centers",
-				type: "select",
-				options: Array.from(testLocsSet)
 					.sort()
 					.map((l) => ({ value: l, label: l })),
 			},
@@ -226,12 +215,6 @@ export const CandidateWorkspace: React.FC = () => {
 					(c.hiringLocation || "").toLowerCase().trim() === targetHiringLoc,
 			);
 		}
-		if (activeFilters.testLocation) {
-			const targetTestLoc = activeFilters.testLocation.toLowerCase().trim();
-			result = result.filter(
-				(c) => (c.testLocation || "").toLowerCase().trim() === targetTestLoc,
-			);
-		}
 		if (activeFilters.status) {
 			const targetStatus = activeFilters.status.toLowerCase().trim();
 			result = result.filter(
@@ -239,7 +222,15 @@ export const CandidateWorkspace: React.FC = () => {
 			);
 		}
 		if (activeFilters.appliedDate) {
-			result = result.filter((c) => c.appliedDate >= activeFilters.appliedDate);
+			const [fromDate, toDate] = activeFilters.appliedDate.split(":");
+			result = result.filter((c) => {
+				if (!c.appliedDate) return false;
+				const applied = c.appliedDate.split("T")[0];
+				if (fromDate && toDate) return applied >= fromDate && applied <= toDate;
+				if (fromDate) return applied >= fromDate;
+				if (toDate) return applied <= toDate;
+				return true;
+			});
 		}
 
 		return result;
@@ -269,11 +260,11 @@ export const CandidateWorkspace: React.FC = () => {
 			{/* Top Highlight Catch */}
 			<div className='absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none rounded-t-(--radius-lg)' />
 
-			{/* Header Toolbar Row */}
-			<div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-3.5 sm:px-4 py-2.5 sm:py-3 border-b border-border-default bg-surface-1 rounded-t-(--radius-lg) relative z-30 min-w-0'>
-				{/* Title & Count Badge */}
-				<div className='flex items-center justify-between sm:justify-start gap-2 shrink-0'>
-					<div className='flex items-center gap-2'>
+			{/* Unified Header & Filter Toolbar Row */}
+			<div className='flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 px-3.5 sm:px-4 py-2.5 border-b border-border-default bg-surface-1 rounded-t-(--radius-lg) relative z-30 min-w-0'>
+				{/* Left: Title + Count Badge + Inline Filter Bar */}
+				<div className='flex items-center gap-3 overflow-x-auto scrollbar-none flex-1 min-w-0'>
+					<div className='flex items-center gap-2 shrink-0'>
 						<h2 className='text-sm sm:text-(--type-h3-size) font-extrabold text-text-primary tracking-tight font-heading'>
 							Candidates
 						</h2>
@@ -282,62 +273,31 @@ export const CandidateWorkspace: React.FC = () => {
 						</span>
 					</div>
 
-					{/* Quick Actions on Mobile */}
-					<div className='flex items-center gap-1.5 sm:hidden'>
-						<button
-							type='button'
-							onClick={async () => {
-								try {
-									const listToExport =
-										apiCandidatesResponse?.data || filteredCandidates || [];
-									await exportCandidatesToExcel(listToExport, {
-										filenamePrefix: `STEP_Candidates_${filterKey}`,
-										vacancyContext: {
-											role: "All Candidates",
-											driveType: filterKey,
-										},
-									});
-									toast.success("Candidates Exported", {
-										description: `Generated multi-sheet report for ${listToExport.length} candidate(s).`,
-									});
-								} catch (err: any) {
-									toast.error("Export Failed", {
-										description:
-											err?.message || "Failed to generate Excel export.",
-									});
-								}
-							}}
-							className='h-8 px-2.5 flex items-center gap-1.5 rounded-full border border-border-default bg-surface-2 text-xs font-semibold text-text-primary cursor-pointer hover:bg-surface-hover active:scale-95 transition-all'
-							title='Export to Excel'>
-							<span className='size-3.5 rounded-[2px] bg-[#107C41] text-white font-mono font-black text-[9px] flex items-center justify-center'>
-								X
-							</span>
-							<span className='text-[11px]'>Export</span>
-						</button>
-						<motion.button
-							whileHover={{ scale: 1.02 }}
-							whileTap={{ scale: 0.98 }}
-							type='button'
-							onClick={() => setIsAddModalOpen(true)}
-							className='h-8 px-3 flex items-center gap-1.5 rounded-xl bg-accent-indigo hover:bg-accent-indigo-hover text-white text-xs font-bold shadow-xs border border-accent-indigo/30 cursor-pointer'
-							title='Add Candidate'>
-							<Icon
-								name='user-plus'
-								size='xs'
-							/>
-							<span>Add</span>
-						</motion.button>
+					{/* Subtle vertical separator */}
+					<div className='h-5 w-[1px] bg-border-default shrink-0 hidden sm:block' />
+
+					{/* FilterBar right after Candidates */}
+					<div className='flex-1 min-w-0 overflow-x-auto scrollbar-none'>
+						<FilterBar
+							filters={dynamicFilters}
+							activeFilters={activeFilters}
+							onFilterChange={handleFilterChange}
+							onReset={handleFilterReset}
+							resultCount={filteredCandidates.length}
+							totalCount={apiCandidates.length}
+							inline={true}
+						/>
 					</div>
 				</div>
 
 				{/* Search Input and Desktop Action Buttons */}
-				<div className='flex items-center gap-2 flex-1 sm:flex-initial justify-end'>
+				<div className='flex items-center gap-2 shrink-0 justify-end'>
 					<div
 						className={`relative flex items-center gap-1.5 h-8.5 px-3 rounded-full border
               transition-all duration-200 ${
 								searchFocused ?
-									"border-accent-indigo bg-surface-1 shadow-xs ring-1 ring-accent-indigo/30 w-full sm:w-64"
-								:	"border-border-default bg-surface-2 hover:border-border-strong w-full sm:w-56"
+									"border-accent-indigo bg-surface-1 shadow-xs ring-1 ring-accent-indigo/30 w-full sm:w-52 lg:w-56"
+								:	"border-border-default bg-surface-2 hover:border-border-strong w-full sm:w-40 lg:w-44"
 							}`}>
 						<Icon
 							name='search'
@@ -434,21 +394,6 @@ export const CandidateWorkspace: React.FC = () => {
 						<span className='whitespace-nowrap'>Add Candidate</span>
 					</motion.button>
 				</div>
-			</div>
-
-			{/* Horizontal Scrollable Filter Strip Bar */}
-			<div className='border-b border-border-default bg-surface-1 px-3 sm:px-4 py-2 relative z-20 overflow-hidden'>
-				<div className='pointer-events-none absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-surface-1 to-transparent z-10' />
-				<div className='pointer-events-none absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-surface-1 to-transparent z-10' />
-				<FilterBar
-					filters={dynamicFilters}
-					activeFilters={activeFilters}
-					onFilterChange={handleFilterChange}
-					onReset={handleFilterReset}
-					resultCount={filteredCandidates.length}
-					totalCount={apiCandidates.length}
-					inline={true}
-				/>
 			</div>
 
 			{/* Candidate Table */}

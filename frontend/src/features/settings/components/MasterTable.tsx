@@ -120,6 +120,18 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 
 	const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
 
+	// Reset page when category title or total records change
+	React.useEffect(() => {
+		setCurrentPage(1);
+	}, [title, data.length]);
+
+	// Auto-clamp if currentPage exceeds totalPages (e.g. after filtering or deletion)
+	React.useEffect(() => {
+		if (currentPage > totalPages && totalPages > 0) {
+			setCurrentPage(totalPages);
+		}
+	}, [currentPage, totalPages]);
+
 	const paginatedData = useMemo(() => {
 		const start = (currentPage - 1) * rowsPerPage;
 		return filteredData.slice(start, start + rowsPerPage);
@@ -216,12 +228,12 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 			label: "Record Name",
 			render: (r) => (
 				<div className='flex flex-col'>
-					<span className='font-bold text-[var(--text-primary)] text-[13px]'>
+					<span className='font-bold text-text-primary text-[13px]'>
 						{r.name}
 					</span>
 					{r.description && (
 						<span
-							className='text-[11px] text-[var(--text-tertiary)] truncate max-w-[220px]'
+							className='text-[11px] text-text-tertiary truncate max-w-[220px]'
 							title={r.description}>
 							{r.description}
 						</span>
@@ -235,7 +247,7 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 					key: "experienceRange",
 					label: "Experience Bounds",
 					render: (r: MasterRecord) => (
-						<span className='inline-flex items-center gap-1 font-mono text-[11.5px] font-bold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-2.5 py-0.5 rounded border border-[var(--accent-indigo)]/20'>
+						<span className='inline-flex items-center gap-1 font-mono text-[11.5px] font-bold text-accent-indigo bg-accent-indigo-dim px-2.5 py-0.5 rounded border border-accent-indigo/20'>
 							{r.minYears ?? 0} – {r.maxYears ?? 99} yrs
 						</span>
 					),
@@ -246,7 +258,7 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 			key: "code",
 			label: "Short Code",
 			render: (r) => (
-				<span className='font-mono text-[11.5px] font-extrabold text-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] px-2.5 py-0.5 rounded border border-[var(--accent-indigo)]/20'>
+				<span className='font-mono text-[11.5px] font-extrabold text-accent-indigo bg-accent-indigo-dim px-2.5 py-0.5 rounded border border-accent-indigo/20'>
 					{r.code || "—"}
 				</span>
 			),
@@ -260,12 +272,12 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 					onClick={() => onToggleStatus?.(r.id)}
 					className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border cursor-pointer transition-all active:scale-95 ${
 						r.status === "Active" ?
-							"bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]"
-						:	"bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border-[var(--status-danger-border)]"
+							"bg-status-success-bg text-status-success-text border-status-success-border"
+						:	"bg-status-danger-bg text-status-danger-text border-status-danger-border"
 					}`}
 					title='Click to toggle status'>
 					<span
-						className={`w-1.5 h-1.5 rounded-full ${r.status === "Active" ? "bg-[var(--status-success)]" : "bg-[var(--status-danger)]"}`}
+						className={`size-1.5 rounded-full ${r.status === "Active" ? "bg-status-success" : "bg-status-danger"}`}
 					/>
 					<span>{r.status}</span>
 				</button>
@@ -275,7 +287,7 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 			key: "updatedAt",
 			label: "Last Updated",
 			render: (r) => (
-				<span className='text-[11.5px] text-[var(--text-tertiary)] font-sans'>
+				<span className='text-[11.5px] text-text-tertiary font-sans'>
 					{r.updatedAt}
 				</span>
 			),
@@ -289,19 +301,17 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 			variants={tactilePopCardVariant}
 			initial='hidden'
 			animate='show'
-			className='bg-[var(--surface-1)] rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-xs flex flex-col overflow-hidden w-full relative z-0'>
+			className='bg-surface-1 rounded-(--radius-lg) border border-border-default shadow-xs flex flex-col overflow-hidden w-full relative z-0'>
 			{/* Top Highlight Catch */}
-			<div className='absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none rounded-t-[var(--radius-lg)]' />
+			<div className='absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none rounded-t-(--radius-lg)' />
 			{/* Header Bar */}
-			<div className='flex flex-wrap items-center justify-between gap-3 p-4 border-b border-[var(--border-default)] bg-[var(--surface-1)]'>
+			<div className='flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border-default bg-surface-1'>
 				<div>
-					<h3 className='text-base font-extrabold text-[var(--text-primary)] font-heading tracking-tight'>
+					<h3 className='text-base font-extrabold text-text-primary font-heading tracking-tight'>
 						{title}
 					</h3>
 					{description && (
-						<p className='text-[12px] text-[var(--text-tertiary)] mt-0.5'>
-							{description}
-						</p>
+						<p className='text-xs text-text-tertiary mt-0.5'>{description}</p>
 					)}
 				</div>
 
@@ -461,7 +471,7 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 				onSubmit={handleSaveAdd}>
 				<div className='flex flex-col gap-3.5'>
 					<div>
-						<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+						<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 							Record Name *
 						</label>
 						<input
@@ -471,11 +481,11 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 							value={formName}
 							onChange={(e) => setFormName(e.target.value)}
 							placeholder={`Enter ${title.toLowerCase()} name... (e.g. ${exampleName})`}
-							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]'
+							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo'
 						/>
 					</div>
 					<div>
-						<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+						<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 							Short Code (Optional)
 						</label>
 						<input
@@ -483,11 +493,11 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 							value={formCode}
 							onChange={(e) => setFormCode(e.target.value)}
 							placeholder={`Auto-generated if left blank (e.g. ${exampleCode})`}
-							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono'
+							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo font-mono'
 						/>
 					</div>
 					<div>
-						<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+						<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 							Description (Optional)
 						</label>
 						<input
@@ -495,13 +505,13 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 							value={formDescription}
 							onChange={(e) => setFormDescription(e.target.value)}
 							placeholder='Enter optional description...'
-							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]'
+							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo'
 						/>
 					</div>
 					{isExperience && (
 						<div className='grid grid-cols-2 gap-3'>
 							<div>
-								<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+								<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 									Min Experience (Years)
 								</label>
 								<input
@@ -512,11 +522,11 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 									value={formMinYears}
 									onChange={(e) => setFormMinYears(e.target.value)}
 									placeholder='e.g. 1.0'
-									className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono'
+									className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo font-mono'
 								/>
 							</div>
 							<div>
-								<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+								<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 									Max Experience (Years)
 								</label>
 								<input
@@ -527,13 +537,13 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 									value={formMaxYears}
 									onChange={(e) => setFormMaxYears(e.target.value)}
 									placeholder='e.g. 3.0'
-									className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono'
+									className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo font-mono'
 								/>
 							</div>
 						</div>
 					)}
 					<div>
-						<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1'>
+						<label className='text-[11.5px] font-bold text-text-secondary uppercase block mb-1'>
 							Status
 						</label>
 						<CustomSelect
@@ -563,7 +573,7 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 				onSubmit={handleSaveEdit}>
 				<div className='flex flex-col gap-3.5'>
 					<div>
-						<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+						<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 							Record Name *
 						</label>
 						<input
@@ -571,11 +581,11 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 							required
 							value={formName}
 							onChange={(e) => setFormName(e.target.value)}
-							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]'
+							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo'
 						/>
 					</div>
 					<div>
-						<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+						<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 							Short Code
 						</label>
 						<input
@@ -583,11 +593,11 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 							value={formCode}
 							onChange={(e) => setFormCode(e.target.value)}
 							placeholder='Short Code'
-							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono'
+							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo font-mono'
 						/>
 					</div>
 					<div>
-						<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+						<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 							Description (Optional)
 						</label>
 						<input
@@ -595,13 +605,13 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 							value={formDescription}
 							onChange={(e) => setFormDescription(e.target.value)}
 							placeholder='Enter optional description...'
-							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)]'
+							className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo'
 						/>
 					</div>
 					{isExperience && (
 						<div className='grid grid-cols-2 gap-3'>
 							<div>
-								<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+								<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 									Min Experience (Years)
 								</label>
 								<input
@@ -612,11 +622,11 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 									value={formMinYears}
 									onChange={(e) => setFormMinYears(e.target.value)}
 									placeholder='e.g. 1.0'
-									className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono'
+									className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo font-mono'
 								/>
 							</div>
 							<div>
-								<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase'>
+								<label className='text-[11.5px] font-bold text-text-secondary uppercase'>
 									Max Experience (Years)
 								</label>
 								<input
@@ -627,13 +637,13 @@ export const MasterTable: React.FC<MasterTableProps> = ({
 									value={formMaxYears}
 									onChange={(e) => setFormMaxYears(e.target.value)}
 									placeholder='e.g. 3.0'
-									className='w-full mt-1 h-9.5 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-indigo)] font-mono'
+									className='w-full mt-1 h-9.5 px-3 rounded-xl border border-border-default bg-surface-2 text-xs text-text-primary outline-none focus:border-accent-indigo font-mono'
 								/>
 							</div>
 						</div>
 					)}
 					<div>
-						<label className='text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1'>
+						<label className='text-[11.5px] font-bold text-text-secondary uppercase block mb-1'>
 							Status
 						</label>
 						<CustomSelect

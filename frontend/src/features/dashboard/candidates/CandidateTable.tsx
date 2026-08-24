@@ -370,19 +370,6 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
 					</td>
 				);
 
-			case "testLocation":
-				return (
-					<td
-						key={col.id}
-						className={cellPadding}>
-						<span
-							className={`${textSize} text-[var(--text-secondary)] truncate block`}
-							title={candidate.testLocation}>
-							{candidate.testLocation}
-						</span>
-					</td>
-				);
-
 			case "appliedDate":
 				return (
 					<td
@@ -435,22 +422,21 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
 	return (
 		<div className='w-full overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-step'>
 			<table
-				className='w-full min-w-[1500px] border-collapse table-fixed'
+				className='w-full min-w-[1450px] border-collapse table-fixed'
 				aria-label='Candidates'
 				role='grid'>
 				<colgroup>
 					{columns.map((col) => {
 						let widthStyle = "140px";
 						if (col.id === "avatar") widthStyle = "46px";
-						else if (col.id === "candidate") widthStyle = "170px";
-						else if (col.id === "driveType") widthStyle = "115px";
-						else if (col.id === "email") widthStyle = "180px";
-						else if (col.id === "role") widthStyle = "180px";
+						else if (col.id === "candidate") widthStyle = "190px";
+						else if (col.id === "driveType") widthStyle = "110px";
+						else if (col.id === "email") widthStyle = "220px";
+						else if (col.id === "role") widthStyle = "210px";
 						else if (col.id === "experience") widthStyle = "95px";
-						else if (col.id === "currentRound") widthStyle = "130px";
-						else if (col.id === "assignedInterviewer") widthStyle = "160px";
-						else if (col.id === "hiringLocation") widthStyle = "140px";
-						else if (col.id === "testLocation") widthStyle = "140px";
+						else if (col.id === "currentRound") widthStyle = "140px";
+						else if (col.id === "assignedInterviewer") widthStyle = "170px";
+						else if (col.id === "hiringLocation") widthStyle = "160px";
 						else if (col.id === "appliedDate") widthStyle = "110px";
 						else if (col.id === "actions") widthStyle = "135px";
 
