@@ -4,8 +4,13 @@ import React, { useState } from 'react';
 import { Icon, EnterpriseModal } from '@/design-system';
 import { CustomSelect } from '@/features/shared/select/CustomSelect';
 import { type UserItem, type UserRole, type UserStatus } from '@/features/users/types/user.types';
-import { useGetUsersQuery, useCreateUserMutation, useUpdateUserMutation, useGetMasterDataByCategoryQuery } from '@/store/services/api';
-import { useAppDispatch, notifySuccess, notifyError } from '@/store';
+import { useAppDispatch, useAppSelector, selectCurrentUser, notifySuccess, notifyError } from '@/store';
+import {
+  useGetUsersQuery,
+  useGetMasterDataByCategoryQuery,
+  useCreateUserMutation,
+  useUpdateUserMutation,
+} from '@/store/services/api';
 
 import { UsersTable } from './UsersTable';
 
@@ -31,8 +36,15 @@ const DEPT_BY_ROLE: Record<string, string[] | 'locked'> = {
  */
 export const UsersView: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { data: apiUsersResponse, isLoading } = useGetUsersQuery();
-  const { data: deptMasterRes } = useGetMasterDataByCategoryQuery('departments');
+  const currentUser = useAppSelector(selectCurrentUser);
+  const isInterviewer = currentUser?.role === 'Interviewer';
+
+  const { data: apiUsersResponse, isLoading } = useGetUsersQuery(undefined, {
+    skip: isInterviewer,
+  });
+  const { data: deptMasterRes } = useGetMasterDataByCategoryQuery('departments', {
+    skip: isInterviewer,
+  });
   const [createUserApi] = useCreateUserMutation();
   const [updateUserApi] = useUpdateUserMutation();
 
@@ -40,6 +52,7 @@ export const UsersView: React.FC = () => {
 
   // Resolve department name → DB ID dynamically from master data
   const resolveDeptId = (deptName: string): number | undefined => {
+    if (!deptName || deptName === '—') return undefined;
     const found = (deptMasterRes?.data || []).find(
       (d: any) => d.name.toLowerCase() === deptName.toLowerCase()
     );
@@ -54,7 +67,7 @@ export const UsersView: React.FC = () => {
     empId: u.employeeCode || u.empId || `EMP-${u.id}`,
     email: u.email || '',
     role: (u.role || 'Interviewer') as UserRole,
-    department: u.department || 'Engineering',
+    department: u.department || '—',
     status: (u.status || 'Active') as UserStatus,
   }));
 
@@ -76,7 +89,7 @@ export const UsersView: React.FC = () => {
   const [formPin, setFormPin] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formRole, setFormRole] = useState<UserRole>('Interviewer');
-  const [formDept, setFormDept] = useState<string>('Engineering');
+  const [formDept, setFormDept] = useState<string>('IT');
   const [formStatus, setFormStatus] = useState<UserStatus>('Active');
 
   const filteredUsers = displayUsers.filter((u) => {
@@ -102,7 +115,7 @@ export const UsersView: React.FC = () => {
     setFormPin('');
     setShowPassword(false);
     setFormRole('Interviewer');
-    setFormDept('Engineering');
+    setFormDept(departmentOptions[0] || 'IT');
     setFormStatus('Active');
     setIsAddOpen(true);
   };
@@ -114,7 +127,7 @@ export const UsersView: React.FC = () => {
     setFormEmpId(user.empId);
     setFormEmail(user.email);
     setFormRole(user.role);
-    setFormDept(user.department);
+    setFormDept(user.department === '—' ? (departmentOptions[0] || 'IT') : user.department);
     setFormStatus(user.status);
   };
 
@@ -220,6 +233,20 @@ export const UsersView: React.FC = () => {
       console.error('[ToggleUserStatus] API error:', err);
     }
   };
+
+  if (isInterviewer) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 px-4 text-center max-w-md mx-auto">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--danger-subtle)] border border-[var(--danger-border)] flex items-center justify-center text-[var(--danger)] mb-4 shadow-sm">
+          <Icon name="lock" size="md" />
+        </div>
+        <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">Access Restricted</h2>
+        <p className="text-[13px] text-[var(--text-secondary)]">
+          The Users & Access Control directory is restricted to Directors and HRs. Interviewers have access to assigned candidate workspaces and technical evaluations only.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6 max-w-7xl mx-auto w-full">
@@ -387,29 +414,21 @@ export const UsersView: React.FC = () => {
                 onChange={(val) => {
                   const role = (val || 'Interviewer') as UserRole;
                   setFormRole(role);
-                  // Auto-set department based on role
-                  if (role === 'Director') setFormDept('Administration');
-                  else if (role === 'HR') setFormDept('Human Resources');
-                  else setFormDept('Engineering');
+                  if (role === 'HR') setFormDept('HR');
+                  else if (!formDept || formDept === '—') setFormDept(departmentOptions[0] || 'IT');
                 }}
                 widthClass="w-full"
               />
             </div>
             <div>
               <label className="text-[11.5px] font-bold text-[var(--text-secondary)] uppercase block mb-1">Department *</label>
-              {formRole === 'Director' ? (
-                <div className="h-9.5 px-3 flex items-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)]/60 text-[12.5px] text-[var(--text-tertiary)] font-medium cursor-not-allowed select-none">
-                  Administration
-                </div>
-              ) : (
-                <CustomSelect
-                  label="Department"
-                  value={formDept}
-                  options={(DEPT_BY_ROLE[formRole] as string[]).map((d) => ({ value: d, label: d }))}
-                  onChange={(val) => setFormDept(val || (DEPT_BY_ROLE[formRole] as string[])[0])}
-                  widthClass="w-full"
-                />
-              )}
+              <CustomSelect
+                label="Department"
+                value={formDept}
+                options={departmentOptions.map((d: string) => ({ value: d, label: d }))}
+                onChange={(val) => setFormDept(val || departmentOptions[0] || 'IT')}
+                widthClass="w-full"
+              />
             </div>
           </div>
 
@@ -422,9 +441,9 @@ export const UsersView: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   required
                   inputMode="numeric"
-                  minLength={6}
-                  maxLength={6}
-                  placeholder="6-digit PIN"
+                  minLength={4}
+                  maxLength={4}
+                  placeholder="4-digit PIN"
                   value={formPin}
                   onChange={(e) => setFormPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   className="w-full h-9.5 pl-3 pr-10 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] font-mono outline-none focus:border-[var(--accent-indigo)]"
@@ -562,7 +581,7 @@ export const UsersView: React.FC = () => {
                 label="Department"
                 value={formDept}
                 options={departmentOptions.map((d: string) => ({ value: d, label: d }))}
-                onChange={(val) => setFormDept(val || 'Engineering')}
+                onChange={(val) => setFormDept(val || departmentOptions[0] || 'IT')}
                 widthClass="w-full"
               />
             </div>

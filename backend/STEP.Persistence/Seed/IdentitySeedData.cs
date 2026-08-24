@@ -80,21 +80,6 @@ namespace STEP.Persistence.Seed
             AddGrants(RoleInterviewerId, "Candidate.View", "Exam.Manage");
 
             modelBuilder.Entity<RolePermission>().HasData(grants);
-
-            modelBuilder.Entity<User>().HasData(
-                new User
-                {
-                    Id = 1,
-                    EmployeeCode = "EMP-0001",
-                    FirstName = "HR",
-                    LastName = "Specialist",
-                    Email = "hr@sthapatya.com",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("user@123"), // user@123
-                    RoleId = RoleHRId,
-                    IsActive = true,
-                    CreatedAt = SeedTimestamp
-                }
-            );
         }
     }
 }

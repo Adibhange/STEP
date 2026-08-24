@@ -299,9 +299,15 @@ export default function CandidateRegistrationPortalPage() {
         setRegisteredResult(res.data);
       }
     } catch (err: any) {
+      const msg =
+        err?.data?.message ||
+        err?.data?.title ||
+        (typeof err?.data === 'string' ? err?.data : null) ||
+        err?.error ||
+        'Registration failed. Please check your details and retry.';
       setErrors((prev) => ({
         ...prev,
-        formSubmit: err?.data?.message || 'Registration failed. Please check your details and retry.',
+        formSubmit: msg,
       }));
     }
   };

@@ -36,6 +36,7 @@ interface MockDbState {
   interviews: Record<number, any>;
   offers: Record<number, any>;
   directorAccessLinks: Record<string, any>;
+  blueprints: any[];
 }
 
 class MockDatabaseService {
@@ -79,6 +80,14 @@ class MockDatabaseService {
           if (!parsed.directorAccessLinks) {
             parsed.directorAccessLinks = {};
           }
+          const existingCodes = new Set((parsed.blueprints || []).map((b: any) => b.code));
+          const mergedBlueprints = [...(parsed.blueprints || [])];
+          for (const defaultBp of MOCK_BLUEPRINTS) {
+            if (!existingCodes.has(defaultBp.code)) {
+              mergedBlueprints.push(JSON.parse(JSON.stringify(defaultBp)));
+            }
+          }
+          parsed.blueprints = mergedBlueprints;
           return parsed;
         }
       } catch (e) {
@@ -99,6 +108,7 @@ class MockDatabaseService {
       interviews: JSON.parse(JSON.stringify(MOCK_INTERVIEWS)),
       offers: JSON.parse(JSON.stringify(MOCK_OFFERS)),
       directorAccessLinks: {},
+      blueprints: JSON.parse(JSON.stringify(MOCK_BLUEPRINTS)),
     };
   }
 
@@ -362,7 +372,7 @@ class MockDatabaseService {
         return { data: this.envelope(true, `${ids.length} questions updated successfully`) };
       }
 
-      if (url === '/v2/question-bank/bulk-import' && method === 'POST') {
+      if ((url === '/v2/question-bank/bulk-import' || url === '/question-bank/bulk-import') && method === 'POST') {
         const items: any[] = body.questions || [];
         let nextId = this.state.questionBank.reduce((max, q) => Math.max(max, q.id), 0) + 1;
         const importedList: MockQuestionBankItem[] = items.map((it: any) => ({
@@ -903,16 +913,22 @@ class MockDatabaseService {
       // ────────────────── EXAM PORTAL ──────────────────
       if (url === '/exams/start' && method === 'POST') {
         const sessionToken = `SES-EXAM-${Date.now().toString().slice(-4)}`;
+        const matchedCandidate = this.state.candidates.find((c) => c.candidateCode === body.candidateCode);
+        const fallbackQuestions =
+          (this.state.questionPapers && this.state.questionPapers[0]?.questions?.length > 0)
+            ? this.state.questionPapers[0].questions
+            : MOCK_QUESTION_PAPERS[0]?.questions || [];
+
         const examSession: any = {
           sessionToken,
-          candidateName: body.candidateCode ? `Candidate (${body.candidateCode})` : 'Live Test Candidate',
-          vacancyTitle: 'Senior Software Engineer Assessment',
-          paperTitle: 'Technical & System Architecture Assessment',
-          durationMinutes: 60,
-          totalTimeLeftSeconds: 3600,
+          candidateName: matchedCandidate ? `${matchedCandidate.firstName} ${matchedCandidate.lastName}` : (body.candidateCode ? `Candidate (${body.candidateCode})` : 'Live Test Candidate'),
+          vacancyTitle: matchedCandidate?.role || matchedCandidate?.vacancyTitle || 'SQL Developer Assessment',
+          paperTitle: 'Database & SQL Engineering Track',
+          durationMinutes: 85,
+          totalTimeLeftSeconds: 85 * 60,
           activeQuestionIndex: 0,
           sessionStatus: 'InProgress',
-          questions: this.state.questionPapers[0]?.questions || [],
+          questions: fallbackQuestions,
         };
         this.state.examSessions[sessionToken] = examSession;
         this.saveState();
@@ -1086,14 +1102,15 @@ class MockDatabaseService {
       }
 
       // ────────────────── QR CODE & PUBLIC APPLY ──────────────────
-      if (url.startsWith('/publicregistration') && url.includes('/eligibility') && method === 'GET') {
+      if ((url.startsWith('/publicregistration') || url.startsWith('/v2/publicregistration') || url.startsWith('/apply') || url.startsWith('/v2/apply')) && url.includes('/eligibility') && method === 'GET') {
         const parts = url.split('/').filter(Boolean);
-        const code = parts[1] || 'WALK-IN';
+        const code = parts.find((p) => p !== 'publicregistration' && p !== 'apply' && p !== 'v2' && p !== 'eligibility') || 'WALK-IN';
         return { data: this.envelope(checkMockEligibility(code, params?.email, params?.phone)) };
       }
 
-      if (url.startsWith('/publicregistration/') && method === 'GET') {
-        const code = decodeURIComponent(url.split('/')[2] || 'WALK-IN');
+      if ((url.startsWith('/publicregistration/') || url.startsWith('/v2/publicregistration/') || url.startsWith('/apply/') || url.startsWith('/v2/apply/')) && method === 'GET') {
+        const parts = url.split('/').filter(Boolean);
+        const code = decodeURIComponent(parts.find((p) => p !== 'publicregistration' && p !== 'apply' && p !== 'v2' && p !== 'eligibility') || 'WALK-IN');
         const matched =
           this.state.vacancies.find(
             (v) =>
@@ -1121,7 +1138,7 @@ class MockDatabaseService {
         return { data: this.envelope(getMockQRScanResult(code)) };
       }
 
-      if (url === '/publicregistration' && method === 'POST') {
+      if ((url === '/publicregistration' || url === '/v2/publicregistration' || url === '/apply' || url === '/v2/apply') && method === 'POST') {
         const newId = this.state.candidates.length + 1;
         const pass = String(Math.floor(1000 + Math.random() * 9000));
         const matchedVacancy =
@@ -1261,14 +1278,88 @@ class MockDatabaseService {
       }
 
       // ────────────────── V2 AUTONOMOUS RECRUITMENT ENGINE ──────────────────
-      if ((url === '/v2/hiring-blueprints' || url === '/v2/assessment-templates' || url === '/assessment-templates') && method === 'GET') {
-        return { data: this.envelope(MOCK_BLUEPRINTS, 'Assessment blueprints retrieved') };
+      if ((url === '/v2/hiring-blueprints' || url === '/v2/assessment-templates' || url === '/assessment-templates' || url === '/hiring-blueprints') && method === 'GET') {
+        const list = this.state.blueprints || MOCK_BLUEPRINTS;
+        return { data: this.envelope(list, 'Assessment blueprints retrieved') };
       }
 
-      if ((url.startsWith('/v2/hiring-blueprints/') || url.startsWith('/v2/assessment-templates/')) && method === 'GET') {
+      if ((url.startsWith('/v2/hiring-blueprints/') || url.startsWith('/v2/assessment-templates/') || url.startsWith('/hiring-blueprints/')) && method === 'GET') {
         const id = Number(url.split('/').pop()) || 1;
-        const bp = MOCK_BLUEPRINTS.find((b) => b.id === id) || MOCK_BLUEPRINTS[0];
+        const list = this.state.blueprints || MOCK_BLUEPRINTS;
+        const bp = list.find((b: any) => b.id === id) || list[0];
         return { data: this.envelope(bp, 'Assessment blueprint retrieved') };
+      }
+
+      if ((url === '/v2/hiring-blueprints' || url === '/v2/assessment-templates' || url === '/assessment-templates' || url === '/hiring-blueprints') && method === 'POST') {
+        const body = (req as any).body || {};
+        const rules = body.sectionRules || [];
+        const totalQuestions = rules.reduce((acc: number, r: any) => acc + (Number(r.questionCount) || 0), 0);
+        const totalMarks = rules.reduce((acc: number, r: any) => acc + ((Number(r.questionCount) || 0) * (Number(r.marksPerQuestion) || 1)), 0);
+        const totalDuration = rules.reduce((acc: number, r: any) => acc + (Number(r.timeLimitMinutes) || 0), 0);
+
+        if (!this.state.blueprints) this.state.blueprints = JSON.parse(JSON.stringify(MOCK_BLUEPRINTS));
+        const maxId = this.state.blueprints.reduce((max: number, b: any) => Math.max(max, Number(b.id) || 0), 0);
+        const newBlueprint = {
+          ...body,
+          id: maxId + 1,
+          code: body.code || `RULE-${maxId + 1}`,
+          name: body.name,
+          defaultPassingPercentage: body.defaultPassingPercentage ?? 70,
+          totalDurationMinutes: totalDuration || 60,
+          totalQuestions,
+          totalMarks,
+          enableQuestionShuffling: true,
+          enableOptionShuffling: true,
+          isDefault: body.isDefault ?? false,
+          assignedRolesCount: 0,
+          sectionRules: rules.map((r: any, idx: number) => ({
+            ...r,
+            id: r.id || idx + 1,
+            displayOrder: idx + 1,
+          })),
+        };
+
+        this.state.blueprints.push(newBlueprint);
+        this.saveState();
+        return { data: this.envelope(newBlueprint, 'Assessment blueprint created') };
+      }
+
+      if ((url.startsWith('/v2/hiring-blueprints/') || url.startsWith('/v2/assessment-templates/') || url.startsWith('/hiring-blueprints/')) && method === 'PUT') {
+        const id = Number(url.split('/').pop());
+        const body = (req as any).body || {};
+        const rules = body.sectionRules || [];
+        const totalQuestions = rules.reduce((acc: number, r: any) => acc + (Number(r.questionCount) || 0), 0);
+        const totalMarks = rules.reduce((acc: number, r: any) => acc + ((Number(r.questionCount) || 0) * (Number(r.marksPerQuestion) || 1)), 0);
+        const totalDuration = rules.reduce((acc: number, r: any) => acc + (Number(r.timeLimitMinutes) || 0), 0);
+
+        if (!this.state.blueprints) this.state.blueprints = JSON.parse(JSON.stringify(MOCK_BLUEPRINTS));
+        const idx = this.state.blueprints.findIndex((b: any) => b.id === id);
+        if (idx !== -1) {
+          this.state.blueprints[idx] = {
+            ...this.state.blueprints[idx],
+            ...body,
+            id,
+            totalDurationMinutes: totalDuration || 60,
+            totalQuestions,
+            totalMarks,
+            sectionRules: rules.map((r: any, rIdx: number) => ({
+              ...r,
+              id: r.id || rIdx + 1,
+              displayOrder: rIdx + 1,
+            })),
+          };
+          this.saveState();
+          return { data: this.envelope(this.state.blueprints[idx], 'Assessment blueprint updated') };
+        }
+        return { data: this.envelope(body, 'Assessment blueprint updated') };
+      }
+
+      if ((url.startsWith('/v2/hiring-blueprints/') || url.startsWith('/v2/assessment-templates/') || url.startsWith('/hiring-blueprints/')) && method === 'DELETE') {
+        const id = Number(url.split('/').pop());
+        if (!this.state.blueprints) this.state.blueprints = JSON.parse(JSON.stringify(MOCK_BLUEPRINTS));
+        this.state.blueprints = this.state.blueprints.filter((b: any) => b.id !== id);
+        this.saveState();
+        return { data: this.envelope(true, 'Assessment blueprint deleted') };
       }
 
       if (url.startsWith('/v2/vacancies/roles/') && url.endsWith('/profiles') && method === 'GET') {

@@ -13,6 +13,20 @@ namespace STEP.Application.Features.Exams.Queries.ResumeExamSession
     {
         public async Task<LiveExamWorkspaceDto> Handle(ResumeExamSessionQuery request, CancellationToken cancellationToken)
         {
+            var sessionV2 = await db.CandidateExamSessionsV2
+                .Include(s => s.Candidate)
+                .Include(s => s.Vacancy)
+                .Include(s => s.AssessmentBlueprint)
+                .Include(s => s.Questions).ThenInclude(q => q.Options)
+                .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SessionToken == request.SessionToken, cancellationToken);
+
+            if (sessionV2 != null)
+            {
+                return ExamWorkspaceMapper.ToWorkspaceDto(sessionV2);
+            }
+
             var session = await db.CandidateExamSessions
                 .Include(s => s.Questions).ThenInclude(q => q.Options)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)

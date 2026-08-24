@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,9 +23,13 @@ namespace STEP.Api.Controllers
     public class ExamsController(ISender mediator) : BaseApiController
     {
         [HttpPost("start")]
+        [AllowAnonymous]
         public async Task<IActionResult> Start([FromBody] StartExamSessionRequestBody body)
         {
             var testSource = string.IsNullOrWhiteSpace(body.TestSource) ? "Home" : body.TestSource;
+            if (testSource.Equals("Online", System.StringComparison.OrdinalIgnoreCase)) testSource = "Home";
+            if (testSource.Equals("In Office", System.StringComparison.OrdinalIgnoreCase)) testSource = "Office";
+
             var result = await mediator.Send(new StartExamSessionCommand(
                 body.CandidateCode, body.Passcode, testSource,
                 HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString()));
@@ -33,6 +37,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpGet("resume/{sessionToken}")]
+        [AllowAnonymous]
         public async Task<IActionResult> Resume(string sessionToken)
         {
             var result = await mediator.Send(new ResumeExamSessionQuery(sessionToken));
@@ -40,6 +45,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("answers")]
+        [AllowAnonymous]
         public async Task<IActionResult> SaveAnswer([FromBody] SaveExamAnswerCommand command)
         {
             await mediator.Send(command);
@@ -47,6 +53,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("batch-answers")]
+        [AllowAnonymous]
         public async Task<IActionResult> SaveAnswerBatch([FromBody] SaveExamAnswerBatchCommand command)
         {
             var result = await mediator.Send(command);
@@ -54,6 +61,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("submit")]
+        [AllowAnonymous]
         public async Task<IActionResult> Submit([FromBody] SubmitExamRequestBody body)
         {
             var result = await mediator.Send(new SubmitExamCommand(body.SessionToken));
@@ -61,6 +69,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("violations")]
+        [AllowAnonymous]
         public async Task<IActionResult> ReportViolation([FromBody] ReportExamViolationRequestBody body)
         {
             var result = await mediator.Send(new ReportExamViolationCommand(body.SessionToken, body.ViolationType));

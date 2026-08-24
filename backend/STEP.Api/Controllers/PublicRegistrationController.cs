@@ -1,5 +1,6 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.QR.Commands.RecordQRScan;
@@ -9,8 +10,12 @@ using STEP.Application.Features.QR.Queries.CheckQRRegistrationEligibility;
 namespace STEP.Api.Controllers
 {
     /// <summary>
-    /// Entirely anonymous public candidate application gateway for QR walk-ins.
+    /// Entirely anonymous public candidate application gateway for QR walk-ins and direct links.
     /// </summary>
+    [AllowAnonymous]
+    [Route("api/v2/publicregistration")]
+    [Route("api/v1/publicregistration")]
+    [Route("api/publicregistration")]
     [Route("api/v2/apply")]
     [Route("api/v1/apply")]
     [Route("api/apply")]

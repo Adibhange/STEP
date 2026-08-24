@@ -43,7 +43,7 @@ namespace STEP.Application.Features.V2.QuestionBank
             {
                 Code = code,
                 Language = request.Language.Trim(),
-                SectionType = string.Equals(request.SectionType, "Aptitude", StringComparison.OrdinalIgnoreCase) ? "TechnicalMCQ" : request.SectionType.Trim(),
+                SectionType = string.IsNullOrWhiteSpace(request.SectionType) ? "TechnicalMCQ" : request.SectionType.Trim(),
                 QuestionType = request.QuestionType.Trim(),
                 ExperienceTier = string.IsNullOrWhiteSpace(request.ExperienceTier) ? "Fresher" : request.ExperienceTier.Trim(),
                 QuestionText = request.QuestionText.Trim(),

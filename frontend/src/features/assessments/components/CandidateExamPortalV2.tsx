@@ -872,6 +872,49 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
   }
 
   // ── STAGE 2: PRE-EXAM INSTRUCTIONS ──────────────────────────────────────────
+  if (examStep === 'instructions' && !session && isStartingSession) {
+    return (
+      <div className="min-h-screen bg-canvas text-text-primary flex items-center justify-center p-4 font-sans" data-theme="dark">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="w-12 h-12 rounded-2xl bg-accent-indigo-dim text-accent-indigo border border-border-default flex items-center justify-center mx-auto animate-spin">
+            <Icon name="loader" size="md" />
+          </div>
+          <h2 className="text-base font-bold text-text-primary font-heading">
+            Loading Assessment Blueprint...
+          </h2>
+          <p className="text-xs text-text-tertiary font-mono">
+            Generating your personalized questions and securing the proctoring environment.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (examStep === 'instructions' && !session && loginError) {
+    return (
+      <div className="min-h-screen bg-canvas text-text-primary flex items-center justify-center p-4 font-sans" data-theme="dark">
+        <div className="max-w-md w-full bg-surface-1 border border-border-default rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-status-danger-bg text-status-danger-text border border-status-danger-border flex items-center justify-center mx-auto">
+            <Icon name="alert-triangle" size="md" />
+          </div>
+          <h2 className="text-lg font-bold text-text-primary font-heading">
+            Assessment Authentication Failed
+          </h2>
+          <p className="text-xs text-status-danger-text bg-status-danger-bg/50 p-3 rounded-xl border border-status-danger-border font-mono">
+            {loginError}
+          </p>
+          <button
+            type="button"
+            onClick={handleLaunchSession}
+            className="w-full h-10 rounded-xl bg-accent-indigo text-text-on-accent font-bold text-xs hover:opacity-90 transition-all cursor-pointer"
+          >
+            Retry Launching Assessment
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (examStep === 'instructions') {
     return (
       <div className="min-h-screen bg-canvas text-text-primary flex items-center justify-center p-4 sm:p-6 font-sans select-none relative overflow-hidden" data-theme="dark">

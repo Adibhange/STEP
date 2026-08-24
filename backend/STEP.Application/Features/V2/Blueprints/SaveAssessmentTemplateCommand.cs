@@ -51,15 +51,23 @@ namespace STEP.Application.Features.V2.Blueprints
                 foreach (var ed in existingDefaults) ed.IsDefault = false;
             }
 
-            AssessmentBlueprint blueprint;
+            AssessmentBlueprint? blueprint = null;
 
             if (request.Id.HasValue && request.Id.Value > 0)
             {
                 blueprint = await db.AssessmentBlueprints
                     .Include(b => b.SectionRules)
-                    .FirstOrDefaultAsync(b => b.Id == request.Id.Value, cancellationToken)
-                    ?? throw new Exception($"Assessment Blueprint ID {request.Id.Value} not found.");
+                    .FirstOrDefaultAsync(b => b.Id == request.Id.Value || b.Code == code, cancellationToken);
+            }
+            else
+            {
+                blueprint = await db.AssessmentBlueprints
+                    .Include(b => b.SectionRules)
+                    .FirstOrDefaultAsync(b => b.Code == code, cancellationToken);
+            }
 
+            if (blueprint != null)
+            {
                 blueprint.Code = code;
                 blueprint.Name = request.Name.Trim();
                 blueprint.DefaultPassingPercentage = passingCutoff;
@@ -68,7 +76,10 @@ namespace STEP.Application.Features.V2.Blueprints
                 blueprint.EnableOptionShuffling = true;
                 blueprint.IsActive = true;
 
-                db.AssessmentBlueprintSectionRules.RemoveRange(blueprint.SectionRules);
+                if (blueprint.SectionRules.Count > 0)
+                {
+                    db.AssessmentBlueprintSectionRules.RemoveRange(blueprint.SectionRules);
+                }
             }
             else
             {
@@ -98,7 +109,7 @@ namespace STEP.Application.Features.V2.Blueprints
                     {
                         BlueprintId = blueprint.Id,
                         SectionName = r.SectionName.Trim(),
-                        SectionType = string.Equals(r.SectionType, "Aptitude", StringComparison.OrdinalIgnoreCase) ? "TechnicalMCQ" : r.SectionType,
+                        SectionType = string.IsNullOrWhiteSpace(r.SectionType) ? "TechnicalMCQ" : r.SectionType.Trim(),
                         QuestionType = r.QuestionType ?? "SINGLE_CHOICE",
                         ExperienceTier = "{InheritFromCandidateTier}",
                         RequiredTags = string.IsNullOrWhiteSpace(r.RequiredTags) ? "{InheritFromRole}" : r.RequiredTags.Trim(),

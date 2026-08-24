@@ -40,7 +40,7 @@ namespace STEP.Application.Features.V2.QuestionBank
                 question.Code = request.Code.Trim();
 
             question.Language = request.Language.Trim();
-            question.SectionType = string.Equals(request.SectionType, "Aptitude", StringComparison.OrdinalIgnoreCase) ? "TechnicalMCQ" : request.SectionType.Trim();
+            question.SectionType = string.IsNullOrWhiteSpace(request.SectionType) ? "TechnicalMCQ" : request.SectionType.Trim();
             question.QuestionType = request.QuestionType.Trim();
             question.ExperienceTier = request.ExperienceTier.Trim();
             question.QuestionText = request.QuestionText.Trim();
@@ -176,7 +176,7 @@ namespace STEP.Application.Features.V2.QuestionBank
                 {
                     Code = code,
                     Language = req.Language.Trim(),
-                    SectionType = string.Equals(req.SectionType, "Aptitude", StringComparison.OrdinalIgnoreCase) ? "TechnicalMCQ" : req.SectionType.Trim(),
+                    SectionType = string.IsNullOrWhiteSpace(req.SectionType) ? "TechnicalMCQ" : req.SectionType.Trim(),
                     QuestionType = req.QuestionType.Trim(),
                     ExperienceTier = string.IsNullOrWhiteSpace(req.ExperienceTier) ? "Fresher" : req.ExperienceTier.Trim(),
                     QuestionText = req.QuestionText.Trim(),

@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +13,7 @@ namespace STEP.Api.Controllers
     public class UsersController(ISender mediator) : BaseApiController
     {
         [HttpGet]
+        [Authorize(Policy = "User.Manage")]
         public async Task<IActionResult> GetUsers()
         {
             var users = await mediator.Send(new GetUsersQuery());

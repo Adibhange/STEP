@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Icon } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
+import { useAppSelector, selectCurrentUser } from '@/store';
 import { NAV_ITEMS, NAV_SECTIONS, type NavItem } from '../config/sidebar.config';
 
 interface SidebarProps {
@@ -23,7 +24,19 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) => {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentUser = useAppSelector(selectCurrentUser);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const userRole = (mounted && currentUser?.role ? currentUser.role : 'Director') as
+    | 'Director'
+    | 'HR'
+    | 'Interviewer'
+    | 'Administrator';
 
   const handleMouseEnter = useCallback(() => {
     if (collapseTimerRef.current) {
@@ -51,11 +64,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) =
 
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
 
-  const sections = (Object.keys(NAV_SECTIONS) as Array<keyof typeof NAV_SECTIONS>).map((sectionKey) => ({
-    key: sectionKey,
-    label: NAV_SECTIONS[sectionKey],
-    items: NAV_ITEMS.filter((item) => item.section === sectionKey),
-  }));
+  const sections = (Object.keys(NAV_SECTIONS) as Array<keyof typeof NAV_SECTIONS>)
+    .map((sectionKey) => {
+      const filteredItems = NAV_ITEMS.filter((item) => {
+        if (item.section !== sectionKey) return false;
+        if (!item.allowedRoles || item.allowedRoles.length === 0) return true;
+        return item.allowedRoles.includes(userRole);
+      });
+      return {
+        key: sectionKey,
+        label: NAV_SECTIONS[sectionKey],
+        items: filteredItems,
+      };
+    })
+    .filter((section) => section.items.length > 0);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';

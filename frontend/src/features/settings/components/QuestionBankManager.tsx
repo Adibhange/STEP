@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon, EnterpriseModal, staggerContainer, kpiCardVariant, tactilePopCardVariant } from '@/design-system';
 import { toast } from '@/design-system/feedback/toast';
@@ -110,6 +111,14 @@ export const QuestionBankManager: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Partial<QuestionBankItem> | null>(null);
+
+  // Hidden File Input & Bulk Upload State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [parsedQuestions, setParsedQuestions] = useState<any[]>([]);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // Filtered Questions
   const filteredData = useMemo(() => {
@@ -222,12 +231,13 @@ export const QuestionBankManager: React.FC = () => {
     const mcqs = questions.filter((q) => q.sectionType === 'TechnicalMCQ');
     return {
       total: questions.length,
-      aptitude: questions.filter((q) => q.sectionType === 'Aptitude').length,
+      aptitude: questions.filter((q) => q.sectionType === 'Aptitude' || q.language === 'General Aptitude').length,
       mcq: mcqs.length,
       mcqSingle: mcqs.filter((q) => q.questionType === 'SINGLE_CHOICE').length,
       mcqMulti: mcqs.filter((q) => q.questionType === 'MULTI_CHOICE').length,
-      sql: questions.filter((q) => q.sectionType === 'SQLQuery').length,
-      coding: questions.filter((q) => q.sectionType === 'Coding').length,
+      sql: questions.filter((q) => q.sectionType === 'SQLQuery' || q.questionType === 'SQL').length,
+      coding: questions.filter((q) => q.sectionType === 'Coding' || q.questionType === 'CODING').length,
+      subjective: questions.filter((q) => q.sectionType === 'SubjectiveTheory' || q.questionType === 'SUBJECTIVE').length,
     };
   }, [questions]);
 
@@ -303,11 +313,139 @@ export const QuestionBankManager: React.FC = () => {
     }
   };
 
-  const handleBulkImport = () => {
-    toast.success('Bulk Import Completed', {
-      description: 'Successfully parsed and imported questions into the central bank.',
-    });
-    setIsBulkOpen(false);
+  const parseSelectedFile = async (file: File) => {
+    setIsParsing(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const extracted: any[] = [];
+
+      for (const sheetName of workbook.SheetNames) {
+        if (sheetName.toLowerCase().includes('instruction') || sheetName.toLowerCase().includes('readme')) continue;
+
+        const worksheet = workbook.Sheets[sheetName];
+        const rows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+        for (const row of rows) {
+          const questionText = row.QuestionStatement || row.QuestionText || row.Statement || row.ProblemStatement || row.questionText || '';
+          if (!questionText || !String(questionText).trim()) continue;
+
+          const language = row.Language || row.Domain || row.language || 'General Aptitude';
+          let sectionType = row.SectionType || row.sectionType;
+          if (!sectionType) {
+            const lowerSheet = sheetName.toLowerCase();
+            if (lowerSheet.includes('sql')) sectionType = 'SQLQuery';
+            else if (lowerSheet.includes('coding')) sectionType = 'Coding';
+            else if (lowerSheet.includes('subjective')) sectionType = 'SubjectiveTheory';
+            else sectionType = 'TechnicalMCQ';
+          }
+
+          let questionType = row.QuestionType || row.questionType;
+          if (!questionType) {
+            if (sectionType === 'SQLQuery') questionType = 'SQL';
+            else if (sectionType === 'Coding') questionType = 'CODING';
+            else if (sectionType === 'SubjectiveTheory') questionType = 'SUBJECTIVE';
+            else questionType = 'SINGLE_CHOICE';
+          }
+
+          const experienceTier = row.ExperienceTier || row.Tier || row.Difficulty || row.experienceTier || 'Junior';
+          const marks = Number(row.Marks || row.marks) || 1.0;
+          const sqlSchema = row.TableSchemaDDL || row.SqlSchema || row.sqlSchema || '';
+          const starterCode = row.StarterCode || row.starterCode || '';
+
+          const correctOptionRaw = String(row.CorrectOption || row.Correct || row.correctOption || 'A').toUpperCase();
+          const correctSet = new Set(correctOptionRaw.split(/[,;\s]+/).map((s) => s.trim()));
+
+          const options: any[] = [];
+          ['A', 'B', 'C', 'D'].forEach((label) => {
+            const text = row[`Option${label}`] || row[`option${label}`] || '';
+            if (text && String(text).trim()) {
+              options.push({
+                label,
+                text: String(text).trim(),
+                isCorrect: correctSet.has(label),
+                displayOrder: label.charCodeAt(0) - 64,
+              });
+            }
+          });
+
+          extracted.push({
+            language: String(language).trim(),
+            sectionType,
+            questionType,
+            experienceTier: String(experienceTier).trim(),
+            questionText: String(questionText).trim(),
+            marks,
+            sqlSchema: sqlSchema ? String(sqlSchema).trim() : null,
+            starterCode: starterCode ? String(starterCode).trim() : null,
+            options: options.length > 0 ? options : undefined,
+            isActive: true,
+          });
+        }
+      }
+
+      if (extracted.length === 0) {
+        toast.error('No Questions Found', {
+          description: 'The uploaded file does not contain recognized question rows.',
+        });
+        setSelectedFile(null);
+        setParsedQuestions([]);
+      } else {
+        setSelectedFile(file);
+        setParsedQuestions(extracted);
+        toast.success('File Parsed Successfully', {
+          description: `Ready to import ${extracted.length} questions from "${file.name}".`,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to parse file:', err);
+      toast.error('File Read Error', { description: 'Could not parse the selected Excel/CSV file.' });
+      setSelectedFile(null);
+      setParsedQuestions([]);
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      parseSelectedFile(file);
+    }
+    e.target.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      parseSelectedFile(file);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (!selectedFile || parsedQuestions.length === 0) {
+      fileInputRef.current?.click();
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      await bulkImportQuestionApi({ questions: parsedQuestions }).unwrap();
+      toast.success('Bulk Import Completed', {
+        description: `Successfully imported ${parsedQuestions.length} questions into the central bank.`,
+      });
+      setIsBulkOpen(false);
+      setSelectedFile(null);
+      setParsedQuestions([]);
+    } catch (err: any) {
+      toast.error('Import Failed', {
+        description: err?.data?.message || 'Could not import questions into repository.',
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   // Generate and download a true multi-sheet Excel (.xlsx) Template with Data Validation
@@ -333,7 +471,7 @@ export const QuestionBankManager: React.FC = () => {
       {/* ────────────────── POOL HEALTH SUMMARY CARDS WITH FRAMER MOTION ────────────────── */}
       <motion.div
         variants={staggerContainer}
-        className="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 w-full"
       >
         <motion.div
           variants={kpiCardVariant}
@@ -357,7 +495,14 @@ export const QuestionBankManager: React.FC = () => {
           <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase font-mono">Aptitude & Logic</span>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-xl font-extrabold text-[var(--status-warning-text)] font-heading">{metrics.aptitude}</span>
-            <span className="text-[10px] text-[var(--text-tertiary)] font-mono">Screening</span>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono">
+              <span className="px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-default)] font-semibold" title="Single-Choice">
+                {questions.filter((q) => q.sectionType === 'Aptitude' && q.questionType === 'SINGLE_CHOICE').length}S
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 font-bold" title="Multi-Choice">
+                {questions.filter((q) => q.sectionType === 'Aptitude' && q.questionType === 'MULTI_CHOICE').length}M
+              </span>
+            </div>
           </div>
         </motion.div>
 
@@ -371,10 +516,10 @@ export const QuestionBankManager: React.FC = () => {
             <span className="text-xl font-extrabold text-[var(--accent-indigo)] font-heading">{metrics.mcq}</span>
             <div className="flex items-center gap-1.5 text-[10px] font-mono">
               <span className="px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border-default)] font-semibold" title="Single-Choice MCQs">
-                {metrics.mcqSingle} Single
+                {metrics.mcqSingle}S
               </span>
               <span className="px-1.5 py-0.5 rounded bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 font-bold" title="Multi-Choice MCQs">
-                {metrics.mcqMulti} Multi
+                {metrics.mcqMulti}M
               </span>
             </div>
           </div>
@@ -401,6 +546,18 @@ export const QuestionBankManager: React.FC = () => {
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-xl font-extrabold text-[var(--status-success-text)] font-heading">{metrics.coding}</span>
             <span className="text-[10px] text-[var(--text-tertiary)] font-mono">IDE Tests</span>
+          </div>
+        </motion.div>
+
+        <motion.div
+          variants={kpiCardVariant}
+          whileHover={{ y: -2, transition: { duration: 0.15 } }}
+          className="p-3.5 rounded-[var(--radius-lg)] bg-[var(--surface-1)] border border-[var(--border-default)] shadow-2xs flex flex-col justify-between cursor-default"
+        >
+          <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase font-mono">Subjective & Theory</span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-extrabold text-[var(--status-warning-text)] font-heading">{metrics.subjective}</span>
+            <span className="text-[10px] text-[var(--text-tertiary)] font-mono">Architecture</span>
           </div>
         </motion.div>
       </motion.div>
@@ -478,23 +635,24 @@ export const QuestionBankManager: React.FC = () => {
               placeholder="All Sections"
               value={sectionFilter}
               options={[
-                { value: 'All', label: 'All Formats' },
-                { value: 'Aptitude', label: 'Aptitude & Logic' },
+                { value: 'All', label: 'All Sections' },
                 { value: 'TechnicalMCQ', label: 'Technical MCQs' },
                 { value: 'SQLQuery', label: 'SQL Queries' },
                 { value: 'Coding', label: 'Coding Tasks' },
+                { value: 'SubjectiveTheory', label: 'Subjective & Theory' },
+                { value: 'Aptitude', label: 'Aptitude & Logic' },
               ]}
               onChange={(val) => {
                 setSectionFilter(val || 'All');
                 setCurrentPage(1);
               }}
-              widthClass="w-full sm:w-[130px]"
+              widthClass="w-full sm:w-[145px]"
             />
 
             {/* Format / Question Type Filter */}
             <CustomSelect
               label="Format"
-              placeholder="All Types"
+              placeholder="All Formats"
               value={typeFilter}
               options={[
                 { value: 'All', label: 'All Formats' },
@@ -502,6 +660,7 @@ export const QuestionBankManager: React.FC = () => {
                 { value: 'MULTI_CHOICE', label: 'Multi-Choice (Checkboxes)' },
                 { value: 'SQL', label: 'SQL Queries' },
                 { value: 'CODING', label: 'Coding IDE' },
+                { value: 'SUBJECTIVE', label: 'Subjective / Theory' },
               ]}
               onChange={(val) => {
                 setTypeFilter(val || 'All');
@@ -744,7 +903,11 @@ export const QuestionBankManager: React.FC = () => {
                                   ? 'SQL Query'
                                   : q.sectionType === 'Coding'
                                   ? 'Coding Task'
-                                  : 'Aptitude'}
+                                  : q.sectionType === 'SubjectiveTheory'
+                                  ? 'Subjective / Theory'
+                                  : q.sectionType === 'Aptitude'
+                                  ? 'Aptitude & Logic'
+                                  : q.sectionType}
                               </span>
                             </span>
                           </td>
@@ -765,6 +928,11 @@ export const QuestionBankManager: React.FC = () => {
                               <span className="inline-flex items-center gap-1.5 text-[10.5px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--accent-cyan)] border border-[var(--border-default)]">
                                 <Icon name="file-text" size="xs" />
                                 <span>SQL Query</span>
+                              </span>
+                            ) : q.questionType === 'SUBJECTIVE' ? (
+                              <span className="inline-flex items-center gap-1.5 text-[10.5px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--status-warning-text)] border border-[var(--border-default)]">
+                                <Icon name="file-text" size="xs" />
+                                <span>Subjective</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 text-[10.5px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--status-success-text)] border border-[var(--border-default)]">
@@ -919,7 +1087,11 @@ export const QuestionBankManager: React.FC = () => {
       {/* ────────────────── BULK IMPORT MODAL ────────────────── */}
       <EnterpriseModal
         isOpen={isBulkOpen}
-        onClose={() => setIsBulkOpen(false)}
+        onClose={() => {
+          setIsBulkOpen(false);
+          setSelectedFile(null);
+          setParsedQuestions([]);
+        }}
         title="Bulk Upload Questions"
         subtitle="Upload structured Excel (.xlsx) or CSV file with questions categorized by Language/Domain, Section Type, and Format."
         icon="upload"
@@ -939,7 +1111,11 @@ export const QuestionBankManager: React.FC = () => {
             <div className="flex gap-2.5">
               <button
                 type="button"
-                onClick={() => setIsBulkOpen(false)}
+                onClick={() => {
+                  setIsBulkOpen(false);
+                  setSelectedFile(null);
+                  setParsedQuestions([]);
+                }}
                 className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl text-xs font-bold bg-[var(--surface-1)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--surface-hover)] cursor-pointer"
               >
                 Cancel
@@ -947,31 +1123,92 @@ export const QuestionBankManager: React.FC = () => {
               <button
                 type="button"
                 onClick={handleBulkImport}
-                className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md hover:from-indigo-700 hover:to-purple-700 active:scale-95"
+                disabled={isParsing || isImporting}
+                className="h-9 sm:h-10 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md hover:from-indigo-700 hover:to-purple-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Import Questions
+                {isImporting
+                  ? 'Importing...'
+                  : isParsing
+                  ? 'Parsing...'
+                  : selectedFile
+                  ? `Import ${parsedQuestions.length} Questions`
+                  : 'Browse & Import'}
               </button>
             </div>
           </div>
         }
       >
         <div className="space-y-4">
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
           <p className="text-xs text-[var(--text-secondary)]">
             Upload a structured Excel (.xlsx) or CSV file with questions categorized by Language/Domain, Section Type, and Format.
           </p>
 
-          {/* Upload Dropzone */}
-          <div className="p-8 border-2 border-dashed border-[var(--border-default)] rounded-2xl bg-[var(--surface-2)] text-center space-y-2.5 cursor-pointer hover:border-[var(--accent-indigo)] transition-all">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 text-[var(--accent-indigo)] flex items-center justify-center mx-auto shadow-2xs">
-              <Icon name="file-text" size="sm" />
+          {/* Upload Dropzone / Selected File Card */}
+          {!selectedFile ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(true);
+              }}
+              onDragLeave={() => setIsDraggingOver(false)}
+              onDrop={handleDrop}
+              className={`p-8 border-2 border-dashed rounded-2xl text-center space-y-2.5 cursor-pointer transition-all ${
+                isDraggingOver
+                  ? 'border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)]'
+                  : 'border-[var(--border-default)] bg-[var(--surface-2)] hover:border-[var(--accent-indigo)]'
+              }`}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 text-[var(--accent-indigo)] flex items-center justify-center mx-auto shadow-2xs">
+                <Icon name="upload" size="sm" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-[var(--text-primary)] block">
+                  {isParsing ? 'Reading & Parsing File...' : 'Drag & Drop Excel / CSV file here or click to browse'}
+                </span>
+                <span className="text-[11px] text-[var(--text-tertiary)] font-mono block mt-1">
+                  Supports .xlsx, .xls, and .csv formats
+                </span>
+              </div>
             </div>
-            <span className="text-xs font-bold text-[var(--text-primary)] block">
-              Drag & Drop Excel / CSV file here or click to browse
-            </span>
-            <span className="text-[11px] text-[var(--text-tertiary)] font-mono block">
-              Supports: Language, SectionType, QuestionType, Difficulty, QuestionStatement, OptionA, OptionB, OptionC, OptionD, CorrectOption, Marks
-            </span>
-          </div>
+          ) : (
+            <div className="p-5 border border-[var(--accent-indigo)]/40 rounded-2xl bg-[var(--accent-indigo-dim)]/40 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-[var(--accent-indigo)] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Icon name="file-text" size="sm" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-[var(--text-primary)] block truncate">
+                    {selectedFile.name}
+                  </span>
+                  <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)] mt-0.5">
+                    <span>{(selectedFile.size / 1024).toFixed(1)} KB</span>
+                    <span>•</span>
+                    <span className="font-bold text-[var(--accent-indigo)]">
+                      {parsedQuestions.length} questions parsed
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs font-bold text-[var(--accent-indigo)] hover:underline shrink-0 px-3 py-1.5 rounded-lg border border-[var(--accent-indigo)]/30 bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] cursor-pointer"
+              >
+                Change File
+              </button>
+            </div>
+          )}
         </div>
       </EnterpriseModal>
 

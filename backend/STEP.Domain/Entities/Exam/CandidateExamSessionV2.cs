@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using STEP.Domain.Common;
 using STEP.Domain.Entities.Candidate;
 using STEP.Domain.Entities.Identity;
 using STEP.Domain.Entities.Master;
@@ -12,8 +11,9 @@ namespace STEP.Domain.Entities.Exam
     /// <summary>
     /// V2 Candidate Exam Session entity (lives under isolated "examv2" schema).
     /// </summary>
-    public class CandidateExamSessionV2 : BaseEntity
+    public class CandidateExamSessionV2
     {
+        public int Id { get; set; }
         public string SessionToken { get; set; } = string.Empty;
         public int CandidateId { get; set; }
         public CandidateEntity Candidate { get; set; } = null!;
@@ -52,14 +52,18 @@ namespace STEP.Domain.Entities.Exam
         public int? EvaluatorUserId { get; set; }
         public User? EvaluatorUser { get; set; }
         public string? EvaluatorRemarks { get; set; }
+        public byte[]? RowVersion { get; set; }
+        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
         public ICollection<CandidateExamSessionQuestionV2> Questions { get; set; } = new List<CandidateExamSessionQuestionV2>();
         public ICollection<CandidateExamAnswerV2> Answers { get; set; } = new List<CandidateExamAnswerV2>();
         public ICollection<ExamProctoringLog> ProctoringLogs { get; set; } = new List<ExamProctoringLog>();
     }
 
-    public class CandidateExamSessionQuestionV2 : BaseEntity
+    public class CandidateExamSessionQuestionV2
     {
+        public int Id { get; set; }
         public int CandidateExamSessionId { get; set; }
         public CandidateExamSessionV2 CandidateExamSession { get; set; } = null!;
 
@@ -79,12 +83,14 @@ namespace STEP.Domain.Entities.Exam
         public string? ProgrammingLanguage { get; set; }
         public string? SqlSchema { get; set; }
         public string QuestionSnapshotJson { get; set; } = string.Empty;
+        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
         public ICollection<CandidateExamSessionQuestionOptionV2> Options { get; set; } = new List<CandidateExamSessionQuestionOptionV2>();
     }
 
-    public class CandidateExamSessionQuestionOptionV2 : BaseEntity
+    public class CandidateExamSessionQuestionOptionV2
     {
+        public int Id { get; set; }
         public int CandidateExamSessionQuestionId { get; set; }
         public CandidateExamSessionQuestionV2 CandidateExamSessionQuestion { get; set; } = null!;
 
@@ -97,8 +103,9 @@ namespace STEP.Domain.Entities.Exam
         public bool IsCorrect { get; set; }
     }
 
-    public class CandidateExamAnswerV2 : BaseEntity
+    public class CandidateExamAnswerV2
     {
+        public int Id { get; set; }
         public int CandidateExamSessionId { get; set; }
         public CandidateExamSessionV2 CandidateExamSession { get; set; } = null!;
 
@@ -115,8 +122,9 @@ namespace STEP.Domain.Entities.Exam
         public ICollection<CandidateExamAnswerOptionV2> SelectedOptions { get; set; } = new List<CandidateExamAnswerOptionV2>();
     }
 
-    public class CandidateExamAnswerOptionV2 : BaseEntity
+    public class CandidateExamAnswerOptionV2
     {
+        public int Id { get; set; }
         public int CandidateExamAnswerId { get; set; }
         public CandidateExamAnswerV2 CandidateExamAnswer { get; set; } = null!;
 
@@ -124,8 +132,9 @@ namespace STEP.Domain.Entities.Exam
         public CandidateExamSessionQuestionOptionV2 CandidateExamSessionQuestionOption { get; set; } = null!;
     }
 
-    public class ExamProctoringLog : BaseEntity
+    public class ExamProctoringLog
     {
+        public int Id { get; set; }
         public int CandidateExamSessionId { get; set; }
         public CandidateExamSessionV2 CandidateExamSession { get; set; } = null!;
 

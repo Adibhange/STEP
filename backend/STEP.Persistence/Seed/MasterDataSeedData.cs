@@ -83,11 +83,11 @@ namespace STEP.Persistence.Seed
             // Central Question Bank Seed Items
             modelBuilder.Entity<MasterQuestion>().HasData(
                 // Aptitude (General)
-                QuestionRow(1, "QB-APT-01", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "If a car travels 120 km in 2 hours, what is its average speed in m/s?", 1.0m),
-                QuestionRow(2, "QB-APT-02", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "Find the next number in the series: 3, 6, 12, 24, 48, ?", 1.0m),
-                QuestionRow(3, "QB-APT-03", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "A train 150m long passes a pole in 15 seconds. What is the speed of the train in km/h?", 1.0m),
-                QuestionRow(4, "QB-APT-04", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "What is 15% of 240 plus 25% of 160?", 1.0m),
-                QuestionRow(5, "QB-APT-05", "General Aptitude", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "Pointing to a photograph, a man says: 'He is the son of the only son of my grandfather.' How is he related?", 1.0m),
+                QuestionRow(1, "QB-APT-01", "General Aptitude", "Aptitude", "SINGLE_CHOICE", "Fresher", "If a car travels 120 km in 2 hours, what is its average speed in m/s?", 1.0m),
+                QuestionRow(2, "QB-APT-02", "General Aptitude", "Aptitude", "SINGLE_CHOICE", "Fresher", "Find the next number in the series: 3, 6, 12, 24, 48, ?", 1.0m),
+                QuestionRow(3, "QB-APT-03", "General Aptitude", "Aptitude", "SINGLE_CHOICE", "Fresher", "A train 150m long passes a pole in 15 seconds. What is the speed of the train in km/h?", 1.0m),
+                QuestionRow(4, "QB-APT-04", "General Aptitude", "Aptitude", "SINGLE_CHOICE", "Fresher", "What is 15% of 240 plus 25% of 160?", 1.0m),
+                QuestionRow(5, "QB-APT-05", "General Aptitude", "Aptitude", "SINGLE_CHOICE", "Fresher", "Pointing to a photograph, a man says: 'He is the son of the only son of my grandfather.' How is he related?", 1.0m),
 
                 // .NET / C# MCQs
                 QuestionRow(6, "QB-DOT-01", "C# (.NET)", "TechnicalMCQ", "SINGLE_CHOICE", "Fresher", "What is the primary difference between a 'class' and a 'struct' in C#?", 1.0m),

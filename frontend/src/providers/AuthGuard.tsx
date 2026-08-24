@@ -30,6 +30,8 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     dispatch(syncFromStorage());
   }, [dispatch]);
 
+  const currentUser = useAppSelector((state) => state.auth.user);
+
   // Route protection guard — only evaluate after storage hydration
   useEffect(() => {
     if (!isInitialized) return;
@@ -38,18 +40,35 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     const hasToken = Boolean(token && token.trim().length > 0);
 
     if (isDashboardRoute && !isAuthenticated && !hasToken) {
-      notifyError({
-        title: 'Authentication Required',
-        description: 'Please sign in to access your workspace.',
-      });
+      dispatch(
+        notifyError({
+          title: 'Authentication Required',
+          description: 'Please sign in to access your workspace.',
+        })
+      );
       router.push('/');
       return;
+    }
+
+    // RBAC: Interviewers cannot access /dashboard/users or /dashboard/settings
+    if (isDashboardRoute && (isAuthenticated || hasToken) && currentUser) {
+      const isRestrictedAdminRoute = pathname.startsWith('/dashboard/users') || pathname.startsWith('/dashboard/settings');
+      if (isRestrictedAdminRoute && currentUser.role === 'Interviewer') {
+        dispatch(
+          notifyError({
+            title: 'Access Restricted',
+            description: 'You do not have administrative permissions to view this section.',
+          })
+        );
+        router.push('/dashboard');
+        return;
+      }
     }
 
     if (pathname === '/' && (isAuthenticated || hasToken)) {
       router.push('/dashboard');
     }
-  }, [pathname, isDashboardRoute, isAuthenticated, isInitialized, router]);
+  }, [pathname, isDashboardRoute, isAuthenticated, isInitialized, currentUser, router, dispatch]);
 
   // Activate idle timer when authenticated in dashboard
   const idleTimer = useIdleTimer({

@@ -17,55 +17,13 @@ export interface AuthState {
   isInitialized: boolean;
 }
 
-const loadStorageAuthState = (): AuthState => {
-  if (typeof window === 'undefined') {
-    return {
-      token: null,
-      refreshToken: null,
-      user: null,
-      isAuthenticated: false,
-      isInitialized: false,
-    };
-  }
-
-  try {
-    const token = localStorage.getItem('step_token');
-    const refreshToken = localStorage.getItem('step_refresh_token');
-    const email = localStorage.getItem('step_email') || '';
-    const role = localStorage.getItem('step_role') || '';
-    const name = localStorage.getItem('step_name') || '';
-    const employeeCode = localStorage.getItem('step_emp_code') || '';
-    const userIdStr = localStorage.getItem('step_user_id');
-    const userId = userIdStr ? Number(userIdStr) : null;
-    const hasToken = Boolean(token && token.trim().length > 0);
-
-    return {
-      token: hasToken ? token : null,
-      refreshToken: hasToken ? refreshToken : null,
-      user: hasToken
-        ? {
-            id: userId,
-            name: name || 'Enterprise User',
-            email,
-            role: role || 'Evaluator',
-            employeeCode,
-          }
-        : null,
-      isAuthenticated: hasToken,
-      isInitialized: true,
-    };
-  } catch {
-    return {
-      token: null,
-      refreshToken: null,
-      user: null,
-      isAuthenticated: false,
-      isInitialized: true,
-    };
-  }
+const initialState: AuthState = {
+  token: null,
+  refreshToken: null,
+  user: null,
+  isAuthenticated: false,
+  isInitialized: false,
 };
-
-const initialState: AuthState = loadStorageAuthState();
 
 export const authSlice = createSlice({
   name: 'auth',

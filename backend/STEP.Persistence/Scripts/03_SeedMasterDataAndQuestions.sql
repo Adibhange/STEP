@@ -81,23 +81,23 @@ GO
 -- ====================================================================================
 
 -- --- General Aptitude & Logical Reasoning ---
-EXEC #sp_SeedQuestion 'QB-APT-01', 'General Aptitude', 'TechnicalMCQ', 'SINGLE_CHOICE', 'Fresher',
+EXEC #sp_SeedQuestion 'QB-APT-01', 'General Aptitude', 'Aptitude', 'SINGLE_CHOICE', 'Fresher',
     'A train running at 60 km/hr crosses a pole in 9 seconds. What is the length of the train in meters?', 1.0,
     '150 meters', 1, '120 meters', 0, '180 meters', 0, '200 meters', 0;
 
-EXEC #sp_SeedQuestion 'QB-APT-02', 'General Aptitude', 'TechnicalMCQ', 'SINGLE_CHOICE', 'Fresher',
+EXEC #sp_SeedQuestion 'QB-APT-02', 'General Aptitude', 'Aptitude', 'SINGLE_CHOICE', 'Fresher',
     'If 12 men can complete a work in 20 days, how many days will 15 men take to complete the same work?', 1.0,
     '16 days', 1, '14 days', 0, '18 days', 0, '22 days', 0;
 
-EXEC #sp_SeedQuestion 'QB-APT-03', 'General Aptitude', 'TechnicalMCQ', 'SINGLE_CHOICE', 'Junior',
+EXEC #sp_SeedQuestion 'QB-APT-03', 'General Aptitude', 'Aptitude', 'SINGLE_CHOICE', 'Junior',
     'What is the compound interest on $10,000 for 2 years at 10% per annum compounded annually?', 1.0,
     '$2,100', 1, '$2,000', 0, '$2,250', 0, '$2,050', 0;
 
-EXEC #sp_SeedQuestion 'QB-APT-04', 'General Aptitude', 'TechnicalMCQ', 'SINGLE_CHOICE', 'Junior',
+EXEC #sp_SeedQuestion 'QB-APT-04', 'General Aptitude', 'Aptitude', 'SINGLE_CHOICE', 'Junior',
     'In a code language, if SYSTEM is written as SYSMET, how is FRACTION written?', 1.0,
     'FRACNOIT', 0, 'CARFNOIT', 1, 'FRACTION', 0, 'CARTIONF', 0;
 
-EXEC #sp_SeedQuestion 'QB-APT-05', 'General Aptitude', 'TechnicalMCQ', 'SINGLE_CHOICE', 'Mid-Level',
+EXEC #sp_SeedQuestion 'QB-APT-05', 'General Aptitude', 'Aptitude', 'SINGLE_CHOICE', 'Mid-Level',
     'Two pipes A and B can fill a tank in 20 and 30 minutes respectively. If both pipes are opened together, the time taken to fill the tank is:', 1.0,
     '12 minutes', 1, '15 minutes', 0, '10 minutes', 0, '25 minutes', 0;
 

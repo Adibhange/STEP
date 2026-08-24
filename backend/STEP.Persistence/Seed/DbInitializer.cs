@@ -14,60 +14,38 @@ namespace STEP.Persistence.Seed
                 var hash = BCrypt.Net.BCrypt.HashPassword("user@123");
                 var pinHash = BCrypt.Net.BCrypt.HashPassword("1234"); // 4-digit Director PIN
 
-                // Ensure HR user
-                var hrUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == "hr@sthapatya.com");
-                if (hrUser == null)
-                {
-                    db.Users.Add(new User
-                    {
-                        EmployeeCode = "EMP-0001",
-                        FirstName = "HR",
-                        LastName = "Specialist",
-                        Email = "hr@sthapatya.com",
-                        PasswordHash = hash,
-                        RoleId = 3, // HR Role
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow
-                    });
-                }
-                else
+                // Ensure Prerana Nehere (HR)
+                var hrUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == "prerananehere29@gmail.com");
+                if (hrUser != null)
                 {
                     hrUser.PasswordHash = hash;
+                    hrUser.RoleId = 3;
+                    hrUser.DepartmentId = 5;
                     hrUser.IsActive = true;
                     hrUser.IsDeleted = false;
                 }
 
-                // Ensure Admin user
-                var adminUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == "admin@sthapatya.in");
-                if (adminUser == null)
+                // Ensure Prashant Doifode (Director)
+                var dirUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == "prashant.df@sthapatya.in");
+                if (dirUser != null)
                 {
-                    db.Users.Add(new User
-                    {
-                        EmployeeCode = "EMP-0099",
-                        FirstName = "System",
-                        LastName = "Administrator",
-                        Email = "admin@sthapatya.in",
-                        PasswordHash = hash,
-                        RoleId = 1, // Administrator Role
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow
-                    });
-                }
-                else
-                {
-                    adminUser.PasswordHash = hash;
-                    adminUser.IsActive = true;
-                    adminUser.IsDeleted = false;
+                    dirUser.PinHash = pinHash;
+                    dirUser.PasswordHash = hash;
+                    dirUser.RoleId = 2;
+                    dirUser.DepartmentId = 6;
+                    dirUser.IsActive = true;
+                    dirUser.IsDeleted = false;
                 }
 
-                // Ensure Director users have 4-digit PIN "1234"
-                var directors = await db.Users.IgnoreQueryFilters().Where(u => u.RoleId == 2).ToListAsync();
-                foreach (var dir in directors)
+                // Ensure Aditya Bhange (Interviewer)
+                var interviewerUser = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == "ab@sthapatya.com");
+                if (interviewerUser != null)
                 {
-                    dir.PinHash = pinHash;
-                    dir.PasswordHash = hash;
-                    dir.IsActive = true;
-                    dir.IsDeleted = false;
+                    interviewerUser.PasswordHash = hash;
+                    interviewerUser.RoleId = 4;
+                    interviewerUser.DepartmentId = 6;
+                    interviewerUser.IsActive = true;
+                    interviewerUser.IsDeleted = false;
                 }
 
                 await db.SaveChangesAsync();

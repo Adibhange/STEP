@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using STEP.Application.Common.Interfaces;
+using STEP.Domain.Common;
 using STEP.Domain.Entities.Audit;
 using STEP.Domain.Entities.Identity;
 using STEP.Domain.Entities.Master;
@@ -22,9 +23,12 @@ namespace STEP.Persistence;
 /// </summary>
 public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    private readonly ICurrentUserService? _currentUserService;
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUserService? currentUserService = null)
         : base(options)
     {
+        _currentUserService = currentUserService;
     }
 
     // Identity / RBAC (staff, master, staffv2 schemas)
@@ -107,5 +111,48 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
         IdentitySeedData.Seed(modelBuilder);
         MasterDataSeedData.Seed(modelBuilder);
+    }
+
+    private void ApplyAuditInformation()
+    {
+        var currentUserId = _currentUserService?.UserId;
+        var utcNow = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    if (entry.Entity.CreatedAt == default)
+                    {
+                        entry.Entity.CreatedAt = utcNow;
+                    }
+                    if (!entry.Entity.CreatedBy.HasValue && currentUserId.HasValue)
+                    {
+                        entry.Entity.CreatedBy = currentUserId.Value;
+                    }
+                    break;
+
+                case EntityState.Modified:
+                    entry.Entity.ModifiedAt = utcNow;
+                    if (currentUserId.HasValue)
+                    {
+                        entry.Entity.ModifiedBy = currentUserId.Value;
+                    }
+                    break;
+            }
+        }
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplyAuditInformation();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override int SaveChanges()
+    {
+        ApplyAuditInformation();
+        return base.SaveChanges();
     }
 }

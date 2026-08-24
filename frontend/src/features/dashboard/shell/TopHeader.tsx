@@ -37,9 +37,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
     setMounted(true);
   }, []);
 
-  const displayName = reduxUser?.name || 'Administrator';
-  const displayEmail = reduxUser?.email || 'admin@sthapatya.com';
-  const displayRole = reduxUser?.role || 'System Administrator';
+  const displayName = mounted ? (reduxUser?.name || 'Administrator') : 'Administrator';
+  const displayEmail = mounted ? (reduxUser?.email || 'admin@sthapatya.com') : 'admin@sthapatya.com';
+  const displayRole = mounted ? (reduxUser?.role || 'System Administrator') : 'System Administrator';
   const avatarInitials = (displayName || 'Administrator')
     .split(' ')
     .map((w) => w[0])
@@ -282,15 +282,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
           >
             <div
               className="w-6.5 h-6.5 rounded-lg bg-gradient-to-br from-[var(--accent-indigo)] to-[#4f46e5] text-white font-bold text-[11px] font-mono flex items-center justify-center shadow-xs border border-indigo-400/30 shrink-0"
-              suppressHydrationWarning
             >
               {user.avatarInitials}
             </div>
-            <div className="hidden sm:flex flex-col text-left justify-center min-w-0" suppressHydrationWarning>
-              <span className="text-[12px] font-bold text-[var(--text-primary)] leading-none font-heading truncate max-w-[130px]" suppressHydrationWarning>
+            <div className="hidden sm:flex flex-col text-left justify-center min-w-0">
+              <span className="text-[12px] font-bold text-[var(--text-primary)] leading-none font-heading truncate max-w-[130px]">
                 {user.name}
               </span>
-              <span className="text-[10px] text-[var(--text-tertiary)] font-medium leading-none mt-0.5 truncate" suppressHydrationWarning>
+              <span className="text-[10px] text-[var(--text-tertiary)] font-medium leading-none mt-0.5 truncate">
                 {user.role}
               </span>
             </div>

@@ -10,7 +10,12 @@ import {
   tactilePopCardVariant,
   cardVariants,
 } from '@/design-system/motion';
-import { useGetMasterDataByCategoryQuery } from '@/store/services/api';
+import {
+  useGetMasterDataByCategoryQuery,
+  useGetBlueprintsV2Query,
+  useSaveBlueprintV2Mutation,
+  useDeleteBlueprintV2Mutation,
+} from '@/store/services/api';
 import {
   MOCK_BLUEPRINTS,
   type AssessmentBlueprint,
@@ -26,8 +31,39 @@ export const RoleHiringProfilesManager: React.FC = () => {
     return ['General Aptitude', 'C# (.NET)', 'JavaScript / React', 'TypeScript', 'SQL (Database)', 'Python', 'Java', 'C++', 'Go (Golang)'];
   }, [languagesRes]);
 
-  // Templates local state
-  const [templates, setTemplates] = useState<AssessmentBlueprint[]>(MOCK_BLUEPRINTS);
+  // Backend Blueprints Queries & Mutations
+  const { data: blueprintsRes, isLoading: isBlueprintsLoading } = useGetBlueprintsV2Query();
+  const [saveBlueprintApi] = useSaveBlueprintV2Mutation();
+  const [deleteBlueprintApi] = useDeleteBlueprintV2Mutation();
+
+  const templates: AssessmentBlueprint[] = useMemo(() => {
+    return (blueprintsRes?.data || []).map((b: any) => ({
+      id: b.id,
+      code: b.code || `RULE-${b.id}`,
+      name: b.name,
+      defaultPassingPercentage: b.defaultPassingPercentage ?? 70,
+      totalDurationMinutes: b.totalDurationMinutes ?? 60,
+      totalQuestions: b.totalQuestions ?? 0,
+      totalMarks: b.totalMarks ?? 0,
+      enableQuestionShuffling: b.enableQuestionShuffling ?? true,
+      enableOptionShuffling: b.enableOptionShuffling ?? true,
+      isDefault: b.isDefault,
+      assignedRolesCount: b.assignedRolesCount ?? 0,
+      sectionRules: (b.sectionRules || []).map((r: any, idx: number) => ({
+        id: r.id ?? idx + 1,
+        sectionName: r.sectionName,
+        sectionType: r.sectionType,
+        questionType: r.questionType || 'SINGLE_CHOICE',
+        experienceTier: r.experienceTier || '{InheritFromCandidateTier}',
+        requiredTags: r.requiredTags || '{InheritFromRole}',
+        questionCount: r.questionCount ?? 10,
+        marksPerQuestion: r.marksPerQuestion ?? 1.0,
+        timeLimitMinutes: r.timeLimitMinutes ?? 15,
+        selectionStrategy: r.selectionStrategy || 'RandomShuffled',
+        displayOrder: r.displayOrder ?? idx + 1,
+      })),
+    }));
+  }, [blueprintsRes]);
 
   // Template modal state
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -95,57 +131,56 @@ export const RoleHiringProfilesManager: React.FC = () => {
     setIsTemplateModalOpen(true);
   };
 
-  const handleSaveTemplate = (e: React.FormEvent) => {
+  const handleSaveTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTemplate || !editingTemplate.name?.trim()) {
       toast.error('Validation Error', { description: 'Template name is required.' });
       return;
     }
 
-    const rules = editingTemplate.sectionRules || [];
-    const totalQuestions = rules.reduce((acc, r) => acc + (Number(r.questionCount) || 0), 0);
-    const totalMarks = rules.reduce((acc, r) => acc + ((Number(r.questionCount) || 0) * (Number(r.marksPerQuestion) || 1)), 0);
-    const totalDuration = rules.reduce((acc, r) => acc + (Number(r.timeLimitMinutes) || 0), 0);
-
-    if (editingTemplate.id) {
-      setTemplates((prev) =>
-        prev.map((b) =>
-          b.id === editingTemplate.id
-            ? {
-                ...(editingTemplate as AssessmentBlueprint),
-                totalQuestions,
-                totalMarks,
-                totalDurationMinutes: totalDuration || 60,
-                enableQuestionShuffling: true,
-                enableOptionShuffling: true,
-              }
-            : b
-        )
-      );
-      toast.success('Template Updated', { description: `Changes saved for "${editingTemplate.name}".` });
-    } else {
-      const newTmpl: AssessmentBlueprint = {
-        ...(editingTemplate as AssessmentBlueprint),
-        id: Date.now(),
-        code: editingTemplate.code || `RULE-${Date.now().toString().slice(-4)}`,
-        totalQuestions,
-        totalMarks,
-        totalDurationMinutes: totalDuration || 60,
-        enableQuestionShuffling: true,
-        enableOptionShuffling: true,
-        assignedRolesCount: 0,
+    try {
+      const payload = {
+        id: editingTemplate.id && editingTemplate.id < 1000000000 ? editingTemplate.id : undefined,
+        code: editingTemplate.code,
+        name: editingTemplate.name.trim(),
+        defaultPassingPercentage: Number(editingTemplate.defaultPassingPercentage) || 70,
+        isDefault: editingTemplate.isDefault ?? false,
+        sectionRules: (editingTemplate.sectionRules || []).map((r, idx) => ({
+          id: r.id && r.id < 1000000000 ? r.id : undefined,
+          sectionName: r.sectionName?.trim() || `Section ${idx + 1}`,
+          sectionType: r.sectionType || 'TechnicalMCQ',
+          questionType: r.questionType || 'SINGLE_CHOICE',
+          experienceTier: r.experienceTier || '{InheritFromCandidateTier}',
+          requiredTags: r.requiredTags || '{InheritFromRole}',
+          questionCount: Number(r.questionCount) || 1,
+          marksPerQuestion: Number(r.marksPerQuestion) || 1.0,
+          timeLimitMinutes: r.timeLimitMinutes ? Number(r.timeLimitMinutes) : null,
+          selectionStrategy: r.selectionStrategy || 'RandomShuffled',
+          displayOrder: idx + 1,
+        })),
       };
-      setTemplates((prev) => [...prev, newTmpl]);
-      toast.success('Template Created', { description: `"${newTmpl.name}" is ready to be selected when creating a vacancy.` });
-    }
 
-    setIsTemplateModalOpen(false);
+      await saveBlueprintApi(payload as any).unwrap();
+      toast.success(editingTemplate.id ? 'Template Updated' : 'Template Created', {
+        description: `Changes saved for "${editingTemplate.name}".`,
+      });
+      setIsTemplateModalOpen(false);
+    } catch (err: any) {
+      toast.error('Save Failed', {
+        description: err?.data?.message || 'Could not save assessment template to database.',
+      });
+    }
   };
 
-  const handleDeleteTemplate = (id: number) => {
-    const tmpl = templates.find((b) => b.id === id);
-    setTemplates((prev) => prev.filter((b) => b.id !== id));
-    toast.success('Template Removed', { description: `Test template "${tmpl?.name || id}" deleted.` });
+  const handleDeleteTemplate = async (id: number) => {
+    try {
+      await deleteBlueprintApi(id).unwrap();
+      toast.success('Template Removed', { description: 'Assessment template deleted from database.' });
+    } catch (err: any) {
+      toast.error('Delete Failed', {
+        description: err?.data?.message || 'Could not delete assessment template.',
+      });
+    }
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────

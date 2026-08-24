@@ -20,6 +20,7 @@ export interface NavItem {
   badge?: string | number;
   isDisabled?: boolean;
   section: 'recruitment' | 'analytics' | 'administration';
+  allowedRoles?: Array<'Director' | 'HR' | 'Interviewer' | 'Administrator'>;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -30,6 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard',
     icon: 'layout-dashboard',
     section: 'recruitment',
+    allowedRoles: ['Director', 'HR', 'Interviewer', 'Administrator'],
   },
   {
     id: 'vacancies',
@@ -37,6 +39,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/vacancies',
     icon: 'briefcase',
     section: 'recruitment',
+    allowedRoles: ['Director', 'HR', 'Administrator'],
   },
   {
     id: 'assessments',
@@ -46,6 +49,7 @@ export const NAV_ITEMS: NavItem[] = [
     badge: 'Soon',
     isDisabled: true,
     section: 'recruitment',
+    allowedRoles: ['Director', 'HR', 'Administrator'],
   },
 
   // ── ANALYTICS ──────────────────────────────────────────────────────────────
@@ -57,6 +61,7 @@ export const NAV_ITEMS: NavItem[] = [
     badge: 'Soon',
     isDisabled: true,
     section: 'analytics',
+    allowedRoles: ['Director', 'HR', 'Administrator'],
   },
 
   // ── ADMINISTRATION ─────────────────────────────────────────────────────────
@@ -66,6 +71,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/users',
     icon: 'user-cog',
     section: 'administration',
+    allowedRoles: ['Director', 'HR', 'Administrator'],
   },
   {
     id: 'settings',
@@ -73,6 +79,7 @@ export const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/settings',
     icon: 'grid',
     section: 'administration',
+    allowedRoles: ['Director', 'HR', 'Administrator'],
   },
 ];
 
