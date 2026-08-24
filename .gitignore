@@ -53,3 +53,10 @@ yarn-error.log*
 Thumbs.db
 desktop.ini
 *.pem
+
+# Playwright & Testing Artifacts
+.playwright-mcp/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
