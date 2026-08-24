@@ -383,7 +383,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
 										<span className='text-[11px] text-text-tertiary truncate font-medium'>
 											{user.email}
 										</span>
-										<span className='text-[10px] text-accent-indigo font-semibold uppercase tracking-wider mt-0.5'>
+										<span className='inline-flex items-center px-1.5 py-0.2 rounded text-[9.5px] font-bold text-accent-indigo bg-accent-indigo-dim w-fit mt-1 uppercase tracking-wider border border-accent-indigo/25'>
 											{user.role}
 										</span>
 									</div>
@@ -392,20 +392,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
 								{/* Actions */}
 								<div className='p-1.5 space-y-0.5 text-xs font-medium'>
 									{/* Theme Selector */}
-									<div className='px-3 py-1.5 flex items-center justify-between'>
-										<span className='text-[11px] font-semibold text-text-tertiary uppercase tracking-wider'>
+									<div className='px-3 py-2 flex items-center justify-between'>
+										<span className='text-[11px] font-bold text-text-tertiary uppercase tracking-wider'>
 											Theme
 										</span>
-										<div className='flex items-center gap-1 bg-surface-3 p-0.5 rounded-lg border border-border-default'>
+										<div className='flex items-center gap-0.5 bg-surface-3 p-1 rounded-lg border border-border-default'>
 											{(["light", "dark", "system"] as Theme[]).map((t) => (
 												<button
 													key={t}
 													type='button'
 													onClick={(e) => setThemeWithTransition(t, e)}
-													className={`px-2 py-1 rounded-md text-[11px] font-semibold capitalize transition-all cursor-pointer ${
+													className={`px-2.5 py-1 rounded-md text-[11px] font-bold capitalize transition-all cursor-pointer ${
 														theme === t ?
-															"bg-surface-1 text-accent-indigo shadow-xs font-bold"
-														:	"text-text-secondary hover:text-text-primary"
+															"bg-accent-indigo text-white shadow-xs"
+														:	"text-text-secondary hover:text-text-primary hover:bg-surface-hover"
 													}`}>
 													{t}
 												</button>
@@ -459,7 +459,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onMobileMenuOpen }) => {
 											);
 											router.replace("/");
 										}}
-										className='w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-status-danger hover:bg-status-danger-bg transition-colors cursor-pointer font-semibold'>
+										className='w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-status-danger hover:bg-status-danger-bg transition-colors cursor-pointer font-semibold active:scale-[0.98]'>
 										<Icon
 											name='log-out'
 											size='xs'
