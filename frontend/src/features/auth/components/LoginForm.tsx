@@ -64,8 +64,8 @@ const StepLoginFieldHero: React.FC<StepLoginFieldHeroProps> = ({
           boxShadow: error
             ? '0 0 0 4px var(--status-danger-bg)'
             : focused
-            ? '0 0 0 4px var(--accent-indigo-dim)'
-            : 'none',
+              ? '0 0 0 4px var(--accent-indigo-dim)'
+              : 'none',
           transform: focused && !error ? 'translateY(-1px)' : 'none',
           transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
           overflow: 'hidden',
@@ -346,8 +346,8 @@ export const LoginForm: React.FC = () => {
           })
         );
         dispatch(notifySuccess({
-          title: 'Director clearance verified',
-          description: redirectParam ? 'Opening candidate review workspace…' : 'Accessing governance workspace…',
+          title: 'Director login verified',
+          description: redirectParam ? 'Opening candidate review workspace…' : 'Opening candidate review workspace…',
         }));
         router.push(redirectParam || '/dashboard');
       } catch (err) {
@@ -621,22 +621,22 @@ export const LoginForm: React.FC = () => {
                   </span>
                 </div>
               )}
-                {isLinkExpired && (
-                  <div
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
-                      background: 'rgba(239,68,68,0.07)',
-                      border: '1px solid rgba(239,68,68,0.25)',
-                      fontSize: '12px',
-                      color: '#ef4444',
-                      fontWeight: 500,
-                    }}
-                  >
-                    ⚠️ This Director access link has expired. Please ask HR to generate a new one.
-                  </div>
-                )}
+              {isLinkExpired && (
+                <div
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    background: 'rgba(239,68,68,0.07)',
+                    border: '1px solid rgba(239,68,68,0.25)',
+                    fontSize: '12px',
+                    color: '#ef4444',
+                    fontWeight: 500,
+                  }}
+                >
+                  ⚠️ This Director access link has expired. Please ask HR to generate a new one.
+                </div>
+              )}
 
               <button className="self-start inline-flex items-center gap-2 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
                 onClick={() => switchMode('standard')}>

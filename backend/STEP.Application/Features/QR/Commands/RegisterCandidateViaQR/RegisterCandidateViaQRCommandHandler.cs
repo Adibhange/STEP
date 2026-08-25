@@ -121,6 +121,13 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
             var round1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
             if (round1 != null && round1.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase))
             {
+                var hrId = qrCode.Vacancy?.CreatedBy;
+                if (hrId == null)
+                {
+                    var hrUser = await db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Role.Name == "HR" && u.IsActive, cancellationToken);
+                    hrId = hrUser?.Id;
+                }
+
                 var r1Progress = new CandidatePipelineProgress
                 {
                     CandidateId = candidate.Id,
@@ -131,7 +138,8 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                     ScoreObtained = 100.00m,
                     StartedAt = DateTime.UtcNow,
                     CompletedAt = DateTime.UtcNow,
-                    Remarks = "Autonomous Sourcing & Screening: Pre-Qualified Direct Applicant",
+                    EvaluatorId = hrId,
+                    Remarks = "HR Sourced & Pre-Qualified Direct Applicant",
                 };
                 db.CandidatePipelineProgresses.Add(r1Progress);
                 candidate.CurrentPipelineProgress = r1Progress;

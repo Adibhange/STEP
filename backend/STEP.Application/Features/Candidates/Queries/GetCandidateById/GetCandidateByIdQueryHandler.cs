@@ -81,11 +81,34 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                     });
 
             var evaluatorUserIds = candidate.PipelineProgressHistory.Where(p => p.EvaluatorId != null).Select(p => p.EvaluatorId!.Value).Distinct().ToList();
+            if (candidate.Vacancy?.CreatedBy != null && !evaluatorUserIds.Contains(candidate.Vacancy.CreatedBy.Value))
+            {
+                evaluatorUserIds.Add(candidate.Vacancy.CreatedBy.Value);
+            }
+
             var evaluatorNames = evaluatorUserIds.Count > 0
                 ? await db.Users
                     .Where(u => evaluatorUserIds.Contains(u.Id))
                     .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), cancellationToken)
-                : [];
+                : new Dictionary<int, string>();
+
+            string? defaultHrRecruiterName = null;
+            if (candidate.Vacancy?.CreatedBy != null && evaluatorNames.TryGetValue(candidate.Vacancy.CreatedBy.Value, out var hrCreator))
+            {
+                defaultHrRecruiterName = hrCreator;
+            }
+            if (string.IsNullOrWhiteSpace(defaultHrRecruiterName))
+            {
+                var firstHr = await db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Role.Name == "HR" && u.IsActive, cancellationToken);
+                if (firstHr != null)
+                {
+                    defaultHrRecruiterName = $"{firstHr.FirstName} {firstHr.LastName}".Trim();
+                }
+            }
+            if (string.IsNullOrWhiteSpace(defaultHrRecruiterName))
+            {
+                defaultHrRecruiterName = "Prerana Nehere";
+            }
 
             // Offer isn't a pipeline round — it's a separate entity keyed only by CandidateId — so
             // the frontend needs this looked up here the same way CandidateExamSessionId/InterviewId
@@ -120,7 +143,8 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var isAutoPassed = (p.RoundTitle ?? r.Name).Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase);
                         var effectiveStatus = isAutoPassed && (p.Status == "Pending" || string.IsNullOrWhiteSpace(p.Status)) ? "Passed" : p.Status;
                         var effectiveScore = p.ScoreObtained ?? (isAutoPassed ? 100.00m : (hasSess ? sessInfo.Score : null));
-                        var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isAutoPassed ? "System Auto-Screening" : null));
+                        var isR1OrAutoPassed = isAutoPassed || r.RoundOrder == 1;
+                        var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isR1OrAutoPassed ? defaultHrRecruiterName : null));
 
                         combinedProgressDtos.Add(new PipelineProgressDto(
                             p.Id, p.RoundNumber, p.RoundTitle ?? r.Name, p.RoundType ?? PipelineRoundClassification.Classify(r.RoundType),
@@ -132,7 +156,8 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var isAutoPassed = r.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase);
                         var defaultStatus = isAutoPassed ? "Passed" : "Pending";
                         var defaultScore = isAutoPassed ? 100.00m : (decimal?)null;
-                        var defaultInterviewer = isAutoPassed ? "System Auto-Screening" : null;
+                        var isR1OrAutoPassed = isAutoPassed || r.RoundOrder == 1;
+                        var defaultInterviewer = isR1OrAutoPassed ? defaultHrRecruiterName : null;
 
                         combinedProgressDtos.Add(new PipelineProgressDto(
                             0, r.RoundOrder, r.Name, PipelineRoundClassification.Classify(r.RoundType),
@@ -149,7 +174,8 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var isAutoPassed = (p.RoundTitle ?? string.Empty).Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase);
                         var effectiveStatus = isAutoPassed && (p.Status == "Pending" || string.IsNullOrWhiteSpace(p.Status)) ? "Passed" : p.Status;
                         var effectiveScore = p.ScoreObtained ?? (isAutoPassed ? 100.00m : (hasSess ? sessInfo.Score : null));
-                        var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isAutoPassed ? "System Auto-Screening" : null));
+                        var isR1OrAutoPassed = isAutoPassed || p.RoundNumber == 1;
+                        var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isR1OrAutoPassed ? defaultHrRecruiterName : null));
 
                         return new PipelineProgressDto(
                             p.Id, p.RoundNumber, p.RoundTitle, p.RoundType, effectiveStatus, effectiveScore, p.StartedAt, p.CompletedAt,

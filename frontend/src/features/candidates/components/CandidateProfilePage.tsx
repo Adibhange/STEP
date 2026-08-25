@@ -468,21 +468,25 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               : p.startedAt
                 ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                 : candDate,
-            interviewer: p.interviewerName || (isDirectorRound ? 'Director of Engineering' : p.roundNumber === 1 ? 'Assigned Evaluator' : 'Unassigned'),
+            interviewer: p.interviewerName || (isDirectorRound ? 'Director of Engineering' : p.roundNumber === 1 ? 'Talent Acquisition' : 'Unassigned'),
             interviewerInitials: p.interviewerName
-              ? p.interviewerName.split(' ').map((n: string) => n[0]).join('')
+              ? p.interviewerName.split(' ').filter(Boolean).map((n: string) => n[0].toUpperCase()).slice(0, 2).join('')
               : isDirectorRound
                 ? 'DR'
                 : p.roundNumber === 1
-                  ? 'AE'
+                  ? 'HR'
                   : 'UA',
-            interviewerRole: p.roundType || (isDirectorRound ? 'Director of Engineering' : 'Evaluator'),
-            mode: p.roundNumber === 1 ? 'Offline (Paper Test)' : p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
+            interviewerRole: p.roundNumber === 1 ? 'HR Talent Acquisition' : (p.roundType || (isDirectorRound ? 'Director of Engineering' : 'Evaluator')),
+            mode: p.roundNumber === 1 ? 'Offline / Direct Screening' : p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
             feedback: isLocked
               ? r1Failed
                 ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
                 : 'Round locked — candidate failed prerequisite technical rounds.'
               : (() => {
+                if (p.roundNumber === 1 && (isAutoPassedRound || p.interviewerName)) {
+                  const hrName = p.interviewerName || 'HR Talent Acquisition';
+                  return `Screened & pre-qualified for technical round by ${hrName}.`;
+                }
                 const hasScore = p.scoreObtained !== null && p.scoreObtained !== undefined;
                 const scoreStr = hasScore ? `Candidate Exam Score: ${p.scoreObtained}%` : '';
 
