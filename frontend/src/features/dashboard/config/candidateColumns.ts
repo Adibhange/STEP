@@ -15,141 +15,130 @@
  */
 
 export type CandidateColumnId =
-  | 'avatar'
-  | 'candidate'
-  | 'driveType'
-  | 'email'
-  | 'role'
-  | 'experience'
-  | 'currentRound'
-  | 'assignedInterviewer'
-  | 'hiringLocation'
-  | 'testLocation'
-  | 'appliedDate'
-  | 'actions';
+	| "avatar"
+	| "candidate"
+	| "driveType"
+	| "email"
+	| "role"
+	| "experience"
+	| "currentRound"
+	| "assignedInterviewer"
+	| "hiringLocation"
+	| "appliedDate"
+	| "actions";
 
 export interface ColumnDef {
-  id: CandidateColumnId;
-  label: string;
-  shortLabel?: string;
-  minWidth: number;
-  align?: 'left' | 'center' | 'right';
-  sortable?: boolean;
-  hideable?: boolean;
-  defaultHidden?: boolean;
+	id: CandidateColumnId;
+	label: string;
+	shortLabel?: string;
+	minWidth: number;
+	align?: "left" | "center" | "right";
+	sortable?: boolean;
+	hideable?: boolean;
+	defaultHidden?: boolean;
 }
 
 export const CANDIDATE_COLUMNS: ColumnDef[] = [
-  {
-    id: 'avatar',
-    label: '',
-    shortLabel: '',
-    minWidth: 36,
-    align: 'center',
-    hideable: false,
-  },
-  {
-    id: 'candidate',
-    label: 'Candidate',
-    minWidth: 140,
-    align: 'left',
-    sortable: true,
-    hideable: false,
-  },
-  {
-    id: 'driveType',
-    label: 'Drive Type',
-    shortLabel: 'Track',
-    minWidth: 110,
-    align: 'left',
-    sortable: true,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'email',
-    label: 'Email',
-    minWidth: 140,
-    align: 'left',
-    sortable: false,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'role',
-    label: 'Role',
-    minWidth: 135,
-    align: 'left',
-    sortable: true,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'experience',
-    label: 'Experience',
-    shortLabel: 'Exp.',
-    minWidth: 100,
-    align: 'left',
-    sortable: true,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'currentRound',
-    label: 'Current Stage',
-    shortLabel: 'Stage',
-    minWidth: 145,
-    align: 'left',
-    sortable: true,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'assignedInterviewer',
-    label: 'Interviewer',
-    shortLabel: 'Interviewer',
-    minWidth: 130,
-    align: 'left',
-    sortable: true,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'hiringLocation',
-    label: 'Hiring Location',
-    shortLabel: 'Hiring Loc.',
-    minWidth: 105,
-    align: 'left',
-    sortable: true,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'testLocation',
-    label: 'Test Location',
-    shortLabel: 'Test Loc.',
-    minWidth: 105,
-    align: 'left',
-    sortable: true,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'appliedDate',
-    label: 'Applied Date',
-    shortLabel: 'Applied',
-    minWidth: 90,
-    align: 'left',
-    sortable: true,
-    hideable: true,
-    defaultHidden: false,
-  },
-  {
-    id: 'actions',
-    label: '',
-    shortLabel: '',
-    minWidth: 120,
-    align: 'right',
-    hideable: false,
-  },
+	{
+		id: "avatar",
+		label: "",
+		shortLabel: "",
+		minWidth: 46,
+		align: "center",
+		hideable: false,
+	},
+	{
+		id: "candidate",
+		label: "Candidate",
+		minWidth: 180,
+		align: "left",
+		sortable: true,
+		hideable: false,
+	},
+	{
+		id: "driveType",
+		label: "Drive Type",
+		shortLabel: "Track",
+		minWidth: 110,
+		align: "left",
+		sortable: true,
+		hideable: true,
+		defaultHidden: false,
+	},
+	{
+		id: "email",
+		label: "Email",
+		minWidth: 210,
+		align: "left",
+		sortable: false,
+		hideable: true,
+		defaultHidden: false,
+	},
+	{
+		id: "role",
+		label: "Role",
+		minWidth: 200,
+		align: "left",
+		sortable: true,
+		hideable: true,
+		defaultHidden: false,
+	},
+	{
+		id: "experience",
+		label: "Experience",
+		shortLabel: "Exp.",
+		minWidth: 95,
+		align: "left",
+		sortable: true,
+		hideable: true,
+		defaultHidden: false,
+	},
+	{
+		id: "currentRound",
+		label: "Current Stage",
+		shortLabel: "Stage",
+		minWidth: 140,
+		align: "left",
+		sortable: true,
+		hideable: true,
+		defaultHidden: false,
+	},
+	{
+		id: "assignedInterviewer",
+		label: "Interviewer",
+		shortLabel: "Interviewer",
+		minWidth: 170,
+		align: "left",
+		sortable: true,
+		hideable: true,
+		defaultHidden: false,
+	},
+	{
+		id: "hiringLocation",
+		label: "Hiring Location",
+		shortLabel: "Hiring Loc.",
+		minWidth: 150,
+		align: "left",
+		sortable: true,
+		hideable: true,
+		defaultHidden: false,
+	},
+	{
+		id: "appliedDate",
+		label: "Applied Date",
+		shortLabel: "Applied",
+		minWidth: 100,
+		align: "left",
+		sortable: true,
+		hideable: true,
+		defaultHidden: false,
+	},
+	{
+		id: "actions",
+		label: "",
+		shortLabel: "",
+		minWidth: 130,
+		align: "right",
+		hideable: false,
+	},
 ];
