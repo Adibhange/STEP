@@ -384,7 +384,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       const isTrulyRejected = r1Failed || (r2Failed && r3Failed);
       const candidateStatus = isTrulyRejected ? 'Rejected' : apiData.status === 'Offered' || apiData.status === 'Hired' ? apiData.status : 'In-Progress';
 
-      const savedAvatar = (typeof window !== 'undefined' ? localStorage.getItem(`step_candidate_avatar_${numericId}`) : null) || apiData.avatarUrl || '';
+      const photoDoc = apiData.documents?.find((d: any) => d.documentType === 'Profile Photo' || d.documentType === 'Avatar');
+      const photoUrl = photoDoc ? `${getApiBaseUrl()}/candidates/${numericId}/documents/${photoDoc.id}/file` : '';
+      const savedAvatar = photoUrl || (typeof window !== 'undefined' ? localStorage.getItem(`step_candidate_avatar_${numericId}`) : null) || apiData.avatarUrl || '';
 
       const cleanRole = apiData.vacancyTitle && apiData.vacancyTitle !== 'Walk-In Registration'
         ? apiData.vacancyTitle.replace(/[-–—]\s*⚡?\s*1-Click Drive/gi, '').trim()
@@ -433,12 +435,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         : '04 Aug 2026';
 
       if (history && Array.isArray(history) && history.length > 0) {
-        // Director (Round 4) and Offer (Round 5) lock ONLY IF Round 1 failed OR BOTH Round 2 & Round 3 failed
+        // Director / Offer rounds lock ONLY IF Round 1 failed OR BOTH Round 2 & Round 3 failed
         const isDirectorAndOfferLocked = r1Failed || (r2Failed && r3Failed);
 
         const liveStages: StageItem[] = history.map((p: any) => {
+          const isAutoPassedRound = (p.roundTitle || '').toLowerCase().includes('auto-passed');
           const isCurrentRoundFailed = p.status?.toLowerCase() === 'failed' || p.status?.toLowerCase() === 'rejected' || p.resultStatus?.toLowerCase() === 'fail';
-          const isCurrentRoundPassed = p.status?.toLowerCase() === 'passed' || p.resultStatus?.toLowerCase() === 'pass';
+          const isCurrentRoundPassed = p.status?.toLowerCase() === 'passed' || p.status?.toLowerCase() === 'cleared' || p.status?.toLowerCase() === 'completed' || p.resultStatus?.toLowerCase() === 'pass' || isAutoPassedRound;
 
           let isLocked = false;
           if (p.roundNumber === 1) {
@@ -452,6 +455,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           }
 
           const hasCompletedTest = Boolean(p.completedAt || p.scoreObtained !== null || p.candidateExamSessionId);
+          const isDirectorRound = p.roundType === 'Director' || (p.roundTitle || '').toLowerCase().includes('director');
+          const isOfferRound = (p.roundTitle || '').toLowerCase().includes('offer') || (p.roundType === 'Director' && p.roundNumber === history.length);
 
           return {
             id: p.roundNumber,
@@ -463,18 +468,20 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               : p.startedAt
                 ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                 : candDate,
-            interviewer: p.interviewerName || (p.roundNumber === 1 ? 'Assigned Evaluator' : 'Unassigned'),
+            interviewer: p.interviewerName || (isDirectorRound ? 'Director of Engineering' : p.roundNumber === 1 ? 'Assigned Evaluator' : 'Unassigned'),
             interviewerInitials: p.interviewerName
               ? p.interviewerName.split(' ').map((n: string) => n[0]).join('')
-              : p.roundNumber === 1
-                ? 'AE'
-                : 'UA',
-            interviewerRole: p.roundType || 'Evaluator',
+              : isDirectorRound
+                ? 'DR'
+                : p.roundNumber === 1
+                  ? 'AE'
+                  : 'UA',
+            interviewerRole: p.roundType || (isDirectorRound ? 'Director of Engineering' : 'Evaluator'),
             mode: p.roundNumber === 1 ? 'Offline (Paper Test)' : p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
             feedback: isLocked
               ? r1Failed
                 ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
-                : 'Round locked — candidate failed both technical rounds (Coding Challenge & Technical F2F).'
+                : 'Round locked — candidate failed prerequisite technical rounds.'
               : (() => {
                 const hasScore = p.scoreObtained !== null && p.scoreObtained !== undefined;
                 const scoreStr = hasScore ? `Candidate Exam Score: ${p.scoreObtained}%` : '';
@@ -494,68 +501,18 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 if (hasCompletedTest) {
                   return 'Candidate submitted exam (Awaiting scorecard evaluation)';
                 }
-                return 'Evaluation in progress';
+                return p.status === 'InProgress' || p.status === 'In-Progress' ? 'Evaluation in progress' : 'Round pending';
               })(),
             result: isLocked ? 'Locked' : isCurrentRoundFailed ? 'Failed' : p.status || 'Pending',
             interviewId: p.interviewId ?? null,
             candidateExamSessionId: p.candidateExamSessionId ?? null,
             roundType: p.roundType,
-            isDirectorRound: p.roundNumber === 4,
-            isOfferRound: p.roundNumber === 5,
+            isDirectorRound: isDirectorRound,
+            isOfferRound: isOfferRound,
             isLocked: isLocked,
             hasCompletedTest: hasCompletedTest,
           };
         });
-
-        // Ensure fixed 4th Round (Director Interview) and 5th Round (Offer) are always present in pipeline
-        if (!liveStages.some((s) => s.id === 4)) {
-          liveStages.push({
-            id: 4,
-            name: 'Director Interview',
-            status: isDirectorAndOfferLocked ? 'Locked' : 'Pending',
-            statusType: isDirectorAndOfferLocked ? 'locked' : 'pending',
-            date: 'Pending',
-            interviewer: 'Unassigned',
-            interviewerInitials: 'UA',
-            interviewerRole: 'Director of Engineering',
-            mode: 'In Office',
-            feedback: isDirectorAndOfferLocked
-              ? r1Failed
-                ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
-                : 'Round locked — candidate failed both technical rounds (Coding Challenge & Technical F2F).'
-              : 'Director decision round pending.',
-            result: isDirectorAndOfferLocked ? 'Locked' : 'Pending',
-            actionLabel: null,
-            isDirectorRound: true,
-            isOfferRound: false,
-            isLocked: isDirectorAndOfferLocked,
-            roundType: 'Interview',
-          });
-        }
-
-        if (!liveStages.some((s) => s.id === 5)) {
-          liveStages.push({
-            id: 5,
-            name: 'Offer',
-            status: isDirectorAndOfferLocked ? 'Locked' : 'Pending',
-            statusType: isDirectorAndOfferLocked ? 'locked' : 'pending',
-            date: 'Pending',
-            interviewer: '—',
-            interviewerInitials: '—',
-            interviewerRole: 'HR Operations',
-            mode: 'Official Document',
-            feedback: isDirectorAndOfferLocked
-              ? r1Failed
-                ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
-                : 'Round locked — candidate failed both technical rounds (Coding Challenge & Technical F2F).'
-              : 'Awaiting pipeline clearance for offer rollout.',
-            result: isDirectorAndOfferLocked ? 'Locked' : 'Pending',
-            actionLabel: null,
-            isDirectorRound: false,
-            isOfferRound: true,
-            isLocked: isDirectorAndOfferLocked,
-          });
-        }
 
         setStagesData(liveStages);
       } else {
@@ -1000,7 +957,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const handleDownloadDocument = (docName: string, docId?: number) => {
     const targetId = docId || selectedDocPreview?.id;
     if (targetId) {
-      window.open(`/api/v2/candidates/${numericId}/documents/${targetId}/download`, '_blank');
+      window.open(`${getApiBaseUrl()}/candidates/${numericId}/documents/${targetId}/download`, '_blank');
       toast.success('Downloading Document', { description: `Downloading ${docName}...` });
     } else {
       toast.info('Downloading File', { description: `Downloading ${docName}...` });

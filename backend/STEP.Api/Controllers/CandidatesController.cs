@@ -106,6 +106,14 @@ namespace STEP.Api.Controllers
             return File(docFile.FileBytes, docFile.ContentType, docFile.FileName);
         }
 
+        [HttpGet("{id:int}/documents/{docId:int}/file")]
+        [HttpGet("{id:int}/documents/{docId:int}/view")]
+        public async Task<IActionResult> ViewDocument(int id, int docId)
+        {
+            var docFile = await mediator.Send(new STEP.Application.Features.Candidates.Queries.GetCandidateDocumentFile.GetCandidateDocumentFileQuery(id, docId));
+            return File(docFile.FileBytes, docFile.ContentType);
+        }
+
         [HttpPost("{id:int}/schedule-test")]
         public async Task<IActionResult> ScheduleTest(int id, [FromBody] ScheduleTestRequestBody body)
         {

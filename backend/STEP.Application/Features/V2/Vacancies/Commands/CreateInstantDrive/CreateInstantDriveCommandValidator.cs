@@ -16,7 +16,14 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 .WithMessage("Total openings must be between 1 and 500.");
 
             RuleFor(v => v.DriveType)
-                .Must(d => string.IsNullOrWhiteSpace(d) || d.Trim().Equals("Walk-in Drive", StringComparison.OrdinalIgnoreCase) || d.Trim().Equals("Direct Hiring", StringComparison.OrdinalIgnoreCase))
+                .Must(d => string.IsNullOrWhiteSpace(d)
+                    || d.Trim().Equals("Walk-in Drive", StringComparison.OrdinalIgnoreCase)
+                    || d.Trim().Equals("Walk-in", StringComparison.OrdinalIgnoreCase)
+                    || d.Trim().Equals("WalkIn", StringComparison.OrdinalIgnoreCase)
+                    || d.Trim().Equals("Direct Hiring", StringComparison.OrdinalIgnoreCase)
+                    || d.Trim().Equals("Direct / Sourced Hiring", StringComparison.OrdinalIgnoreCase)
+                    || d.Trim().Equals("Direct / Sourced", StringComparison.OrdinalIgnoreCase)
+                    || d.Trim().Equals("Direct", StringComparison.OrdinalIgnoreCase))
                 .WithMessage("Drive type must be 'Walk-in Drive' or 'Direct Hiring'.");
 
             RuleFor(v => v.ExperienceLevelId)

@@ -23,6 +23,105 @@ namespace STEP.Application.Features.V2.Exams.Commands.PublishAssessmentResultV2
 
         public async Task<PublishResultDto> Handle(PublishAssessmentResultV2Command request, CancellationToken cancellationToken)
         {
+            // 1. Try V2 Session
+            var sessionV2 = await db.CandidateExamSessionsV2
+                .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
+                .Include(s => s.Questions).ThenInclude(q => q.Options)
+                .Include(s => s.CandidatePipelineProgress)
+                .FirstOrDefaultAsync(s => s.Id == request.CandidateExamSessionId, cancellationToken);
+
+            if (sessionV2 != null)
+            {
+                if (sessionV2.SessionStatus == "InProgress" || sessionV2.SessionStatus == "Ready" || sessionV2.SessionStatus == "Created")
+                {
+                    sessionV2.SessionStatus = "Submitted";
+                    sessionV2.SubmittedAt ??= DateTimeOffset.UtcNow;
+                }
+
+                foreach (var answer in sessionV2.Answers)
+                {
+                    var question = sessionV2.Questions.FirstOrDefault(q => q.Id == answer.CandidateExamSessionQuestionId);
+                    if (question == null) continue;
+
+                    var isChoiceQuestion = question.QuestionType is "SINGLE_CHOICE" or "MULTI_CHOICE" or "Single Choice" or "Multi Choice";
+                    if (isChoiceQuestion && answer.EvaluationStatus != "Published")
+                    {
+                        var selectedOptionIds = answer.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToHashSet();
+                        var correctOptionIds = question.Options.Where(o => o.IsCorrect).Select(o => o.Id).ToHashSet();
+
+                        var isFullyCorrect = correctOptionIds.Count > 0 && correctOptionIds.SetEquals(selectedOptionIds);
+
+                        answer.MarksObtained = isFullyCorrect ? question.Marks : 0;
+                        answer.EvaluationStatus = "Published";
+                        answer.EvaluationLocked = true;
+                        answer.EvaluatorRemarks = isFullyCorrect ? "Auto-graded (Correct)" : "Auto-graded (Incorrect)";
+                    }
+                    else if (!answer.EvaluationLocked)
+                    {
+                        if (!string.IsNullOrWhiteSpace(answer.SubmittedAnswerText))
+                        {
+                            answer.MarksObtained = question.Marks * 0.75m;
+                        }
+                        answer.EvaluationStatus = "Published";
+                        answer.EvaluationLocked = true;
+                    }
+                }
+
+                sessionV2.TotalMarks = sessionV2.Questions.Sum(q => q.Marks);
+                sessionV2.TotalScore = sessionV2.Answers.Sum(a => a.MarksObtained);
+                sessionV2.Percentage = sessionV2.TotalMarks > 0 ? Math.Round(sessionV2.TotalScore / sessionV2.TotalMarks * 100, 2) : 0;
+                sessionV2.ResultStatus = sessionV2.Percentage >= sessionV2.PassingPercentage ? "Pass" : "Fail";
+
+                sessionV2.EvaluationStatus = "Published";
+                sessionV2.SessionStatus = "Evaluated";
+                sessionV2.EvaluatedAt = DateTimeOffset.UtcNow;
+                sessionV2.EvaluatorUserId = request.EvaluatorUserId;
+                sessionV2.EvaluatorRemarks = request.Remarks;
+                sessionV2.UpdatedAt = DateTimeOffset.UtcNow;
+
+                var passedV2 = sessionV2.ResultStatus == "Pass";
+
+                if (sessionV2.CandidatePipelineProgressId.HasValue)
+                {
+                    var progressV2 = await db.CandidatePipelineProgresses
+                        .FirstOrDefaultAsync(p => p.Id == sessionV2.CandidatePipelineProgressId.Value, cancellationToken);
+
+                    if (progressV2 != null)
+                    {
+                        progressV2.Status = passedV2 ? "Passed" : "Failed";
+                        progressV2.ScoreObtained = sessionV2.Percentage;
+                        progressV2.CompletedAt = DateTime.UtcNow;
+                        progressV2.EvaluatedAt = DateTime.UtcNow;
+                        progressV2.EvaluatorId = request.EvaluatorUserId;
+                        progressV2.Remarks = request.Remarks ?? $"V2 Assessment Result: {sessionV2.ResultStatus} ({sessionV2.Percentage}%)";
+
+                        var candidateV2 = await db.Candidates
+                            .Include(c => c.PipelineProgressHistory)
+                            .FirstOrDefaultAsync(c => c.Id == progressV2.CandidateId, cancellationToken);
+
+                        if (candidateV2 != null)
+                        {
+                            await advancement.AdvanceOrResolveAsync(candidateV2, progressV2, passedV2, cancellationToken);
+                        }
+                    }
+                }
+
+                await db.SaveChangesAsync(cancellationToken);
+
+                return new PublishResultDto(
+                    sessionV2.Id,
+                    sessionV2.ResultStatus,
+                    sessionV2.TotalScore,
+                    sessionV2.TotalMarks,
+                    sessionV2.Percentage,
+                    passedV2,
+                    passedV2 ? "Technical Interview" : null,
+                    null,
+                    passedV2 ? "InProgress" : "Rejected"
+                );
+            }
+
+            // 2. Fallback to V1 Session
             var session = await db.CandidateExamSessions
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)

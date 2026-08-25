@@ -138,7 +138,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
     return blueprints.find((b) => b.id === selectedBlueprintId) || blueprints[0] || null;
   }, [blueprints, selectedBlueprintId]);
 
-  // Auto-select initial defaults
+  // Auto-select initial defaults & match blueprint to selected role
   useEffect(() => {
     if (roles.length > 0 && selectedRoleId === 0) {
       setSelectedRoleId(Number(roles[0].id));
@@ -146,17 +146,25 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
   }, [roles, selectedRoleId]);
 
   useEffect(() => {
+    if (!activeRole || blueprints.length === 0) return;
+    const roleName = (activeRole.name || '').toLowerCase();
+    if (roleName.includes('.net') || roleName.includes('c#') || roleName.includes('developer') || roleName.includes('software') || roleName.includes('engineer') || roleName.includes('full stack') || roleName.includes('backend') || roleName.includes('frontend')) {
+      const techBp = blueprints.find((b) => b.code === 'RULE-TECH-ENG' || b.name.toLowerCase().includes('technical'));
+      if (techBp) setSelectedBlueprintId(techBp.id);
+    } else if (roleName.includes('sql') || roleName.includes('database') || roleName.includes('data') || roleName.includes('analyst')) {
+      const dataBp = blueprints.find((b) => b.code === 'RULE-DATA-SQL' || b.name.toLowerCase().includes('sql'));
+      if (dataBp) setSelectedBlueprintId(dataBp.id);
+    } else if (selectedBlueprintId === 0) {
+      const def = blueprints.find((b) => b.isDefault) || blueprints[0];
+      setSelectedBlueprintId(def.id);
+    }
+  }, [activeRole, blueprints]);
+
+  useEffect(() => {
     if (experienceLevels.length > 0 && selectedExperienceLevelId === 0) {
       setSelectedExperienceLevelId(Number(experienceLevels[0].id));
     }
   }, [experienceLevels, selectedExperienceLevelId]);
-
-  useEffect(() => {
-    if (blueprints.length > 0 && selectedBlueprintId === 0) {
-      const def = blueprints.find((b) => b.isDefault) || blueprints[0];
-      setSelectedBlueprintId(def.id);
-    }
-  }, [blueprints, selectedBlueprintId]);
 
   useEffect(() => {
     if (hiringLocations.length > 0 && selectedLocationId === 0) {
@@ -194,7 +202,7 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
         roleId: selectedRoleId,
         experienceLevelId: selectedExperienceLevelId || undefined,
         blueprintId: selectedBlueprintId || undefined,
-        driveType,
+        driveType: driveType === 'Walk-in Drive' ? 'Walk-in Drive' : 'Direct Hiring',
         hiringLocationId: selectedLocationId || undefined,
         departmentId: selectedDeptId || undefined,
         totalOpenings,
@@ -219,10 +227,14 @@ export const InstantDriveModalV2: React.FC<InstantDriveModalV2Props> = ({
         );
       }
     } catch (err: any) {
+      const errorMsg =
+        err?.data?.errors && Array.isArray(err.data.errors) && err.data.errors.length > 0
+          ? err.data.errors.join('; ')
+          : err?.data?.message || err?.message || 'Failed to create vacancy.';
       dispatch(
         notifyError({
-          title: 'Error',
-          description: err?.data?.message || 'Failed to create vacancy.',
+          title: 'Validation Error',
+          description: errorMsg,
         })
       );
     }

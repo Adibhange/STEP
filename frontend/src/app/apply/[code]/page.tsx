@@ -92,7 +92,8 @@ export default function CandidateRegistrationPortalPage() {
 
   // File Uploads
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [resumeFile, setResumeFile] = useState<{ name: string; sizeStr: string } | null>(null);
+  const [photoFile, setPhotoFile] = useState<{ name: string; type: string; base64: string } | null>(null);
+  const [resumeData, setResumeData] = useState<{ name: string; sizeStr: string; type: string; base64: string } | null>(null);
   const [fileErrors, setFileErrors] = useState<{ photo?: string; resume?: string }>({});
 
   // Field Validation Errors
@@ -191,7 +192,9 @@ export default function CandidateRegistrationPortalPage() {
     setFileErrors((prev) => ({ ...prev, photo: undefined }));
     const reader = new FileReader();
     reader.onload = (event) => {
-      setPhotoPreview(event.target?.result as string);
+      const b64 = event.target?.result as string;
+      setPhotoPreview(b64);
+      setPhotoFile({ name: file.name, type: file.type || 'image/jpeg', base64: b64 });
     };
     reader.readAsDataURL(file);
   };
@@ -218,7 +221,17 @@ export default function CandidateRegistrationPortalPage() {
       : `${Math.round(file.size / 1024)} KB`;
 
     setFileErrors((prev) => ({ ...prev, resume: undefined }));
-    setResumeFile({ name: file.name, sizeStr });
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const b64 = event.target?.result as string;
+      setResumeData({
+        name: file.name,
+        sizeStr,
+        type: file.type || 'application/pdf',
+        base64: b64,
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
   // ── Form Submission ─────────────────────────────────────────────────────────
@@ -290,8 +303,12 @@ export default function CandidateRegistrationPortalPage() {
         refType,
         refName: refType !== 'Direct' ? refName.trim() : undefined,
         refMobile: refType !== 'Direct' && refMobile ? refMobile.trim().replace(/[\s+-]/g, '') : undefined,
-        avatarUrl: photoPreview || undefined,
-        resumeFileName: resumeFile?.name || undefined,
+        photoBase64: photoFile?.base64 || photoPreview || undefined,
+        photoFileName: photoFile?.name || undefined,
+        photoContentType: photoFile?.type || 'image/jpeg',
+        resumeBase64: resumeData?.base64 || undefined,
+        resumeFileName: resumeData?.name || undefined,
+        resumeContentType: resumeData?.type || 'application/pdf',
       };
 
       const res = await registerCandidate(payload).unwrap();
@@ -446,7 +463,11 @@ export default function CandidateRegistrationPortalPage() {
                           {photoPreview && (
                             <button
                               type="button"
-                              onClick={() => setPhotoPreview(null)}
+                              onClick={() => {
+                                setPhotoPreview(null);
+                                setPhotoFile(null);
+                                if (photoInputRef.current) photoInputRef.current.value = '';
+                              }}
                               className="text-xs font-semibold text-[var(--status-danger-text)] hover:underline cursor-pointer"
                             >
                               Remove
@@ -937,7 +958,7 @@ export default function CandidateRegistrationPortalPage() {
                     className="hidden"
                   />
 
-                  {!resumeFile ? (
+                  {!resumeData ? (
                     <motion.div
                       whileHover={{ scale: 1.01, borderColor: 'var(--accent-indigo)' }}
                       whileTap={{ scale: 0.99 }}
@@ -966,16 +987,19 @@ export default function CandidateRegistrationPortalPage() {
                         </div>
                         <div className="min-w-0">
                           <span className="text-xs font-bold text-[var(--text-primary)] truncate block">
-                            {resumeFile.name}
+                            {resumeData.name}
                           </span>
                           <span className="text-[10px] text-[var(--text-tertiary)]">
-                            {resumeFile.sizeStr} • Attached
+                            {resumeData.sizeStr} • Attached
                           </span>
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setResumeFile(null)}
+                        onClick={() => {
+                          setResumeData(null);
+                          if (resumeInputRef.current) resumeInputRef.current.value = '';
+                        }}
                         className="text-xs font-bold text-[var(--status-danger-text)] hover:underline cursor-pointer shrink-0"
                       >
                         Remove

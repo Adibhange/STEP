@@ -430,40 +430,86 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
           {/* ── MCQs: Auto-Evaluated Choice Viewer ──────────────────────────── */}
           {isMcqType(selectedAnswer.questionType) && (
             <div className="flex flex-col gap-3">
-              <div className="p-3 rounded-xl bg-[var(--status-success-bg)] border border-[var(--status-success-border)] text-[var(--status-success-text)] text-xs font-semibold flex items-center gap-2">
-                <Icon name="check-circle" size="xs" className="shrink-0 text-[var(--status-success)]" />
-                <span>Auto-Evaluated by System Engine. Correct options are scored automatically.</span>
+              <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border-default)] text-xs font-semibold flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 text-[var(--status-success-text)]">
+                  <Icon name="check-circle" size="xs" className="shrink-0 text-[var(--status-success)]" />
+                  <span>Auto-Evaluated by System Engine. Correct options are scored automatically.</span>
+                </div>
+                {selectedAnswer.selectedOptionIds.length === 0 ? (
+                  <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border border-[var(--status-warning-border)]">
+                    Unattempted by Candidate
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30">
+                    Candidate Answered
+                  </span>
+                )}
               </div>
+
+              {selectedAnswer.selectedOptionIds.length === 0 && (
+                <div className="p-3 rounded-xl bg-[var(--status-warning-bg)]/40 border border-[var(--status-warning-border)] text-[var(--status-warning-text)] text-xs font-medium flex items-center gap-2">
+                  <Icon name="alert-triangle" size="xs" className="shrink-0 text-[var(--status-warning-text)]" />
+                  <span>Candidate did not select any option for this question.</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
                 {selectedAnswer.options.map((opt) => {
                   const isSelected = selectedAnswer.selectedOptionIds.includes(opt.id);
+                  const isCorrect = opt.isCorrect;
+
                   return (
                     <div
                       key={opt.id}
-                      className={`p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 ${
-                        opt.isCorrect
-                          ? 'bg-[var(--status-success-bg)] border-[var(--status-success-border)] text-[var(--status-success-text)] font-bold shadow-2xs'
-                          : isSelected && !opt.isCorrect
-                          ? 'bg-[var(--status-danger-bg)] border-[var(--status-danger-border)] text-[var(--status-danger-text)] font-bold shadow-2xs'
-                          : 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-primary)]'
+                      className={`p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 transition-all ${
+                        isSelected && isCorrect
+                          ? 'bg-emerald-950/40 border-emerald-500/60 text-emerald-300 font-bold shadow-md ring-1 ring-emerald-500/30'
+                          : isSelected && !isCorrect
+                          ? 'bg-rose-950/40 border-rose-500/60 text-rose-300 font-bold shadow-md ring-1 ring-rose-500/30'
+                          : !isSelected && isCorrect
+                          ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300/90 font-medium'
+                          : 'bg-[var(--surface-1)] border-[var(--border-default)] text-[var(--text-secondary)]'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className="font-mono font-bold text-[var(--text-tertiary)]">{opt.label}.</span>
-                        <span>{opt.text}</span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className={`w-5 h-5 rounded-full flex items-center justify-center font-mono text-[10px] font-extrabold shrink-0 border ${
+                            isSelected && isCorrect
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                              : isSelected && !isCorrect
+                              ? 'bg-rose-500 text-white border-rose-400'
+                              : isCorrect
+                              ? 'bg-emerald-900/50 text-emerald-300 border-emerald-500/40'
+                              : 'bg-[var(--surface-3)] text-[var(--text-tertiary)] border-[var(--border-default)]'
+                          }`}
+                        >
+                          {isSelected ? (isCorrect ? '✓' : '✗') : opt.label}
+                        </span>
+                        <span className="truncate">{opt.text}</span>
                       </div>
 
-                      {opt.isCorrect && (
-                        <span className="text-[10px] font-mono font-bold text-[var(--status-success-text)] bg-[var(--status-success-bg)] px-2 py-0.5 rounded border border-[var(--status-success-border)]">
-                          Correct Answer
-                        </span>
-                      )}
-                      {isSelected && !opt.isCorrect && (
-                        <span className="text-[10px] font-mono font-bold text-[var(--status-danger-text)] bg-[var(--status-danger-bg)] px-2 py-0.5 rounded border border-[var(--status-danger-border)]">
-                          Candidate Choice
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                        {isSelected && isCorrect && (
+                          <>
+                            <span className="text-[10px] font-mono font-extrabold text-emerald-300 bg-emerald-900/70 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1">
+                              <span>✓ Candidate Choice</span>
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/90 px-2 py-0.5 rounded border border-emerald-500/30">
+                              Correct Key
+                            </span>
+                          </>
+                        )}
+                        {isSelected && !isCorrect && (
+                          <span className="text-[10px] font-mono font-extrabold text-rose-300 bg-rose-900/70 px-2 py-0.5 rounded border border-rose-500/50 flex items-center gap-1">
+                            <span>✗ Candidate Choice (Wrong)</span>
+                          </span>
+                        )}
+                        {!isSelected && isCorrect && (
+                          <span className="text-[10px] font-mono font-bold text-emerald-400/90 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-500/30">
+                            Correct Answer (Not Selected)
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

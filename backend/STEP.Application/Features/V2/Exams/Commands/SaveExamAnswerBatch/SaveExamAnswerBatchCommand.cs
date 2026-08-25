@@ -4,17 +4,19 @@ using MediatR;
 
 namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
 {
-    public record AnswerBatchItemInput(
-        int CandidateExamSessionQuestionId,
-        string? SubmittedAnswerText,
-        List<int> SelectedOptionIds,
-        DateTime? ClientTimestamp
-    );
+    public class AnswerBatchItemInput
+    {
+        public int CandidateExamSessionQuestionId { get; set; }
+        public string? SubmittedAnswerText { get; set; }
+        public List<int>? SelectedOptionIds { get; set; } = new();
+        public DateTime? ClientTimestamp { get; set; }
+    }
 
-    public record SaveExamAnswerBatchCommand(
-        string SessionToken,
-        List<AnswerBatchItemInput> Answers
-    ) : IRequest<SaveExamAnswerBatchResultDto>;
+    public class SaveExamAnswerBatchCommand : IRequest<SaveExamAnswerBatchResultDto>
+    {
+        public string SessionToken { get; set; } = string.Empty;
+        public List<AnswerBatchItemInput> Answers { get; set; } = new();
+    }
 
     public record SaveExamAnswerBatchResultDto(
         int SyncedCount,

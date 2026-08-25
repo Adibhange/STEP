@@ -47,6 +47,23 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                     .FirstOrDefaultAsync(b => b.Id == blueprintId.Value && b.IsActive, cancellationToken);
             }
 
+            if (blueprint == null)
+            {
+                var roleName = masterRole.Name.ToLowerInvariant();
+                if (roleName.Contains(".net") || roleName.Contains("c#") || roleName.Contains("developer") || roleName.Contains("software") || roleName.Contains("engineer") || roleName.Contains("full stack") || roleName.Contains("backend") || roleName.Contains("frontend"))
+                {
+                    blueprint = await db.AssessmentBlueprints
+                        .Include(b => b.SectionRules.Where(r => r.IsActive))
+                        .FirstOrDefaultAsync(b => b.Code == "RULE-TECH-ENG" && b.IsActive, cancellationToken);
+                }
+                else if (roleName.Contains("sql") || roleName.Contains("database") || roleName.Contains("data") || roleName.Contains("analyst") || roleName.Contains("dba"))
+                {
+                    blueprint = await db.AssessmentBlueprints
+                        .Include(b => b.SectionRules.Where(r => r.IsActive))
+                        .FirstOrDefaultAsync(b => b.Code == "RULE-DATA-SQL" && b.IsActive, cancellationToken);
+                }
+            }
+
             blueprint ??= await db.AssessmentBlueprints
                 .Include(b => b.SectionRules.Where(r => r.IsActive))
                 .FirstOrDefaultAsync(b => b.IsDefault && b.IsActive, cancellationToken)
@@ -54,10 +71,10 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 .Include(b => b.SectionRules.Where(r => r.IsActive))
                 .FirstOrDefaultAsync(b => b.IsActive, cancellationToken);
 
-            var blueprintName = blueprint?.Name ?? "Standard Assessment Track";
+            var blueprintName = blueprint?.Name ?? "Technical Assessment Track";
             var passingCutoff = blueprint?.DefaultPassingPercentage ?? 70.00m;
-            var totalQuestions = blueprint?.TotalQuestions ?? 20;
-            var totalDuration = blueprint?.TotalDurationMinutes ?? 30;
+            var totalQuestions = blueprint?.TotalQuestions ?? 28;
+            var totalDuration = blueprint?.TotalDurationMinutes ?? 85;
 
             // 4. Resolve Master Taxonomies with Fallbacks
             var department = request.DepartmentId.HasValue
@@ -78,7 +95,8 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
             // 5. Generate Vacancy Code & Title (Using Max Id to prevent duplicate code collisions)
             var maxId = await db.Vacancies.IgnoreQueryFilters().MaxAsync(v => (int?)v.Id, cancellationToken) ?? 0;
             var vacancyCode = $"VAC-{DateTime.UtcNow:yyyy}-{(maxId + 101)}";
-            var driveType = string.IsNullOrWhiteSpace(request.DriveType) ? "Walk-in Drive" : request.DriveType.Trim();
+            var driveTypeRaw = string.IsNullOrWhiteSpace(request.DriveType) ? "Walk-in Drive" : request.DriveType.Trim();
+            var driveType = driveTypeRaw.StartsWith("Walk", StringComparison.OrdinalIgnoreCase) ? "Walk-in Drive" : "Direct Hiring";
             var driveTitle = masterRole.Name;
 
             // 100% Dynamic Master Data Bounds (Zero Hardcoding)

@@ -146,18 +146,19 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
     });
 
     let secId = 1;
-    const totalExamMinutes = session?.durationMinutes || 60;
+    const totalExamMinutes = session?.durationMinutes || 30;
     const totalExamMarks = rawQuestions.reduce((acc, q) => acc + q.marks, 0) || 1;
+    const isSingleSection = Object.keys(sectionBuckets).length <= 1;
 
     return Object.values(sectionBuckets).map(({ config, questions }) => {
       const qIndices = questions.map((item) => item.idx);
       const sectionMarks = questions.reduce((acc, item) => acc + item.q.marks, 0);
 
-      // Check if backend questions explicitly provide timeAllowedMinutes (from Master Question / Paper snapshot)
-      const explicitQuestionMinutesSum = questions.reduce((acc, item) => acc + (item.q.timeAllowedMinutes || 0), 0);
-      const durationMinutes = explicitQuestionMinutesSum > 0
-        ? explicitQuestionMinutesSum
-        : Math.max(5, Math.round(totalExamMinutes * (sectionMarks / totalExamMarks)));
+      // Section duration: If single section, duration is the total exam duration.
+      // If multi-section, proportional to marks, strictly capped at totalExamMinutes.
+      const durationMinutes = isSingleSection
+        ? totalExamMinutes
+        : Math.min(totalExamMinutes, Math.max(5, Math.round(totalExamMinutes * (sectionMarks / totalExamMarks))));
 
       return {
         sectionId: secId++,
@@ -361,6 +362,15 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
       setIsSyncing(false);
     }
   }, [activeSessionToken, answersMap, isSyncing, saveAnswerBatchApi]);
+
+  // Debounced auto-sync whenever answers change
+  useEffect(() => {
+    if (Object.keys(answersMap).length === 0 || !activeSessionToken || examStep !== 'active') return;
+    const syncTimer = setTimeout(() => {
+      flushAnswersToServer();
+    }, 600);
+    return () => clearTimeout(syncTimer);
+  }, [answersMap, activeSessionToken, examStep, flushAnswersToServer]);
 
   // ── 7. Submission Handling ──────────────────────────────────────────────────
   const handleFinalSubmit = useCallback(async (customReason?: string) => {
@@ -1188,10 +1198,9 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
             <span>{syncStatusText}</span>
           </div>
 
-          {/* Dual Timers (Section Timer & Overall Timer) */}
+          {/* Timers HUD: Dynamic Single-Timer vs Multi-Section Dual Timers */}
           <div className="flex items-center gap-2">
-            {/* Active Section Timer */}
-            {activeSection && (
+            {sections.length > 1 && activeSection && (
               <div
                 className={`px-3 py-1.5 rounded-xl border font-mono text-xs flex items-center gap-1.5 transition-all ${
                   (sectionTimeLeftMap[activeSection.sectionId] ?? activeSection.durationMinutes * 60) < 120
@@ -1216,7 +1225,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
               title="Total Assessment Time Remaining"
             >
               <Icon name="calendar" size="xs" />
-              <span className="hidden sm:inline">Total:</span>
+              <span className="hidden sm:inline">{sections.length === 1 ? 'Time Left:' : 'Total:'}</span>
               <span>{formatTime(totalTimeLeftSeconds)}</span>
             </div>
           </div>

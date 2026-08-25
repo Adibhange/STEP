@@ -36,6 +36,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost]
+        [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterCandidateViaQRCommand command)
         {
             var candidate = await mediator.Send(command);

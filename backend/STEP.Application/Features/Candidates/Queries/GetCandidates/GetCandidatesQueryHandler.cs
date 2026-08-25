@@ -15,6 +15,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
         {
             var query = db.Candidates
                 .Include(c => c.Vacancy).ThenInclude(v => v.HiringLocation)
+                .Include(c => c.Vacancy).ThenInclude(v => v.PipelineFlows).ThenInclude(f => f.Rounds)
                 .Include(c => c.PipelineProgressHistory)
                 .AsNoTracking().AsQueryable();
 
@@ -104,19 +105,33 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
 
                 // candidate.Status is the authoritative terminal/interim status maintained by
                 // CandidateAdvancementService — trust it directly instead of recomputing from raw
-                // round data. (A prior version of this recompute hardcoded a 3-round assumption,
-                // which silently downgraded real "Rejected" candidates back to "In-Progress" for
-                // any 2-round or 4+-round pipeline flow — those are real, per-vacancy-configurable
-                // shapes, not hypothetical.) "Applied" (pre-pipeline-assignment) still collapses to
-                // "In-Progress" for display, matching the existing list-view terminology.
+                // round data.
                 string effectiveStatus = c.Status is "Offered" or "Hired" or "Rejected" ? c.Status : "In-Progress";
+
+                string effectiveStage = c.CurrentStage ?? "Screening";
+                var defaultFlow = c.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
+                    ?? c.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
+                var flowRound1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
+                var isDirectFlow = flowRound1 != null && flowRound1.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase);
+
+                var r1 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
+                var isR1AutoPassed = isDirectFlow || (r1 != null && (r1.RoundTitle ?? "").Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase));
+
+                if (effectiveStage == "Registered" || string.IsNullOrWhiteSpace(effectiveStage))
+                {
+                    if (isR1AutoPassed)
+                    {
+                        var flowRound2 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 2 && !r.IsDeleted);
+                        effectiveStage = flowRound2 != null ? flowRound2.Name : "HR Sourced & Auto-Passed";
+                    }
+                }
 
                 string hiringLocation = c.Vacancy?.HiringLocation?.Name ?? c.CurrentLocation ?? "Primary Center";
                 string testLocation = hiringLocation;
 
                 items.Add(new CandidateSummaryDto(
                     c.Id, c.CandidateCode, c.FirstName, c.LastName, c.Email, c.Phone,
-                    c.VacancyId, c.Vacancy?.Title ?? "Position", c.CurrentStage ?? "Screening", effectiveStatus, c.CreatedAt,
+                    c.VacancyId, c.Vacancy?.Title ?? "Position", effectiveStage, effectiveStatus, c.CreatedAt,
                     assignedInterviewer, hiringLocation, testLocation, c.PipelineProgressHistory.Count > 0));
             }
 

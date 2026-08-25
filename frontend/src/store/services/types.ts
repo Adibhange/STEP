@@ -290,7 +290,12 @@ export interface RegisterCandidateViaQRRequest {
   yearOfPassing?: number;
   marksPercentage?: number;
   avatarUrl?: string;
+  photoBase64?: string;
+  photoFileName?: string;
+  photoContentType?: string;
+  resumeBase64?: string;
   resumeFileName?: string;
+  resumeContentType?: string;
   refType?: 'Direct' | 'Internal' | 'External';
   refName?: string;
   refMobile?: string;

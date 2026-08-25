@@ -17,7 +17,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateDocumentFile
 
     public record GetCandidateDocumentFileQuery(int CandidateId, int DocumentId) : IRequest<CandidateDocumentFileDto>;
 
-    public class GetCandidateDocumentFileQueryHandler(IApplicationDbContext db)
+    public class GetCandidateDocumentFileQueryHandler(IApplicationDbContext db, IFileStorageService fileStorage)
         : IRequestHandler<GetCandidateDocumentFileQuery, CandidateDocumentFileDto>
     {
         public async Task<CandidateDocumentFileDto> Handle(GetCandidateDocumentFileQuery request, CancellationToken cancellationToken)
@@ -27,14 +27,20 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateDocumentFile
                 ?? throw new NotFoundException(nameof(CandidateDocument), request.DocumentId);
 
             byte[] bytes;
-            if (File.Exists(doc.FilePath))
+            try
             {
-                bytes = await File.ReadAllBytesAsync(doc.FilePath, cancellationToken);
+                bytes = await fileStorage.ReadAsync(doc.FilePath, cancellationToken);
             }
-            else
+            catch
             {
-                // Fallback to minimal placeholder byte payload if physical disk path was cleaned up
-                bytes = System.Text.Encoding.UTF8.GetBytes($"Candidate Document Content for {doc.FileName}");
+                if (File.Exists(doc.FilePath))
+                {
+                    bytes = await File.ReadAllBytesAsync(doc.FilePath, cancellationToken);
+                }
+                else
+                {
+                    bytes = System.Text.Encoding.UTF8.GetBytes($"Document content for {doc.FileName}");
+                }
             }
 
             return new CandidateDocumentFileDto(doc.FileName, doc.ContentType, bytes);

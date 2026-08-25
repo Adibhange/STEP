@@ -247,6 +247,15 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
 
       case 'currentRound': {
         const badgeStyle = getStageBadgeStyle(candidate.currentRound);
+        const formatStageName = (name: string) => {
+          if (!name) return 'Registered';
+          return name
+            .replace(/\s*\(Elimination\)/gi, '')
+            .replace(/\s*\(Auto-Passed\)/gi, '')
+            .trim();
+        };
+        const displayStage = formatStageName(candidate.currentRound);
+
         return (
           <td key={col.id} className={cellPadding}>
             <button
@@ -261,11 +270,11 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
                 color: badgeStyle.color,
                 borderColor: badgeStyle.border,
               }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border whitespace-nowrap font-sans shadow-2xs truncate max-w-full hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
-              title={`Click to view ${candidate.name}'s live pipeline progress`}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border font-sans shadow-2xs max-w-full hover:scale-105 active:scale-95 transition-transform duration-150 cursor-pointer"
+              title={`Click to view ${candidate.name}'s live pipeline progress: ${candidate.currentRound}`}
             >
               <Icon name={badgeStyle.icon as any} size="xs" className="shrink-0 opacity-85" />
-              <span className="truncate">{candidate.currentRound}</span>
+              <span className="truncate max-w-[160px]">{displayStage}</span>
             </button>
           </td>
         );
