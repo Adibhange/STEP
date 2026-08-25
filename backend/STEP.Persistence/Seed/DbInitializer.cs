@@ -99,6 +99,8 @@ namespace STEP.Persistence.Seed
                     BEGIN
                         ALTER TABLE candidate.CandidatePipelineProgress ADD TestPasscode NVARCHAR(20) NULL;
                     END
+
+                    UPDATE vacancy.Vacancies SET IsDeleted = 0 WHERE IsDeleted = 1;
                 ";
                 await db.Database.ExecuteSqlRawAsync(addMissingColumnsSql);
             }

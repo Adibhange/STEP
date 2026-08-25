@@ -502,9 +502,26 @@ export const LoginForm: React.FC = () => {
                 onBlur={() => setPassword((s) => ({ ...s, error: validatePassword(), touched: true }))}
                 error={password.error} placeholder="••••••••••••" autoComplete="current-password"
                 suffix={
-                  <button type="button" tabIndex={-1} onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    style={{ paddingRight: '16px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', transition: 'color 120ms ease' }}>
-                    <Icon name={showPassword ? 'unlock' : 'lock'} size="sm" />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    style={{
+                      paddingRight: '16px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-secondary, #94a3b8)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 150ms ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent-indigo, #6366f1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary, #94a3b8)')}
+                  >
+                    <Icon name={showPassword ? 'unlock' : 'lock'} size="md" />
                   </button>
                 } />
 

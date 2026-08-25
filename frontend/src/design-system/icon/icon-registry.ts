@@ -43,6 +43,7 @@ import {
   MoreHorizontal,
   Menu,
   Eye,
+  EyeOff,
   FileText,
   ClipboardCheck,
   Mic,
@@ -142,6 +143,7 @@ export type IconName =
   | 'more-horizontal'
   | 'menu'
   | 'eye'
+  | 'eye-off'
   | 'file-text'
   | 'clipboard-check'
   | 'mic'
@@ -235,6 +237,7 @@ export const iconRegistry: Record<IconName, LucideIcon> = {
   'more-horizontal': MoreHorizontal,
   'menu': Menu,
   'eye': Eye,
+  'eye-off': EyeOff,
   'file-text': FileText,
   'clipboard-check': ClipboardCheck,
   'mic': Mic,

@@ -32,7 +32,7 @@ namespace STEP.Persistence.Configurations
             builder.HasIndex(e => e.CandidateCode).IsUnique();
             builder.HasIndex(e => e.Email);
 
-            builder.HasOne(e => e.Vacancy).WithMany().HasForeignKey(e => e.VacancyId).OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.Vacancy).WithMany().HasForeignKey(e => e.VacancyId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
 
             // Candidate -> CandidatePipelineProgress (owning direction) is Cascade; the reverse
             // "current pointer" below must be Restrict, or SQL Server rejects the cycle as
