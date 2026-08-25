@@ -35,7 +35,8 @@ namespace STEP.Application.Features.Exams.Common
                 session.TotalTimeLeftSeconds,
                 session.ActiveQuestionIndex,
                 session.SessionStatus,
-                questions);
+                questions,
+                session.Id);
         }
 
         public static LiveExamWorkspaceDto ToWorkspaceDto(CandidateExamSessionV2 session)
@@ -71,7 +72,8 @@ namespace STEP.Application.Features.Exams.Common
                 session.TotalTimeLeftSeconds,
                 0,
                 session.SessionStatus,
-                questions);
+                questions,
+                session.Id);
         }
     }
 }

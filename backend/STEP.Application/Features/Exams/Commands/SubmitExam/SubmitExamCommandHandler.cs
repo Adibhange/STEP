@@ -50,22 +50,34 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
                     answer.AnsweredAt ??= DateTimeOffset.UtcNow;
                 }
 
+                var mcqQuestions = sessionV2.Questions.Where(q => McqTypes.Contains(q.QuestionType)).ToList();
+                var mcqMarksTotal = mcqQuestions.Sum(q => q.Marks);
+                var mcqScoreObtained = sessionV2.Answers
+                    .Where(a => questionsById.TryGetValue(a.CandidateExamSessionQuestionId, out var q) && McqTypes.Contains(q.QuestionType))
+                    .Sum(a => a.MarksObtained);
+                var mcqPercentage = mcqMarksTotal > 0 ? Math.Round(mcqScoreObtained / mcqMarksTotal * 100, 2) : 0;
+                var mcqPassed = mcqPercentage >= sessionV2.PassingPercentage;
+
                 sessionV2.TotalMarks = sessionV2.Questions.Sum(q => q.Marks);
                 sessionV2.TotalScore = sessionV2.Answers.Sum(a => a.MarksObtained);
-                sessionV2.Percentage = sessionV2.TotalMarks > 0 ? Math.Round(sessionV2.TotalScore / sessionV2.TotalMarks * 100, 2) : 0;
-                sessionV2.ResultStatus = sessionV2.Percentage >= sessionV2.PassingPercentage ? "Pass" : "Fail";
                 sessionV2.SessionStatus = "Submitted";
                 sessionV2.SubmittedAt = DateTimeOffset.UtcNow;
                 sessionV2.UpdatedAt = DateTimeOffset.UtcNow;
 
                 var pendingManualCount = sessionV2.Answers.Count(a => a.EvaluationStatus == "Pending");
-                sessionV2.EvaluationStatus = pendingManualCount == 0 ? "Published"
-                    : pendingManualCount == sessionV2.Answers.Count ? "Pending"
-                    : "PartiallyEvaluated";
-
                 if (pendingManualCount == 0)
                 {
+                    sessionV2.Percentage = sessionV2.TotalMarks > 0 ? Math.Round(sessionV2.TotalScore / sessionV2.TotalMarks * 100, 2) : mcqPercentage;
+                    sessionV2.ResultStatus = sessionV2.Percentage >= sessionV2.PassingPercentage ? "Pass" : "Fail";
+                    sessionV2.EvaluationStatus = "Published";
                     sessionV2.EvaluatedAt = DateTimeOffset.UtcNow;
+                }
+                else
+                {
+                    // Multi-section test: record MCQ percentage and keep overall result pending evaluator review
+                    sessionV2.Percentage = mcqPercentage;
+                    sessionV2.ResultStatus = "Pending";
+                    sessionV2.EvaluationStatus = "PartiallyEvaluated";
                 }
 
                 // Update candidate pipeline progress status and score
@@ -77,12 +89,14 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
 
                     if (progress != null)
                     {
-                        progress.ScoreObtained = sessionV2.Percentage;
+                        progress.ScoreObtained = pendingManualCount == 0 ? sessionV2.Percentage : mcqPercentage;
                         progress.CompletedAt = DateTime.UtcNow;
                         progress.Status = pendingManualCount == 0
                             ? (sessionV2.ResultStatus == "Pass" ? "Passed" : "Failed")
                             : "Evaluated";
-                        progress.Remarks = $"Assessment Score: {sessionV2.TotalScore}/{sessionV2.TotalMarks} ({sessionV2.Percentage}% — {sessionV2.ResultStatus})";
+                        progress.Remarks = pendingManualCount == 0
+                            ? $"Assessment Score: {sessionV2.TotalScore}/{sessionV2.TotalMarks} ({sessionV2.Percentage}% — {sessionV2.ResultStatus})"
+                            : $"MCQ Auto-Graded: {mcqScoreObtained}/{mcqMarksTotal} ({mcqPercentage}% - {(mcqPassed ? "Passed" : "Failed")}) • {pendingManualCount} Practical challenges awaiting evaluator review";
                     }
                 }
 

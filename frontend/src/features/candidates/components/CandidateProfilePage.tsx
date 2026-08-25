@@ -329,6 +329,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [showShareToast, setShowShareToast] = useState(false);
   const [showDirectorShareModal, setShowDirectorShareModal] = useState(false);
   const [selectedDocPreview, setSelectedDocPreview] = useState<CandidateDocument | null>(null);
+  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
+  const [selectedEvaluationSessionId, setSelectedEvaluationSessionId] = useState<number | null>(null);
 
   // Dynamic Candidate Profile Details State
   const [isTechAuthorized, setIsTechAuthorized] = useState(false);
@@ -1993,8 +1995,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 if (!isInterviewer) return false;
                 const loggedInId = Number(currentUser?.id || currentUserId);
                 const currentFullName = (currentUser
-                  ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`
-                  : (typeof window !== 'undefined' ? localStorage.getItem('step_user_name') || '' : '')
+                  ? (currentUser.name || '')
+                  : (typeof window !== 'undefined' ? localStorage.getItem('step_name') || localStorage.getItem('step_user_name') || '' : '')
                 ).trim().toLowerCase();
 
                 // 1. If explicit interviewerUserId is attached to stage, match strictly by ID
@@ -2199,6 +2201,21 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                               ) : (
                                 /* Round 2 Technical Assessment (Coding & SQL) */
                                 <div className="flex items-center gap-2 flex-wrap">
+                                  {stage.candidateExamSessionId ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedEvaluationSessionId(stage.candidateExamSessionId ?? null);
+                                        setShowEvaluationModal(true);
+                                      }}
+                                      className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black transition-colors cursor-pointer shadow-2xs font-semibold text-[11.5px] sm:text-xs"
+                                      title="Open technical assessment evaluation and scorecard"
+                                    >
+                                      <Icon name="award" size="xs" />
+                                      <span>Evaluate Assessment</span>
+                                    </button>
+                                  ) : null}
+
                                   {isHrOrDirectorOrAdmin && (
                                     <>
                                       <button
@@ -3429,6 +3446,34 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           roundTitle={selectedScheduleStage?.name || 'Aptitude Assessment'}
           roundNumber={selectedScheduleStage?.id || 1}
         />
+      )}
+
+      {/* ── Technical Assessment Evaluation View Modal ────────────────── */}
+      {showEvaluationModal && selectedEvaluationSessionId && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs overflow-y-auto p-2 sm:p-4 flex items-center justify-center">
+          <div className="bg-[var(--surface-1)] border border-[var(--border-default)] rounded-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl relative">
+            <CandidateAssessmentEvaluationView
+              candidateId={String(numericId)}
+              candidateName={candidate.name}
+              candidateCode={candidate.code}
+              vacancyTitle={candidate.appliedFor}
+              candidateExamSessionId={selectedEvaluationSessionId}
+              onClose={() => {
+                setShowEvaluationModal(false);
+                setSelectedEvaluationSessionId(null);
+                refetchCandidate();
+              }}
+              onFinalizeScore={() => {
+                setShowEvaluationModal(false);
+                setSelectedEvaluationSessionId(null);
+                refetchCandidate();
+                toast.success('Assessment Published', {
+                  description: 'Assessment results and final score updated successfully.',
+                });
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {/* --- Document Preview Modal -------------------------------------- */}

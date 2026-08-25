@@ -24,6 +24,85 @@ namespace STEP.Application.Features.Exams.Commands.PublishAssessmentResult
     {
         public async Task<PublishResultDto> Handle(PublishAssessmentResultCommand request, CancellationToken cancellationToken)
         {
+            // 1. Try V2 Session
+            var sessionV2 = await db.CandidateExamSessionsV2
+                .Include(s => s.Answers)
+                .Include(s => s.CandidatePipelineProgress)
+                .FirstOrDefaultAsync(s => s.Id == request.CandidateExamSessionId, cancellationToken);
+
+            if (sessionV2 != null)
+            {
+                // 1. Verify session submission.
+                if (sessionV2.SessionStatus != "Submitted" && sessionV2.EvaluationStatus != "PartiallyEvaluated")
+                {
+                    throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(sessionV2.SessionStatus),
+                        $"Only a Submitted session can be published (current status: '{sessionV2.SessionStatus}').")]);
+                }
+
+                // 2. Verify full manual evaluation (no answer left Pending).
+                var unevaluated = sessionV2.Answers.Count(a => a.EvaluationStatus is "Pending");
+                if (unevaluated != 0)
+                {
+                    throw new ValidationException([new FluentValidation.Results.ValidationFailure("Answers",
+                        $"{unevaluated} answer(s) still need manual evaluation before this result can be published.")]);
+                }
+
+                var progress = sessionV2.CandidatePipelineProgress
+                    ?? throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(sessionV2.CandidatePipelineProgressId),
+                        "This session is not linked to a pipeline progress row.")]);
+
+                var candidate = await db.Candidates
+                    .Include(c => c.PipelineProgressHistory)
+                    .FirstAsync(c => c.Id == sessionV2.CandidateId, cancellationToken);
+
+                // 3. Calculate final score, percentage, result status.
+                sessionV2.TotalScore = sessionV2.Answers.Sum(a => a.MarksObtained);
+                sessionV2.Percentage = sessionV2.TotalMarks > 0 ? Math.Round(sessionV2.TotalScore / sessionV2.TotalMarks * 100, 2) : 0;
+                sessionV2.ResultStatus = sessionV2.Percentage >= sessionV2.PassingPercentage ? "Pass" : "Fail";
+
+                // 4. Publish timestamps.
+                sessionV2.EvaluationStatus = "Published";
+                sessionV2.SessionStatus = "Evaluated";
+                sessionV2.EvaluatedAt = DateTimeOffset.UtcNow;
+                sessionV2.EvaluatorUserId = request.PublishedByUserId;
+
+                // 5. Lock every answer.
+                foreach (var answer in sessionV2.Answers)
+                {
+                    answer.EvaluationLocked = true;
+                    answer.EvaluationStatus = "Published";
+                }
+
+                // 6. Update the pipeline progress row.
+                var passed = sessionV2.ResultStatus == "Pass";
+                progress.Status = passed ? "Passed" : "Failed";
+                progress.ScoreObtained = sessionV2.Percentage;
+                progress.CompletedAt = DateTime.UtcNow;
+                progress.EvaluatedAt = DateTime.UtcNow;
+                progress.EvaluatorId = request.PublishedByUserId;
+                progress.Remarks = $"Assessment Score: {sessionV2.TotalScore}/{sessionV2.TotalMarks} ({sessionV2.Percentage}% — {sessionV2.ResultStatus})" +
+                    (!string.IsNullOrWhiteSpace(request.Remarks) ? $" • {request.Remarks}" : "");
+
+                // 7. Auto-advance if passed.
+                var advancementResult = await advancement.AdvanceOrResolveAsync(candidate, progress, passed, cancellationToken);
+
+                db.AuditLogs.Add(new AuditLog
+                {
+                    CorrelationId = Guid.NewGuid(),
+                    UserId = request.PublishedByUserId,
+                    Action = "PublishAssessmentResult",
+                    EntityName = nameof(CandidateExamSessionV2),
+                    EntityId = sessionV2.Id.ToString(),
+                });
+
+                await db.SaveChangesAsync(cancellationToken);
+
+                return new PublishResultDto(
+                    sessionV2.Id, sessionV2.ResultStatus, sessionV2.TotalScore, sessionV2.TotalMarks, sessionV2.Percentage,
+                    advancementResult.Advanced, advancementResult.NextRoundTitle, advancementResult.NextRoundExamPasscode, advancementResult.CandidateStatus);
+            }
+
+            // 2. Fallback to V1 Session
             var session = await db.CandidateExamSessions
                 .Include(s => s.Answers)
                 .Include(s => s.CandidatePipelineProgress)
@@ -38,20 +117,20 @@ namespace STEP.Application.Features.Exams.Commands.PublishAssessmentResult
             }
 
             // 2. Verify full manual evaluation (no answer left Pending/InReview).
-            var unevaluated = session.Answers.Count(a => a.EvaluationStatus is "Pending" or "InReview");
-            if (unevaluated != 0)
+            var unevaluatedV1 = session.Answers.Count(a => a.EvaluationStatus is "Pending" or "InReview");
+            if (unevaluatedV1 != 0)
             {
                 throw new ValidationException([new FluentValidation.Results.ValidationFailure("Answers",
-                    $"{unevaluated} answer(s) still need manual evaluation before this result can be published.")]);
+                    $"{unevaluatedV1} answer(s) still need manual evaluation before this result can be published.")]);
             }
 
-            var progress = session.CandidatePipelineProgress
+            var progressV1 = session.CandidatePipelineProgress
                 ?? throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(session.CandidatePipelineProgressId),
                     "This session is not linked to a pipeline progress row.")]);
 
-            var candidate = await db.Candidates
+            var candidateV1 = await db.Candidates
                 .Include(c => c.PipelineProgressHistory)
-                .FirstAsync(c => c.Id == progress.CandidateId, cancellationToken);
+                .FirstAsync(c => c.Id == progressV1.CandidateId, cancellationToken);
 
             // 3. Calculate final score, percentage, result status.
             session.TotalScore = session.Answers.Sum(a => a.MarksObtained);
@@ -73,17 +152,17 @@ namespace STEP.Application.Features.Exams.Commands.PublishAssessmentResult
             }
 
             // 6. Update the pipeline progress row.
-            var passed = session.ResultStatus == "Pass";
-            progress.Status = passed ? "Passed" : "Failed";
-            progress.ScoreObtained = session.Percentage;
-            progress.CompletedAt = DateTime.UtcNow;
-            progress.EvaluatedAt = DateTime.UtcNow;
-            progress.EvaluatorId = request.PublishedByUserId;
-            progress.Remarks = request.Remarks;
+            var passedV1 = session.ResultStatus == "Pass";
+            progressV1.Status = passedV1 ? "Passed" : "Failed";
+            progressV1.ScoreObtained = session.Percentage;
+            progressV1.CompletedAt = DateTime.UtcNow;
+            progressV1.EvaluatedAt = DateTime.UtcNow;
+            progressV1.EvaluatorId = request.PublishedByUserId;
+            progressV1.Remarks = request.Remarks;
 
             // 7. Auto-advance if passed (or resolve to Rejected/Offered) — shared with Phase 5's
             // PublishInterviewResultCommand so both round types advance identically.
-            var advancementResult = await advancement.AdvanceOrResolveAsync(candidate, progress, passed, cancellationToken);
+            var advancementResultV1 = await advancement.AdvanceOrResolveAsync(candidateV1, progressV1, passedV1, cancellationToken);
 
             db.AuditLogs.Add(new AuditLog
             {
@@ -101,11 +180,11 @@ namespace STEP.Application.Features.Exams.Commands.PublishAssessmentResult
                 Payload = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     CandidateExamSessionId = session.Id,
-                    CandidateId = candidate.Id,
+                    CandidateId = candidateV1.Id,
                     session.ResultStatus,
                     session.Percentage,
-                    advancementResult.Advanced,
-                    advancementResult.CandidateStatus,
+                    advancementResultV1.Advanced,
+                    advancementResultV1.CandidateStatus,
                 }),
             });
 
@@ -113,7 +192,7 @@ namespace STEP.Application.Features.Exams.Commands.PublishAssessmentResult
 
             return new PublishResultDto(
                 session.Id, session.ResultStatus, session.TotalScore, session.TotalMarks, session.Percentage,
-                advancementResult.Advanced, advancementResult.NextRoundTitle, advancementResult.NextRoundExamPasscode, advancementResult.CandidateStatus);
+                advancementResultV1.Advanced, advancementResultV1.NextRoundTitle, advancementResultV1.NextRoundExamPasscode, advancementResultV1.CandidateStatus);
         }
     }
 }

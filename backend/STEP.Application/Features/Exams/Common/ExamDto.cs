@@ -29,7 +29,8 @@ namespace STEP.Application.Features.Exams.Common
         int TotalTimeLeftSeconds,
         int ActiveQuestionIndex,
         string SessionStatus,
-        List<ExamQuestionDto> Questions);
+        List<ExamQuestionDto> Questions,
+        int? CandidateExamSessionId = null);
 
     public record SubmitExamResultDto(string SessionStatus, decimal TotalScore, decimal TotalMarks, int PendingManualEvaluationCount);
 
@@ -51,7 +52,8 @@ namespace STEP.Application.Features.Exams.Common
         string? EvaluatorRemarks,
         List<EvaluationOptionDto> Options,
         List<int> SelectedOptionIds,
-        string? SectionName = null);
+        string? SectionName = null,
+        int CandidateExamSessionQuestionId = 0);
 
     public record ExamEvaluationViewDto(
         int CandidateExamSessionId,

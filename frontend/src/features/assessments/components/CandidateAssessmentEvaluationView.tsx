@@ -151,7 +151,7 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
   const nonMcqAnswers = answers.filter((a) => !isMcqType(a.questionType));
   const allNonMcqEvaluated = nonMcqAnswers.length === 0 || nonMcqAnswers.every((a) => a.evaluationStatus === 'Evaluated' || a.evaluationLocked);
   const isPublished = evaluation?.evaluationStatus === 'Published' || evaluation?.sessionStatus === 'Evaluated';
-  const canPublish = evaluation?.sessionStatus === 'Submitted' && allNonMcqEvaluated && !isPublished;
+  const canPublish = (evaluation?.sessionStatus === 'Submitted' || evaluation?.evaluationStatus === 'PartiallyEvaluated') && allNonMcqEvaluated && !isPublished;
 
   const timeUsedMinutes =
     evaluation?.startedAt && evaluation?.submittedAt

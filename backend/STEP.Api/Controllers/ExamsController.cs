@@ -58,8 +58,14 @@ namespace STEP.Api.Controllers
         [HttpPost("answers/batch")]
         [HttpPost("{sessionToken}/batch-answers")]
         [AllowAnonymous]
-        public async Task<IActionResult> SaveAnswerBatch([FromBody] SaveExamAnswerBatchCommand command)
+        public async Task<IActionResult> SaveAnswerBatch(
+            [FromRoute] string? sessionToken,
+            [FromBody] SaveExamAnswerBatchCommand command)
         {
+            if (!string.IsNullOrWhiteSpace(sessionToken) && string.IsNullOrWhiteSpace(command.SessionToken))
+            {
+                command.SessionToken = sessionToken;
+            }
             var result = await mediator.Send(command);
             return Ok(ApiResponse<object>.Ok(result, "Offline answers synced and saved successfully"));
         }
@@ -95,11 +101,17 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("evaluate")]
+        [HttpPost("{sessionId:int}/evaluate-answer")]
+        [HttpPost("{sessionId:int}/evaluation/answers/{answerId:int}")]
         [Authorize(Policy = "Exam.Manage")]
-        public async Task<IActionResult> EvaluateAnswer([FromBody] EvaluateAnswerRequestBody body)
+        public async Task<IActionResult> EvaluateAnswer(
+            [FromRoute] int? sessionId,
+            [FromRoute] int? answerId,
+            [FromBody] EvaluateAnswerRequestBody body)
         {
+            var targetAnswerId = answerId ?? body.CandidateExamAnswerId;
             var evaluatedBy = CurrentUserId ?? throw new System.UnauthorizedAccessException("Unable to resolve the current user.");
-            await mediator.Send(new EvaluateCandidateAnswerCommand(body.CandidateExamAnswerId, body.MarksObtained, body.EvaluatorRemarks, evaluatedBy));
+            await mediator.Send(new EvaluateCandidateAnswerCommand(targetAnswerId, body.MarksObtained, body.EvaluatorRemarks, evaluatedBy));
             return Ok(ApiResponse<object>.Ok(new { }, "Answer evaluated"));
         }
 

@@ -286,7 +286,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
                     if (isAptitudeRound)
                     {
-                        // Round 1: Strictly Aptitude & Logical Reasoning questions
+                        // Round 1 (Walk-in Drive): Strictly Aptitude & Logical Reasoning questions
                         query = query.Where(q =>
                             q.SectionType == "Aptitude" ||
                             q.Language == "General Aptitude" ||
@@ -295,8 +295,37 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     }
                     else
                     {
-                        // Round 2+: Technical MCQs, Coding, and SQL queries (excluding general aptitude)
-                        query = query.Where(q => q.SectionType == rule.SectionType && q.SectionType != "Aptitude" && q.Language != "General Aptitude");
+                        // Round 2+ (Technical Assessment): Role-specific Technical MCQs, SQL, Coding, and Subjective
+                        if (rule.SectionType == "TechnicalMCQ")
+                        {
+                            var isSqlRole = (candidate.Vacancy?.Title ?? "").Contains("SQL", StringComparison.OrdinalIgnoreCase) ||
+                                            (candidate.Vacancy?.MasterRole?.Name ?? "").Contains("SQL", StringComparison.OrdinalIgnoreCase);
+
+                            query = query.Where(q =>
+                                (q.SectionType == "TechnicalMCQ" || q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE") &&
+                                q.SectionType != "Aptitude" && q.Language != "General Aptitude");
+
+                            if (isSqlRole)
+                            {
+                                query = query.Where(q => q.Language.Contains("SQL") || q.Language.Contains("Database") || q.SectionType == "TechnicalMCQ");
+                            }
+                        }
+                        else if (rule.SectionType == "SQLQuery")
+                        {
+                            query = query.Where(q => q.SectionType == "SQLQuery" || q.QuestionType == "SQL");
+                        }
+                        else if (rule.SectionType == "Coding")
+                        {
+                            query = query.Where(q => q.SectionType == "Coding" || q.QuestionType == "CODING");
+                        }
+                        else if (rule.SectionType == "SubjectiveTheory")
+                        {
+                            query = query.Where(q => q.SectionType == "SubjectiveTheory" || q.QuestionType == "SUBJECTIVE");
+                        }
+                        else
+                        {
+                            query = query.Where(q => q.SectionType == rule.SectionType && q.SectionType != "Aptitude" && q.Language != "General Aptitude");
+                        }
                     }
 
                     var pool = await query.ToListAsync(cancellationToken);
@@ -306,6 +335,14 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                         pool = await db.MasterQuestions
                             .Include(q => q.Options)
                             .Where(q => q.IsActive && (q.SectionType == "Aptitude" || q.Language == "General Aptitude" || q.QuestionType == "SINGLE_CHOICE"))
+                            .ToListAsync(cancellationToken);
+                    }
+
+                    if (pool.Count == 0 && !isAptitudeRound && rule.SectionType == "TechnicalMCQ")
+                    {
+                        pool = await db.MasterQuestions
+                            .Include(q => q.Options)
+                            .Where(q => q.IsActive && (q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE") && q.SectionType != "Aptitude")
                             .ToListAsync(cancellationToken);
                     }
 
