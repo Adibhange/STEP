@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +10,7 @@ using STEP.Application.Features.Interviews.Queries.GetInterviewById;
 
 namespace STEP.Api.Controllers
 {
-    [Authorize(Policy = "Candidate.Approve")]
+    [Authorize]
     public class InterviewsController(ISender mediator) : BaseApiController
     {
         [HttpGet("{id:int}")]

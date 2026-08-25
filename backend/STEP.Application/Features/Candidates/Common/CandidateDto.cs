@@ -36,7 +36,8 @@ namespace STEP.Application.Features.Candidates.Common
         int? CandidateExamSessionId,
         int? InterviewId,
         string? Remarks = null,
-        string? InterviewerName = null);
+        string? InterviewerName = null,
+        int? InterviewerUserId = null);
 
     public record CandidateDocumentDto(
         int Id,

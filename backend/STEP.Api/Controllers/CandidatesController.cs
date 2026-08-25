@@ -65,7 +65,7 @@ namespace STEP.Api.Controllers
             return Ok(ApiResponse<object>.Ok(result, "Document uploaded successfully"));
         }
         [HttpPost("{id:int}/evaluate-stage")]
-        [Authorize(Policy = "Candidate.Approve")]
+        [Authorize]
         public async Task<IActionResult> EvaluateStage(int id, [FromBody] EvaluateStageRequestBody body)
         {
             var candidate = await mediator.Send(new STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage.EvaluateCandidateStageCommand(

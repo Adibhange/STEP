@@ -31,7 +31,9 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
             // so a direct URL visit can't be used to route around the list-level filtering.
             if (currentUser.Role == "Interviewer" && currentUser.UserId is int interviewerId)
             {
-                var isAssigned = await db.Interviews.AnyAsync(i => i.CandidateId == candidate.Id && i.InterviewerUserId == interviewerId, cancellationToken);
+                var isAssigned = await db.Interviews.AnyAsync(i => i.CandidateId == candidate.Id && i.InterviewerUserId == interviewerId && !i.IsDeleted, cancellationToken)
+                    || candidate.PipelineProgressHistory.Any(p => p.EvaluatorId == interviewerId && !p.IsDeleted);
+
                 if (!isAssigned)
                 {
                     throw new NotFoundException(nameof(CandidateEntity), request.Id);
@@ -63,21 +65,20 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
 
 
 
-            var interviews = progressIds.Count > 0
-                ? await db.Interviews
-                    .Include(i => i.InterviewerUser)
-                    .Where(i => progressIds.Contains(i.CandidatePipelineProgressId) && i.Status != "Cancelled")
-                    .ToListAsync(cancellationToken)
-                : [];
+            var interviews = await db.Interviews
+                .Include(i => i.InterviewerUser)
+                .Where(i => i.CandidateId == candidate.Id && !i.IsDeleted && i.Status != "Cancelled")
+                .ToListAsync(cancellationToken);
 
             var latestInterviewByProgress = interviews
+                .Where(i => i.CandidatePipelineProgressId > 0)
                 .GroupBy(i => i.CandidatePipelineProgressId)
                 .ToDictionary(
                     g => g.Key,
                     g => {
                         var latest = g.OrderByDescending(i => i.Id).First();
                         var name = latest.InterviewerUser != null ? $"{latest.InterviewerUser.FirstName} {latest.InterviewerUser.LastName}".Trim() : null;
-                        return new { latest.Id, InterviewerName = name };
+                        return new { latest.Id, InterviewerName = name, latest.InterviewerUserId };
                     });
 
             var evaluatorUserIds = candidate.PipelineProgressHistory.Where(p => p.EvaluatorId != null).Select(p => p.EvaluatorId!.Value).Distinct().ToList();
@@ -145,6 +146,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var effectiveScore = p.ScoreObtained ?? (isAutoPassed ? 100.00m : (hasSess ? sessInfo.Score : null));
                         var isR1OrAutoPassed = isAutoPassed || r.RoundOrder == 1;
                         var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isR1OrAutoPassed ? defaultHrRecruiterName : null));
+                        var interviewerUserId = interviewInfo?.InterviewerUserId ?? p.EvaluatorId;
 
                         var rawTitle = p.RoundTitle ?? r.Name;
                         var isAssessment = hasSess || (rawTitle != null && (rawTitle.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Assessment", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Coding", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Challenge", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Track", StringComparison.OrdinalIgnoreCase)));
@@ -153,7 +155,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         combinedProgressDtos.Add(new PipelineProgressDto(
                             p.Id, p.RoundNumber, rawTitle, effectiveRoundType,
                             effectiveStatus, effectiveScore, p.StartedAt, p.CompletedAt,
-                            hasSess ? sessInfo.SessionId : null, interviewInfo?.Id, p.Remarks, interviewerName));
+                            hasSess ? sessInfo.SessionId : null, interviewInfo?.Id, p.Remarks, interviewerName, interviewerUserId));
                     }
                     else
                     {
@@ -162,12 +164,13 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var defaultScore = isAutoPassed ? 100.00m : (decimal?)null;
                         var isR1OrAutoPassed = isAutoPassed || r.RoundOrder == 1;
                         var defaultInterviewer = isR1OrAutoPassed ? defaultHrRecruiterName : null;
+
                         var isAssessment = r.Name.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Assessment", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Coding", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Challenge", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Track", StringComparison.OrdinalIgnoreCase);
                         var effectiveRoundType = isAssessment ? "Assessment" : PipelineRoundClassification.Classify(r.RoundType);
 
                         combinedProgressDtos.Add(new PipelineProgressDto(
                             0, r.RoundOrder, r.Name, effectiveRoundType,
-                            defaultStatus, defaultScore, null, null, null, null, null, defaultInterviewer));
+                            defaultStatus, defaultScore, null, null, null, null, null, defaultInterviewer, null));
                     }
                 }
             }

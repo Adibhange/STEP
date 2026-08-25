@@ -68,6 +68,7 @@ export interface StageItem {
   hasCompletedTest?: boolean;
   terminationReason?: string;
   candidateExamSessionId?: number | null;
+  interviewerUserId?: number | null;
 }
 
 export interface CandidateDocument {
@@ -81,6 +82,7 @@ export interface CandidateDocument {
 interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 interface FormSelectProps {
@@ -127,12 +129,18 @@ const FormSelect: React.FC<FormSelectProps> = ({ value, onChange, options, disab
             <button
               key={opt.value}
               type="button"
+              disabled={opt.disabled}
               onClick={() => {
+                if (opt.disabled) return;
                 onChange(opt.value);
                 setOpen(false);
               }}
-              className={`w-full px-3 py-2 text-left text-xs font-medium flex items-center justify-between hover:bg-[var(--surface-hover)] transition-colors cursor-pointer ${
-                opt.value === value ? 'text-[var(--accent-indigo)] font-bold bg-[var(--accent-indigo-dim)]' : 'text-[var(--text-primary)]'
+              className={`w-full px-3 py-2 text-left text-xs font-medium flex items-center justify-between transition-colors ${
+                opt.disabled
+                  ? 'opacity-40 cursor-not-allowed bg-[var(--surface-2)] text-[var(--text-tertiary)]'
+                  : opt.value === value
+                  ? 'text-[var(--accent-indigo)] font-bold bg-[var(--accent-indigo-dim)] hover:bg-[var(--surface-hover)] cursor-pointer'
+                  : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)] cursor-pointer'
               }`}
             >
               <span>{opt.label}</span>
@@ -301,7 +309,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const router = useRouter();
 
   const numericId = parseInt(String(candidateId).replace(/\D/g, ''), 10) || 1;
-  const { data: candidateRes, isLoading: isCandidateLoading, isFetching: isCandidateFetching } = useGetCandidateByIdQuery(numericId);
+  const { data: candidateRes, isLoading: isCandidateLoading, isFetching: isCandidateFetching, refetch: refetchCandidate } = useGetCandidateByIdQuery(numericId);
   const { data: candidatesListRes, isLoading: isListLoading } = useGetCandidatesQuery();
   const [evaluateStage] = useEvaluateCandidateStageMutation();
   const [assignEvaluator] = useAssignEvaluatorMutation();
@@ -535,6 +543,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             result: isLocked ? 'Locked' : isCurrentRoundFailed ? 'Failed' : p.status || 'Pending',
             interviewId: p.interviewId ?? null,
             candidateExamSessionId: p.candidateExamSessionId ?? null,
+            interviewerUserId: p.interviewerUserId ?? p.evaluatorId ?? null,
             roundType: p.roundType,
             isDirectorRound: isDirectorRound,
             isOfferRound: isOfferRound,
@@ -785,7 +794,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [assignedInterviewer, setAssignedInterviewer] = useState(''); // holds a real Users.Id (as a string)
   const [assignDate, setAssignDate] = useState('2025-05-18');
   const [assignTime, setAssignTime] = useState('11:30');
-  const [assignMode, setAssignMode] = useState('Google Meet');
+  const [assignMode, setAssignMode] = useState('In Office');
   const [assignSuccessToast, setAssignSuccessToast] = useState(false);
 
   // Candidate Assessment Evaluation & Schedule Test Modal State
@@ -816,10 +825,21 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   );
 
   const meetingModeOptions = [
-    { value: 'Google Meet', label: 'Google Meet (Online Link)' },
-    { value: 'Microsoft Teams', label: 'Microsoft Teams' },
     { value: 'In Office', label: 'In Office Venue' },
+    { value: 'Google Meet', label: 'Google Meet (Disabled)', disabled: true },
+    { value: 'Microsoft Teams', label: 'Microsoft Teams (Disabled)', disabled: true },
   ];
+
+  // Auto pre-select interviewer option when Assign modal opens
+  useEffect(() => {
+    if (selectedAssignStage) {
+      const options = selectedAssignStage.isDirectorRound ? directorOptions : interviewerOptions;
+      if (options.length > 0) {
+        const currentlyAssigned = options.find((o) => Number(o.value) === selectedAssignStage.interviewerUserId);
+        setAssignedInterviewer(currentlyAssigned ? currentlyAssigned.value : options[0].value);
+      }
+    }
+  }, [selectedAssignStage, directorOptions, interviewerOptions]);
 
   // Main Dynamic Recruitment Stages Stack
   const [stagesData, setStagesData] = useState<StageItem[]>([]);
@@ -1134,14 +1154,29 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
     // Regular (non-Director) Interview rounds submit a real scorecard against the real Interview row —
     if (!selectedFeedbackStage.isDirectorRound) {
-      if (!selectedFeedbackStage.interviewId) {
-        toast.error('No Interview Scheduled', {
-          description: 'Assign an interviewer and schedule this round before submitting a scorecard.',
-        });
-        return;
-      }
+      let targetInterviewId = selectedFeedbackStage.interviewId;
 
       try {
+        if (!targetInterviewId) {
+          // Auto-schedule interview record on demand if not scheduled yet
+          const schedRes = await scheduleInterview({
+            candidateId: numericId,
+            interviewerUserId: currentUser?.id ? Number(currentUser.id) : (currentUserId || 1),
+            scheduledAt: new Date().toISOString(),
+            durationMinutes: 60,
+            mode: 'Onsite',
+            roundNumber: selectedFeedbackStage.id,
+          }).unwrap();
+          targetInterviewId = schedRes.data?.id;
+        }
+
+        if (!targetInterviewId) {
+          toast.error('Scheduling Failed', {
+            description: 'Could not create an interview record for this round.',
+          });
+          return;
+        }
+
         const mappedRecommendation: 'Hire' | 'Reject' | 'OnHold' =
           scorecardRecommendation === 'Fail' || scorecardRecommendation === 'Reject'
             ? 'Reject'
@@ -1150,7 +1185,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               : 'Hire';
 
         await submitInterviewFeedback({
-          interviewId: selectedFeedbackStage.interviewId,
+          interviewId: targetInterviewId,
           technicalRating: scorecardTechnical,
           communicationRating: scorecardCommunication,
           problemSolvingRating: scorecardProblemSolving,
@@ -1163,16 +1198,24 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
         const isPassed = mappedRecommendation === 'Hire';
         await publishInterviewResult({
-          id: selectedFeedbackStage.interviewId,
+          id: targetInterviewId,
           passed: isPassed,
           remarks: feedbackText || `Scorecard submitted (${mappedRecommendation}).`,
         }).unwrap();
 
         setStagesData((prev) =>
-          prev.map((s) => (s.id === selectedFeedbackStage.id ? { ...s, feedback: feedbackText || s.feedback } : s))
+          prev.map((s) => (s.id === selectedFeedbackStage.id ? {
+            ...s,
+            feedback: feedbackText || s.feedback,
+            status: isPassed ? 'Passed' : 'Failed',
+            statusType: isPassed ? 'passed' : 'rejected',
+            result: isPassed ? 'Passed' : 'Failed',
+            interviewId: targetInterviewId,
+          } : s))
         );
         setSelectedFeedbackStage(null);
-        toast.success('Scorecard Saved', { description: 'Interview scorecard submitted and persisted.' });
+        refetchCandidate();
+        toast.success('Scorecard Saved', { description: 'Interview scorecard submitted and persisted successfully.' });
       } catch (err) {
         const description = (err as { data?: { message?: string; errors?: string[] } })?.data?.errors?.[0]
           || (err as { data?: { message?: string } })?.data?.message
@@ -1265,8 +1308,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         }).unwrap();
 
         setStagesData((prev) =>
-          prev.map((s) => (s.id === selectedAssignStage.id ? { ...s, interviewer: displayName, interviewerInitials: initials || 'IN' } : s))
+          prev.map((s) => (s.id === selectedAssignStage.id ? {
+            ...s,
+            interviewer: displayName,
+            interviewerInitials: initials || 'IN',
+            interviewerUserId: Number(assignedInterviewer),
+          } : s))
         );
+        refetchCandidate();
         setSelectedAssignStage(null);
         toast.success('Evaluator Assigned', {
           description: `${displayName} assigned as Technical Evaluator for ${selectedAssignStage.name}.`,
@@ -1320,6 +1369,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               ...s,
               interviewer: displayName || (selectedAssignStage.isDirectorRound ? 'Director' : 'Interviewer'),
               interviewerInitials: initials || 'IN',
+              interviewerUserId: Number(assignedInterviewer),
               mode: assignMode,
               date: assignDate,
               interviewId: result.data?.id || s.interviewId,
@@ -1328,6 +1378,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         )
       );
 
+      refetchCandidate();
       setSelectedAssignStage(null);
       toast.success('Interview Scheduled', { description: `${displayName} assigned for ${assignDate} (${assignMode}) — persisted.` });
     } catch (err) {
@@ -1938,6 +1989,29 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               const isRejected = stage.statusType === 'rejected';
               const isInProgress = stage.status === 'In-Progress';
 
+              const isAssignedToUser = isHrOrDirectorOrAdmin || (() => {
+                if (!isInterviewer) return false;
+                const loggedInId = Number(currentUser?.id || currentUserId);
+                const currentFullName = (currentUser
+                  ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`
+                  : (typeof window !== 'undefined' ? localStorage.getItem('step_user_name') || '' : '')
+                ).trim().toLowerCase();
+
+                // 1. If explicit interviewerUserId is attached to stage, match strictly by ID
+                if (stage.interviewerUserId && Number(stage.interviewerUserId) > 0) {
+                  return Number(stage.interviewerUserId) === loggedInId;
+                }
+
+                // 2. Fall back to name matching
+                const assignedName = (stage.interviewer || '').trim().toLowerCase();
+                if (!assignedName || assignedName === 'unassigned' || assignedName === 'talent acquisition' || assignedName === 'assigned evaluator') {
+                  return false;
+                }
+
+                if (!currentFullName) return false;
+                return assignedName === currentFullName || assignedName.includes(currentFullName) || currentFullName.includes(assignedName);
+              })();
+
               return (
                 <motion.div key={stage.id} variants={cardVariants} className="relative">
                   {/* Vertical Track Line connecting to the next milestone */}
@@ -2152,6 +2226,34 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                       </button>
                                     </>
                                   )}
+                                  
+                                  {(isInterviewer || isHrOrDirectorOrAdmin) && (
+                                    <button
+                                      type="button"
+                                      disabled={!isAssignedToUser}
+                                      onClick={() => {
+                                        if (!isAssignedToUser) return;
+                                        setSelectedFeedbackStage(stage);
+                                        setFeedbackText('');
+                                        setScorecardTechnical(3);
+                                        setScorecardCommunication(3);
+                                        setScorecardProblemSolving(3);
+                                        setScorecardCulturalFit(3);
+                                        setScorecardStrengths('');
+                                        setScorecardWeaknesses('');
+                                        setScorecardRecommendation('Hire');
+                                      }}
+                                      className={`h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border text-[11.5px] sm:text-xs font-semibold transition-colors shadow-2xs ${
+                                        !isAssignedToUser
+                                          ? 'bg-[var(--surface-3)] border-[var(--border-default)] text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
+                                          : 'border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] hover:bg-[var(--accent-blue)] hover:text-white cursor-pointer'
+                                      }`}
+                                      title={!isAssignedToUser ? `Only the assigned interviewer (${stage.interviewer}) can submit feedback for this round.` : 'Submit feedback scorecard'}
+                                    >
+                                      <Icon name="pencil" size="xs" />
+                                      <span>Submit Feedback</span>
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </>
@@ -2205,7 +2307,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
                               <button
                                 type="button"
+                                disabled={!isAssignedToUser}
                                 onClick={() => {
+                                  if (!isAssignedToUser) return;
                                   setSelectedFeedbackStage(stage);
                                   setFeedbackText('');
                                   setScorecardTechnical(3);
@@ -2216,7 +2320,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                   setScorecardWeaknesses('');
                                   setScorecardRecommendation('Hire');
                                 }}
-                                className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-blue)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                className={`h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border text-[11.5px] sm:text-xs font-semibold transition-colors shadow-2xs ${
+                                  !isAssignedToUser
+                                    ? 'bg-[var(--surface-3)] border-[var(--border-default)] text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
+                                    : 'border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] hover:bg-[var(--accent-blue)] hover:text-white cursor-pointer'
+                                }`}
+                                title={!isAssignedToUser ? `Only the assigned interviewer (${stage.interviewer}) can submit feedback for this round.` : 'Submit feedback scorecard'}
                               >
                                 <Icon name="pencil" size="xs" />
                                 <span>Submit Feedback</span>
@@ -2810,15 +2919,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     </div>
                   )}
                 </>
-              ) : (!selectedFeedbackStage.interviewId && selectedFeedbackStage.roundType === 'Interview') ? (
-                /* No real Interview row exists for this round yet */
-                <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-[var(--status-warning-border)] bg-[var(--status-warning-bg)] text-center">
-                  <Icon name="alert-triangle" size="sm" className="text-[var(--status-warning-text)]" />
-                  <p className="text-xs font-semibold text-[var(--status-warning-text)]">No interview scheduled for this round yet</p>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    Use &ldquo;Schedule &amp; Assign Interviewer&rdquo; to schedule this round before submitting a scorecard — feedback needs a real interview record to attach to.
-                  </p>
-                </div>
               ) : (
                 <>
                   {myExistingScorecard && (

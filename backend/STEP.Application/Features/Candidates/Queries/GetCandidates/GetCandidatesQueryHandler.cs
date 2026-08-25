@@ -21,7 +21,10 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
 
             if (currentUser.Role == "Interviewer" && currentUser.UserId is int interviewerId)
             {
-                query = query.Where(c => db.Interviews.Any(i => i.CandidateId == c.Id && i.InterviewerUserId == interviewerId));
+                query = query.Where(c =>
+                    db.Interviews.Any(i => i.CandidateId == c.Id && i.InterviewerUserId == interviewerId && !i.IsDeleted) ||
+                    c.PipelineProgressHistory.Any(p => p.EvaluatorId == interviewerId && !p.IsDeleted)
+                );
             }
 
             if (!string.IsNullOrWhiteSpace(request.Search))
