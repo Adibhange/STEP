@@ -240,6 +240,9 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
 			case "driveType": {
 				const isDirect =
 					candidate.registrationChannel === "Direct" ||
+					candidate.registrationChannel === "Direct Sourced" ||
+					candidate.registrationChannel?.toLowerCase().includes("direct") ||
+					candidate.registrationChannel?.toLowerCase().includes("sourced") ||
 					candidate.source === "HomeTest";
 				return (
 					<td
@@ -247,7 +250,7 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
 						className={cellPadding}>
 						{isDirect ?
 							<span className='inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/25 whitespace-nowrap shadow-xs'>
-								Direct
+								Direct Sourced
 							</span>
 						:	<span className='inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 whitespace-nowrap shadow-xs'>
 								Walk-in

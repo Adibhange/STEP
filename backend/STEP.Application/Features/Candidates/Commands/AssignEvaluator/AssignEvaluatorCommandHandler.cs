@@ -25,7 +25,9 @@ namespace STEP.Application.Features.Candidates.Commands.AssignEvaluator
             if (progress == null)
             {
                 var flowRound = await db.VacancyPipelineFlowRounds
-                    .FirstOrDefaultAsync(r => r.VacancyPipelineFlow.VacancyId == candidate.VacancyId && r.RoundOrder == request.RoundNumber, cancellationToken);
+                    .FirstOrDefaultAsync(r => r.VacancyPipelineFlow.VacancyId == candidate.VacancyId && r.RoundOrder == request.RoundNumber && !r.IsDeleted, cancellationToken)
+                    ?? await db.VacancyPipelineFlowRounds
+                    .FirstOrDefaultAsync(r => r.RoundOrder == request.RoundNumber && !r.IsDeleted, cancellationToken);
 
                 var roundId = flowRound?.Id ?? await db.VacancyPipelineFlowRounds.Select(r => r.Id).FirstOrDefaultAsync(cancellationToken);
 
@@ -34,8 +36,8 @@ namespace STEP.Application.Features.Candidates.Commands.AssignEvaluator
                     CandidateId = candidate.Id,
                     VacancyPipelineFlowRoundId = roundId,
                     RoundNumber = request.RoundNumber,
-                    RoundTitle = request.RoundNumber == 2 ? "Coding & Algorithm Challenge" : $"Round {request.RoundNumber}",
-                    RoundType = request.RoundNumber == 2 ? "Assessment" : "Interview",
+                    RoundTitle = flowRound?.Name ?? $"Round {request.RoundNumber}",
+                    RoundType = flowRound?.RoundType ?? "Assessment",
                     Status = "Assigned",
                 };
                 candidate.PipelineProgressHistory.Add(progress);

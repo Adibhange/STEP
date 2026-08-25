@@ -10,5 +10,6 @@ namespace STEP.Application.Features.Interviews.Commands.ScheduleInterview
         DateTime ScheduledAt,
         int DurationMinutes,
         string Mode,
-        string? MeetingLinkOrLocation) : IRequest<InterviewDto>;
+        string? MeetingLinkOrLocation = null,
+        int? RoundNumber = null) : IRequest<InterviewDto>;
 }

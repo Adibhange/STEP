@@ -93,6 +93,11 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
             var isDirectHiring = qrCode.Vacancy?.DriveType == "Direct" || qrCode.Vacancy?.DriveType == "Direct / Sourced Hiring" || qrCode.Vacancy?.DriveType == "Direct Hiring";
             var channel = isDirectHiring ? "Direct Sourced" : "Walk-in";
 
+            var defaultFlow = qrCode.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
+                ?? qrCode.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
+
+            var round1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
+
             var candidate = new CandidateEntity
             {
                 CandidateCode = candidateCode,
@@ -101,7 +106,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 Email = request.Email.Trim(),
                 Phone = request.Phone.Trim(),
                 VacancyId = qrCode.VacancyId,
-                CurrentStage = isDirectHiring ? "HR Sourced & Auto-Passed" : "Registered",
+                CurrentStage = round1 != null ? round1.Name : (isDirectHiring ? "Round 1: HR Sourcing & Screening (Auto-Passed)" : "Registered"),
                 Status = "Applied",
                 RegistrationChannel = channel,
                 QRCodeId = qrCode.Id,
@@ -118,10 +123,6 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
             await db.SaveChangesAsync(cancellationToken);
 
             // Initialize Direct Hiring Round 1 if it is Auto-Passed
-            var defaultFlow = qrCode.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
-                ?? qrCode.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
-
-            var round1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
             if (round1 != null && (round1.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) || isDirectHiring))
             {
                 var hrId = qrCode.Vacancy?.CreatedBy;
@@ -147,7 +148,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 };
                 db.CandidatePipelineProgresses.Add(r1Progress);
                 candidate.CurrentPipelineProgress = r1Progress;
-                candidate.CurrentStage = "HR Sourced & Auto-Passed";
+                candidate.CurrentStage = round1.Name;
                 await db.SaveChangesAsync(cancellationToken);
             }
 

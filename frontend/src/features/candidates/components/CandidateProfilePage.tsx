@@ -36,6 +36,7 @@ import {
   useUpdateCandidateMutation,
   useDeleteCandidateDocumentMutation,
 } from '@/store/services/api';
+import { useAppSelector, selectCurrentUser } from '@/store';
 
 export interface StageAttempt {
   attempt: number;
@@ -305,6 +306,15 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [evaluateStage] = useEvaluateCandidateStageMutation();
   const [assignEvaluator] = useAssignEvaluatorMutation();
   const [uploadCandidateDocument] = useUploadCandidateDocumentMutation();
+
+  // Current logged in user & role-based permissions
+  const currentUser = useAppSelector(selectCurrentUser);
+  const userRole = (currentUser?.role || '').toLowerCase();
+  const isDirector = userRole === 'director';
+  const isHr = userRole === 'hr';
+  const isAdmin = userRole === 'administrator' || userRole === 'admin';
+  const isHrOrDirectorOrAdmin = isHr || isDirector || isAdmin;
+  const isInterviewer = userRole === 'interviewer';
 
   // Dialog & Toast States
   const [showImageModal, setShowImageModal] = useState(false);
@@ -691,9 +701,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         }));
         setDocumentsData(liveDocs);
       } else {
-        setDocumentsData([
-          { id: 1, name: `Registration_Data_${apiData.lastName || 'Candidate'}.pdf`, date: candDate, size: '120 KB', type: 'Application Form' },
-        ]);
+        setDocumentsData([]);
       }
 
       // Sync the real OfferLetterId once one exists, so the Offer modal knows to fetch/display it
@@ -710,12 +718,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [profileSaveSuccessToast, setProfileSaveSuccessToast] = useState(false);
   const [profileValidationToast, setProfileValidationToast] = useState<string | null>(null);
 
-  // Documents State: ONLY 3 items — Resume, Application Form, Profile Photo
-  const [documentsData, setDocumentsData] = useState<CandidateDocument[]>([
-    { id: 1, name: 'Resume_Anjali_Sharma.pdf', date: '12 May 2025', size: '245 KB', type: 'Resume' },
-    { id: 2, name: 'Application_Form_Anjali_Sharma.pdf', date: '12 May 2025', size: '180 KB', type: 'Application Form' },
-    { id: 3, name: 'Candidate_Profile_Photo.jpg', date: '12 May 2025', size: '95 KB', type: 'Profile Photo' },
-  ]);
+  // Documents State: only real backend-persisted documents
+  const [documentsData, setDocumentsData] = useState<CandidateDocument[]>([]);
 
   // Document Preview Modal State
   const [docDeletedToast, setDocDeletedToast] = useState<string | null>(null);
@@ -1250,7 +1254,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     const initials = displayName.split(' ').map((n) => n[0]).join('');
 
     // Assessment-classified rounds (evaluator assignment) persist EvaluatorUserId to DB
-    if (selectedAssignStage.roundType !== 'Interview') {
+    const isAssessment = selectedAssignStage.roundType === 'Assessment';
+
+    if (isAssessment && !selectedAssignStage.isDirectorRound) {
       try {
         await assignEvaluator({
           candidateId: numericId,
@@ -1304,6 +1310,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         scheduledAt: isoScheduledAt,
         durationMinutes: 60,
         mode: MEETING_MODE_TO_BACKEND[assignMode] || 'Onsite',
+        roundNumber: selectedAssignStage.id,
       }).unwrap();
 
       setStagesData((prev) =>
@@ -1579,14 +1586,16 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleOpenEditProfile}
-                  className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
-                  title="Edit Profile Details"
-                >
-                  <Icon name="pencil" size="xs" />
-                </button>
+                {isHrOrDirectorOrAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleOpenEditProfile}
+                    className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+                    title="Edit Profile Details"
+                  >
+                    <Icon name="pencil" size="xs" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleShare}
@@ -1753,38 +1762,40 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 <span>Documents ({documentsData.length})</span>
               </h2>
 
-              <div className="flex items-center gap-1.5">
-                <motion.label
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 text-[10.5px] font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                  title="Upload Candidate Resume"
-                >
-                  <Icon name="file-text" size="xs" />
-                  <span>+ Resume</span>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    className="hidden"
-                    onChange={(e) => handleUploadDocumentFile(e, 'Resume')}
-                  />
-                </motion.label>
-                <motion.label
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border border-[var(--accent-violet)]/30 text-[10.5px] font-bold hover:bg-[var(--accent-violet)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                  title="Upload Application Form"
-                >
-                  <Icon name="plus" size="xs" />
-                  <span>+ Form</span>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    className="hidden"
-                    onChange={(e) => handleUploadDocumentFile(e, 'Application Form')}
-                  />
-                </motion.label>
-              </div>
+              {isHrOrDirectorOrAdmin && (
+                <div className="flex items-center gap-1.5">
+                  <motion.label
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 text-[10.5px] font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                    title="Upload Candidate Resume"
+                  >
+                    <Icon name="file-text" size="xs" />
+                    <span>+ Resume</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={(e) => handleUploadDocumentFile(e, 'Resume')}
+                    />
+                  </motion.label>
+                  <motion.label
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="h-6 px-2 inline-flex items-center gap-1 rounded-md bg-[var(--accent-violet-dim)] text-[var(--accent-violet)] border border-[var(--accent-violet)]/30 text-[10.5px] font-bold hover:bg-[var(--accent-violet)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                    title="Upload Application Form"
+                  >
+                    <Icon name="plus" size="xs" />
+                    <span>+ Form</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={(e) => handleUploadDocumentFile(e, 'Application Form')}
+                    />
+                  </motion.label>
+                </div>
+              )}
             </div>
 
             <motion.div variants={staggerFastContainer} className="flex flex-col gap-2">
@@ -2043,7 +2054,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                     <span>{stage.id === 1 ? 'Passed Aptitude (≥ 70%)' : 'Passed Technical Assessment (≥ 70%)'}</span>
                                   </span>
 
-                                  {stage.id === 1 && !isTechAuthorized && (
+                                  {isHrOrDirectorOrAdmin && stage.id === 1 && !isTechAuthorized && (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -2077,7 +2088,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                     <Icon name="x" size="xs" />
                                     <span>{stage.id === 1 ? 'Failed Aptitude (< 70%)' : 'Failed Technical Assessment (< 70%)'}</span>
                                   </span>
-                                  {stage.id === 1 && (
+                                  {isHrOrDirectorOrAdmin && stage.id === 1 && (
                                     <button
                                       type="button"
                                       onClick={() => handleRetakeAptitude(stage.id)}
@@ -2096,45 +2107,51 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                     <span className="w-2 h-2 rounded-full bg-[var(--status-warning)] animate-ping" />
                                     <span>Aptitude In-Progress (Live)</span>
                                   </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedScheduleStage(stage);
-                                      setShowScheduleTestModal(true);
-                                    }}
-                                    className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-black cursor-pointer shadow-2xs"
-                                    title="Generate or send online Aptitude Test link to candidate"
-                                  >
-                                    <Icon name="external-link" size="xs" />
-                                    <span>Generate Test Link</span>
-                                  </button>
+                                  {isHrOrDirectorOrAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedScheduleStage(stage);
+                                        setShowScheduleTestModal(true);
+                                      }}
+                                      className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-black cursor-pointer shadow-2xs"
+                                      title="Generate or send online Aptitude Test link to candidate"
+                                    >
+                                      <Icon name="external-link" size="xs" />
+                                      <span>Generate Test Link</span>
+                                    </button>
+                                  )}
                                 </div>
                               ) : (
                                 /* Round 2 Technical Assessment (Coding & SQL) */
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedAssignStage(stage);
-                                      setAssignedInterviewer(interviewerOptions[0]?.value || '');
-                                    }}
-                                    className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                                  >
-                                    <Icon name="user" size="xs" />
-                                    <span>Assign Evaluator</span>
-                                  </button>
+                                  {isHrOrDirectorOrAdmin && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedAssignStage(stage);
+                                          setAssignedInterviewer(interviewerOptions[0]?.value || '');
+                                        }}
+                                        className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                      >
+                                        <Icon name="user" size="xs" />
+                                        <span>Assign Evaluator</span>
+                                      </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedScheduleStage(stage);
-                                      setShowScheduleTestModal(true);
-                                    }}
-                                    className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] hover:bg-[var(--accent-green)] hover:text-white cursor-pointer shadow-2xs"
-                                  >
-                                    <Icon name="calendar" size="xs" />
-                                    <span>Schedule &amp; Send Test</span>
-                                  </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedScheduleStage(stage);
+                                          setShowScheduleTestModal(true);
+                                        }}
+                                        className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] hover:bg-[var(--accent-green)] hover:text-white cursor-pointer shadow-2xs"
+                                      >
+                                        <Icon name="calendar" size="xs" />
+                                        <span>Schedule &amp; Send Test</span>
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               )}
                             </>
@@ -2153,34 +2170,38 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                 </span>
                               ) : null}
 
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedFeedbackStage(stage);
-                                  setFeedbackText(stage.feedback || '');
-                                  setDirectorDecision('offer');
-                                  setDirectorPin('');
-                                }}
-                                className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                              >
-                                <Icon name="shield-check" size="xs" />
-                                <span>Director Decision (PIN)</span>
-                              </button>
+                              {(isDirector || isAdmin) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedFeedbackStage(stage);
+                                    setFeedbackText(stage.feedback || '');
+                                    setDirectorDecision('offer');
+                                    setDirectorPin('');
+                                  }}
+                                  className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                >
+                                  <Icon name="shield-check" size="xs" />
+                                  <span>Director Decision (PIN)</span>
+                                </button>
+                              )}
                             </div>
                           ) : stage.roundType === 'Interview' ? (
                             /* Technical Interview Rounds */
                             <div className="flex items-center gap-2 flex-wrap">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedAssignStage(stage);
-                                  setAssignedInterviewer(interviewerOptions[0]?.value || '');
-                                }}
-                                className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                              >
-                                <Icon name="user" size="xs" />
-                                <span>Schedule &amp; Assign Interviewer</span>
-                              </button>
+                              {isHrOrDirectorOrAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedAssignStage(stage);
+                                    setAssignedInterviewer(interviewerOptions[0]?.value || '');
+                                  }}
+                                  className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                >
+                                  <Icon name="user" size="xs" />
+                                  <span>Schedule &amp; Assign Interviewer</span>
+                                </button>
+                              )}
 
                               <button
                                 type="button"

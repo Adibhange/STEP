@@ -110,10 +110,6 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
                     ? c.Status
                     : (hasAnyFailedRound ? "Rejected" : "In-Progress");
 
-                string effectiveStage = hasAnyFailedRound || effectiveStatus == "Rejected"
-                    ? (c.CurrentStage?.Contains("Failed", StringComparison.OrdinalIgnoreCase) == true ? c.CurrentStage : $"{c.CurrentStage ?? "Assessment"} (Failed)")
-                    : (c.CurrentStage ?? "Screening");
-
                 var defaultFlow = c.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
                     ?? c.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
                 var flowRound1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
@@ -122,21 +118,36 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
                 var r1 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
                 var isR1AutoPassed = isDirectFlow || (r1 != null && (r1.RoundTitle ?? "").Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase));
 
-                if ((effectiveStage == "Registered" || string.IsNullOrWhiteSpace(effectiveStage)) && !hasAnyFailedRound)
+                var failedRound = c.PipelineProgressHistory.FirstOrDefault(p => p.Status == "Failed" || p.Status == "Rejected" || p.Status == "Fail");
+                var inProgressRound = c.PipelineProgressHistory.FirstOrDefault(p => p.Status == "InProgress");
+
+                string effectiveStage;
+                if (hasAnyFailedRound && failedRound != null)
                 {
-                    if (isR1AutoPassed)
-                    {
-                        var flowRound2 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 2 && !r.IsDeleted);
-                        effectiveStage = flowRound2 != null ? flowRound2.Name : "HR Sourced & Auto-Passed";
-                    }
+                    effectiveStage = $"{failedRound.RoundTitle} (Failed)";
+                }
+                else if (inProgressRound != null && !string.IsNullOrWhiteSpace(inProgressRound.RoundTitle))
+                {
+                    effectiveStage = inProgressRound.RoundTitle;
+                }
+                else if (!string.IsNullOrWhiteSpace(c.CurrentStage) && c.CurrentStage != "Registered" && c.CurrentStage != "HR Sourced & Auto-Passed")
+                {
+                    effectiveStage = c.CurrentStage;
+                }
+                else if (isR1AutoPassed)
+                {
+                    effectiveStage = r1?.RoundTitle ?? flowRound1?.Name ?? "Round 1: HR Sourcing & Screening (Auto-Passed)";
+                }
+                else
+                {
+                    effectiveStage = c.CurrentStage ?? flowRound1?.Name ?? "Screening";
                 }
 
                 string hiringLocation = c.Vacancy?.HiringLocation?.Name ?? c.CurrentLocation ?? "Primary Center";
                 string testLocation = hiringLocation;
 
-                var effectiveChannel = !string.IsNullOrWhiteSpace(c.RegistrationChannel)
-                    ? c.RegistrationChannel
-                    : (c.QRCodeId.HasValue || c.PipelineProgressHistory.Any(p => p.RoundNumber == 1 && p.RoundType == "Assessment" && !(p.RoundTitle ?? "").Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase)) ? "Walk-in" : "Direct");
+                var isDirectCandidate = isR1AutoPassed || (c.Vacancy != null && c.Vacancy.DriveType == "Direct") || (!string.IsNullOrWhiteSpace(c.RegistrationChannel) && c.RegistrationChannel.Contains("Direct", StringComparison.OrdinalIgnoreCase));
+                var effectiveChannel = isDirectCandidate ? "Direct Sourced" : (!string.IsNullOrWhiteSpace(c.RegistrationChannel) ? c.RegistrationChannel : "Walk-in");
 
                 items.Add(new CandidateSummaryDto(
                     c.Id, c.CandidateCode, c.FirstName, c.LastName, c.Email, c.Phone,

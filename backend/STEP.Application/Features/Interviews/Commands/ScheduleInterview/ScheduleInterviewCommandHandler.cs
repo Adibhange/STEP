@@ -18,15 +18,9 @@ namespace STEP.Application.Features.Interviews.Commands.ScheduleInterview
             var candidate = await db.Candidates
                 .Include(c => c.Vacancy)
                 .Include(c => c.CurrentPipelineProgress)
+                .Include(c => c.PipelineProgressHistory)
                 .FirstOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
                 ?? throw new NotFoundException(nameof(CandidateEntity), request.CandidateId);
-
-            var progress = candidate.CurrentPipelineProgress;
-            if (progress == null || progress.RoundType != "Interview" || progress.Status is not ("Assigned" or "InProgress"))
-            {
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CurrentPipelineProgress",
-                    "There is no active interview round for this candidate right now.")]);
-            }
 
             var interviewerExists = await db.Users.AnyAsync(u => u.Id == request.InterviewerUserId, cancellationToken);
             if (!interviewerExists)
@@ -34,9 +28,67 @@ namespace STEP.Application.Features.Interviews.Commands.ScheduleInterview
                 throw new NotFoundException(nameof(STEP.Domain.Entities.Identity.User), request.InterviewerUserId);
             }
 
+            // Find target pipeline progress round
+            STEP.Domain.Entities.Candidate.CandidatePipelineProgress? progress = null;
+
+            if (request.RoundNumber.HasValue)
+            {
+                progress = candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == request.RoundNumber.Value);
+            }
+
+            if (progress == null)
+            {
+                progress = candidate.PipelineProgressHistory
+                    .Where(p => (p.RoundType == "Interview" || p.RoundType == "Director" || (p.RoundTitle ?? "").Contains("Interview", StringComparison.OrdinalIgnoreCase)) && p.Status != "Passed")
+                    .OrderBy(p => p.RoundNumber)
+                    .FirstOrDefault()
+                    ?? candidate.CurrentPipelineProgress;
+            }
+
+            if (progress == null)
+            {
+                var defaultFlow = await db.VacancyPipelineFlows
+                    .Include(f => f.Rounds)
+                    .FirstOrDefaultAsync(f => f.VacancyId == candidate.VacancyId && f.IsDefault && !f.IsDeleted, cancellationToken)
+                    ?? await db.VacancyPipelineFlows
+                    .Include(f => f.Rounds)
+                    .FirstOrDefaultAsync(f => f.VacancyId == candidate.VacancyId && !f.IsDeleted, cancellationToken);
+
+                var targetRound = defaultFlow?.Rounds?.FirstOrDefault(r => request.RoundNumber.HasValue ? r.RoundOrder == request.RoundNumber.Value : (r.RoundType == "Interview" || r.RoundType == "Director"))
+                    ?? defaultFlow?.Rounds?.OrderByDescending(r => r.RoundOrder).FirstOrDefault();
+
+                if (targetRound != null)
+                {
+                    progress = new STEP.Domain.Entities.Candidate.CandidatePipelineProgress
+                    {
+                        CandidateId = candidate.Id,
+                        VacancyPipelineFlowRoundId = targetRound.Id,
+                        RoundNumber = targetRound.RoundOrder,
+                        RoundTitle = targetRound.Name,
+                        RoundType = targetRound.RoundType,
+                        Status = "InProgress",
+                        StartedAt = DateTime.UtcNow,
+                    };
+                    db.CandidatePipelineProgresses.Add(progress);
+                    candidate.PipelineProgressHistory.Add(progress);
+                }
+            }
+
+            if (progress == null)
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CurrentPipelineProgress",
+                    "Unable to find or initialize an interview round for this candidate.")]);
+            }
+
+            progress.EvaluatorId = request.InterviewerUserId;
+            if (progress.Status == "Pending" || string.IsNullOrWhiteSpace(progress.Status))
+            {
+                progress.Status = "InProgress";
+            }
+            progress.StartedAt ??= DateTime.UtcNow;
+            candidate.CurrentPipelineProgress = progress;
+
             // Reassigning/rescheduling an already-scheduled round updates that same Interview row
-            // rather than creating a second one — the "Assign Interviewer" modal re-opening on a
-            // round that already has an interview is an edit, not a new booking.
             var interview = await db.Interviews
                 .Where(i => i.CandidatePipelineProgressId == progress.Id && i.Status != "Cancelled")
                 .OrderByDescending(i => i.Id)
@@ -59,15 +111,12 @@ namespace STEP.Application.Features.Interviews.Commands.ScheduleInterview
             interview.MeetingLinkOrLocation = request.MeetingLinkOrLocation;
             interview.Status = "Scheduled";
 
-            progress.Status = "InProgress";
-            progress.StartedAt ??= DateTime.UtcNow;
-
             await db.SaveChangesAsync(cancellationToken);
 
             var interviewer = await db.Users.FirstAsync(u => u.Id == request.InterviewerUserId, cancellationToken);
 
             return new InterviewDto(
-                interview.Id, candidate.Id, $"{candidate.FirstName} {candidate.LastName}", candidate.Vacancy.Title,
+                interview.Id, candidate.Id, $"{candidate.FirstName} {candidate.LastName}", candidate.Vacancy?.Title ?? "Position",
                 interview.InterviewerUserId, $"{interviewer.FirstName} {interviewer.LastName}",
                 interview.ScheduledAt, interview.DurationMinutes, interview.Mode, interview.MeetingLinkOrLocation,
                 interview.Status, []);

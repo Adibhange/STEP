@@ -215,6 +215,7 @@ export interface ScheduleInterviewRequest {
   durationMinutes: number;
   mode: 'Online' | 'Onsite' | 'Phone';
   meetingLinkOrLocation?: string;
+  roundNumber?: number;
 }
 
 export interface SubmitInterviewFeedbackRequest {

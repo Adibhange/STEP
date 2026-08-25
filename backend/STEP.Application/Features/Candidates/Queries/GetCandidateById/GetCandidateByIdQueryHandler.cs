@@ -193,9 +193,14 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                     .ToList();
             }
 
+            var isDirectCandidate = (candidate.Vacancy != null && candidate.Vacancy.DriveType == "Direct")
+                || candidate.PipelineProgressHistory.Any(p => (p.RoundTitle ?? "").Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(candidate.RegistrationChannel) && candidate.RegistrationChannel.Contains("Direct", StringComparison.OrdinalIgnoreCase));
+            var effectiveChannel = isDirectCandidate ? "Direct Sourced" : (!string.IsNullOrWhiteSpace(candidate.RegistrationChannel) ? candidate.RegistrationChannel : "Walk-in");
+
             return new CandidateDto(
                 candidate.Id, candidate.CandidateCode, candidate.FirstName, candidate.LastName, candidate.Email, candidate.Phone,
-                candidate.VacancyId, candidate.Vacancy?.Title ?? "Position", candidate.CurrentStage, candidate.Status, candidate.RegistrationChannel,
+                candidate.VacancyId, candidate.Vacancy?.Title ?? "Position", candidate.CurrentStage, candidate.Status, effectiveChannel,
                 candidate.ReferralEmployeeName, candidate.TotalExperienceYears, candidate.CurrentCTC, candidate.ExpectedCTC,
                 candidate.NoticePeriodDays, candidate.CurrentLocation, candidate.HighestQualification, candidate.CreatedAt,
                 combinedProgressDtos,

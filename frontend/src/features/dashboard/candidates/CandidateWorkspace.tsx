@@ -44,11 +44,13 @@ export const CandidateWorkspace: React.FC = () => {
 			: (apiCandidatesResponse?.data as any)?.items || [];
 
 		return list.map((c: any, index: number) => {
-			const channel = (c.registrationChannel || "").trim();
+			const channel = (c.registrationChannel || "").trim().toLowerCase();
+			const stageStr = (c.currentStage || "").toLowerCase();
 			const isDirect =
-				channel.toLowerCase() === "direct" ||
-				channel.toLowerCase() === "direct sourced" ||
-				channel.toLowerCase().includes("sourced");
+				channel.includes("direct") ||
+				channel.includes("sourced") ||
+				stageStr.includes("auto-passed") ||
+				stageStr.includes("sourcing");
 			const isWalkIn = !isDirect;
 			const expVal = c.totalExperienceYears ?? c.experienceYears ?? 0;
 			const expStr = expVal ? `${expVal} Years` : "0 Years";
@@ -63,7 +65,7 @@ export const CandidateWorkspace: React.FC = () => {
 				role: c.vacancyTitle || c.role || "Applicant",
 				experience: expStr,
 				experienceYears: expVal,
-				registrationChannel: isWalkIn ? "Walk-in" : "Direct",
+				registrationChannel: isDirect ? "Direct Sourced" : "Walk-in",
 				source: (isWalkIn ? "WalkIn" : "HomeTest") as any,
 				stage: (c.currentStage || "Screening") as any,
 				currentRound: (c.currentStage || "Screening") as any,
