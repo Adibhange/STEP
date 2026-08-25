@@ -39,14 +39,17 @@ export const CandidateWorkspace: React.FC = () => {
 	const { data: apiCandidatesResponse, isLoading } = useGetCandidatesQuery();
 
 	const apiCandidates: DashboardCandidate[] = useMemo(() => {
-		return (apiCandidatesResponse?.data || []).map((c: any, index: number) => {
-			const channel =
-				c.registrationChannel ||
-				(c.source === "WalkIn" || c.qrCodeId ? "Walk-in" : "Direct");
-			const isWalkIn =
-				channel.toLowerCase().includes("walk") ||
-				c.source === "WalkIn" ||
-				Boolean(c.qrCodeId);
+		const list = Array.isArray(apiCandidatesResponse?.data)
+			? apiCandidatesResponse.data
+			: (apiCandidatesResponse?.data as any)?.items || [];
+
+		return list.map((c: any, index: number) => {
+			const channel = (c.registrationChannel || "").trim();
+			const isDirect =
+				channel.toLowerCase() === "direct" ||
+				channel.toLowerCase() === "direct sourced" ||
+				channel.toLowerCase().includes("sourced");
+			const isWalkIn = !isDirect;
 			const expVal = c.totalExperienceYears ?? c.experienceYears ?? 0;
 			const expStr = expVal ? `${expVal} Years` : "0 Years";
 

@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Icon, EnterpriseModal } from '@/design-system';
 import type { DashboardCandidate } from '../types/dashboard.types';
-import { getCandidateFlowStages } from './candidateFlowData';
+import { type HiringStageProgress } from './candidateFlowData';
+import { useGetCandidateByIdQuery } from '@/store/services/api';
 
 interface CandidateProgressModalProps {
   candidate: DashboardCandidate | null;
@@ -24,8 +25,63 @@ export const CandidateProgressModal: React.FC<CandidateProgressModalProps> = ({
     lastCandidateRef.current = candidate;
   }
   const activeCandidate = candidate || lastCandidateRef.current;
+  const candidateIdNum = Number(activeCandidate?.id);
 
-  const stages = activeCandidate ? getCandidateFlowStages(activeCandidate) : [];
+  const { data: candidateDetailRes, isLoading } = useGetCandidateByIdQuery(candidateIdNum, {
+    skip: !isOpen || !candidateIdNum,
+  });
+
+  const stages: HiringStageProgress[] = useMemo(() => {
+    const rawHistory = candidateDetailRes?.data?.pipelineProgress || (candidateDetailRes?.data as any)?.pipelineProgressHistory;
+    if (rawHistory && Array.isArray(rawHistory) && rawHistory.length > 0) {
+      return rawHistory.map((p: any) => {
+        const isAutoPassed = (p.roundTitle || '').toLowerCase().includes('auto-passed');
+        const isPassed = p.status?.toLowerCase() === 'passed' || p.status?.toLowerCase() === 'cleared' || p.resultStatus?.toLowerCase() === 'pass' || isAutoPassed;
+        const isFailed = p.status?.toLowerCase() === 'failed' || p.status?.toLowerCase() === 'rejected' || p.resultStatus?.toLowerCase() === 'fail';
+        const isInProgress = p.status?.toLowerCase() === 'inprogress' || p.status?.toLowerCase() === 'in-progress';
+
+        const statusStr: 'Passed' | 'In-Progress' | 'Pending' | 'Failed' = isPassed ? 'Passed' : isFailed ? 'Failed' : isInProgress ? 'In-Progress' : 'Pending';
+        const statusType = isPassed ? 'passed' : isFailed ? 'rejected' : isInProgress ? 'warning' : 'pending';
+
+        const dateStr = p.completedAt
+          ? new Date(p.completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+          : p.startedAt
+            ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : p.roundNumber === 1
+              ? (activeCandidate?.appliedDate || '—')
+              : '—';
+
+        const scoreStr = p.scoreObtained !== null && p.scoreObtained !== undefined ? `${p.scoreObtained}%` : undefined;
+
+        let feedbackText = 'Round pending.';
+        if (isFailed) {
+          feedbackText = p.remarks || (scoreStr ? `Assessment Score: ${scoreStr} (Failed)` : 'Candidate failed evaluation for this round.');
+        } else if (isPassed) {
+          feedbackText = p.remarks || (scoreStr ? `Assessment Score: ${scoreStr} (Passed)` : 'Round cleared successfully.');
+        } else if (isInProgress) {
+          feedbackText = 'Evaluation in progress.';
+        }
+
+        return {
+          id: p.roundNumber,
+          name: p.roundTitle || `Round ${p.roundNumber}`,
+          roundType: p.roundType || 'Assessment',
+          status: statusStr,
+          statusType: statusType,
+          date: dateStr,
+          interviewer: p.interviewerName || (p.roundNumber === 1 ? 'HR Talent Acquisition' : p.roundType === 'Director' ? 'Director of Engineering' : 'Unassigned'),
+          interviewerRole: p.roundNumber === 1 ? 'HR Talent Acquisition' : (p.roundType || 'Evaluator'),
+          interviewerInitials: p.interviewerName
+            ? p.interviewerName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
+            : (p.roundNumber === 1 ? 'HR' : 'UA'),
+          feedback: feedbackText,
+          score: scoreStr,
+        };
+      });
+    }
+
+    return [];
+  }, [candidateDetailRes, activeCandidate]);
 
   return (
     <EnterpriseModal

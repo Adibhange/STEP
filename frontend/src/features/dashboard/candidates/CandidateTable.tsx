@@ -297,11 +297,13 @@ export const CandidateTable: React.FC<CandidateTableProps> = ({
 				);
 
 			case "currentRound": {
-				const badgeStyle = getStageBadgeStyle(candidate.currentRound);
-				const isLiveActive =
-					!candidate.currentRound?.toLowerCase().includes("reject") &&
-					!candidate.currentRound?.toLowerCase().includes("hired");
+				const isRejected = candidate.status === "Rejected" || candidate.currentRound?.toLowerCase().includes("reject") || candidate.currentRound?.toLowerCase().includes("fail");
+				const badgeStyle = isRejected
+					? { bg: "var(--status-danger-bg)", color: "var(--status-danger-text)", border: "var(--status-danger-border)", icon: "x-circle" }
+					: getStageBadgeStyle(candidate.currentRound);
+				const isLiveActive = !isRejected && !candidate.currentRound?.toLowerCase().includes("hired");
 				const formatStageName = (name: string) => {
+					if (isRejected) return "Rejected";
 					if (!name) return "Registered";
 					return name
 						.replace(/\s*\(Elimination\)/gi, "")

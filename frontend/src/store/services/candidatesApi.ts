@@ -99,11 +99,11 @@ export const candidatesApi = stepApi.injectEndpoints({
       }),
       invalidatesTags: ['Candidates'],
     }),
-    evaluateCandidateStage: builder.mutation<ApiEnvelope<any>, { candidateId: number; roundNumber: number; passed: boolean; remarks?: string }>({
-      query: ({ candidateId, roundNumber, passed, remarks }) => ({
+    evaluateCandidateStage: builder.mutation<ApiEnvelope<any>, { candidateId: number; roundNumber: number; passed: boolean; remarks?: string; directorPin?: string }>({
+      query: ({ candidateId, roundNumber, passed, remarks, directorPin }) => ({
         url: `/candidates/${candidateId}/evaluate-stage`,
         method: 'POST',
-        body: { roundNumber, passed, remarks },
+        body: { roundNumber, passed, remarks, directorPin },
       }),
       invalidatesTags: ['Candidates', 'Interviews'],
     }),

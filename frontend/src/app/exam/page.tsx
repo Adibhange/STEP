@@ -8,8 +8,9 @@ function ExamContent() {
   const searchParams = useSearchParams();
   const candidateCode = searchParams?.get('code') || searchParams?.get('id') || '';
   const passcode = searchParams?.get('pass') || searchParams?.get('token') || '';
+  const round = searchParams?.get('round') ? Number(searchParams?.get('round')) : undefined;
 
-  return <CandidateExamPortalV2 initialCandidateCode={candidateCode} initialPasscode={passcode} />;
+  return <CandidateExamPortalV2 initialCandidateCode={candidateCode} initialPasscode={passcode} initialRoundNumber={round} />;
 }
 
 export default function CandidateExamPage() {

@@ -19,14 +19,28 @@ namespace STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage
         int CandidateId,
         int RoundNumber,
         bool Passed,
-        string? Remarks
+        string? Remarks,
+        string? DirectorPin = null
     ) : IRequest<CandidateDto>;
 
-    public class EvaluateCandidateStageCommandHandler(IApplicationDbContext db, ICandidateAdvancementService advancement)
+    public class EvaluateCandidateStageCommandHandler(IApplicationDbContext db, ICandidateAdvancementService advancement, IPasswordHasher hasher)
         : IRequestHandler<EvaluateCandidateStageCommand, CandidateDto>
     {
         public async Task<CandidateDto> Handle(EvaluateCandidateStageCommand request, CancellationToken cancellationToken)
         {
+            if (!string.IsNullOrWhiteSpace(request.DirectorPin))
+            {
+                var isPinValid = await db.Users
+                    .Include(u => u.Role)
+                    .Where(u => u.Role.Name == "Director" && u.IsActive && u.PinHash != null)
+                    .AnyAsync(u => hasher.Verify(request.DirectorPin, u.PinHash!), cancellationToken);
+
+                if (!isPinValid)
+                {
+                    throw new ValidationException([new FluentValidation.Results.ValidationFailure("DirectorPin", "Invalid 4-digit Director security PIN.")]);
+                }
+            }
+
             var candidate = await db.Candidates
                 .Include(c => c.Vacancy)
                 .Include(c => c.PipelineProgressHistory)

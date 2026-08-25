@@ -20,56 +20,16 @@ namespace STEP.Application.Common.Services
 
             if (!passed)
             {
-                // Round 1 (Paper Aptitude) failure = immediate pipeline rejection
-                if (completedProgress.RoundNumber == 1)
-                {
-                    candidate.Status = "Rejected";
-                    return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
-                }
-
-                // Failing Round 2 (Coding Challenge) allows candidate to proceed to Round 3 (Technical F2F)
-                if (completedProgress.RoundNumber == 2 && nextRound != null)
-                {
-                    candidate.CurrentPipelineProgressId = nextRound.Id;
-                    candidate.CurrentStage = nextRound.RoundTitle;
-                    candidate.Status = "In-Progress";
-                    return Task.FromResult(new CandidateAdvancementResult(true, nextRound.RoundTitle, null, candidate.Status));
-                }
-
-                // For Round 3 or later: check if candidate has passed AT LEAST ONE technical round (Round 2 or 3)
-                var round2 = rounds.FirstOrDefault(r => r.RoundNumber == 2);
-                var round3 = rounds.FirstOrDefault(r => r.RoundNumber == 3);
-
-                bool hasPassedTechnical = (round2 != null && round2.Status == "Passed") || (round3 != null && round3.Status == "Passed");
-
-                if (!hasPassedTechnical)
-                {
-                    candidate.Status = "Rejected";
-                    return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
-                }
-
-                // Has a passed technical round on record, so this failure alone doesn't disqualify
-                // them — but if there's nowhere left to send them (this was the last round), failing
-                // it is a rejection, never an offer. Previously this fell through to the shared
-                // "no next round" logic below, which unconditionally set Status="Offered" — so
-                // failing the final round (e.g. the Director round) could get recorded as an offer.
-                if (nextRound == null)
-                {
-                    candidate.Status = "Rejected";
-                    return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
-                }
-
-                // Otherwise: leniency — advance them to the next round anyway despite this failure.
-                candidate.CurrentPipelineProgressId = nextRound.Id;
-                candidate.CurrentStage = nextRound.RoundTitle;
-                candidate.Status = "In-Progress";
-                return Task.FromResult(new CandidateAdvancementResult(true, nextRound.RoundTitle, null, candidate.Status));
+                // Any stage failure = immediate candidate rejection
+                candidate.Status = "Rejected";
+                candidate.CurrentStage = $"{completedProgress.RoundTitle} (Failed)";
+                return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
             }
 
             // passed == true from here on.
             if (nextRound == null)
             {
-                candidate.Status = "Offered";
+                candidate.Status = "Hired";
                 return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
             }
 

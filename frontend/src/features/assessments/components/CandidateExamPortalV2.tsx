@@ -18,6 +18,7 @@ import {
 export interface CandidateExamPortalV2Props {
   initialCandidateCode?: string;
   initialPasscode?: string;
+  initialRoundNumber?: number;
   testMode?: 'Online' | 'In Office';
 }
 
@@ -44,6 +45,7 @@ const SECTION_TYPE_MAP: Record<string, { title: string; shortTitle: string; icon
 export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
   initialCandidateCode = '',
   initialPasscode = '',
+  initialRoundNumber,
   testMode = 'Online',
 }) => {
   // ── Authentication & Session State ──────────────────────────────────────────
@@ -376,7 +378,25 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
   const handleFinalSubmit = useCallback(async (customReason?: string) => {
     setIsSubmissionModalOpen(false);
     setIsTimerRunning(false);
-    await flushAnswersToServer();
+
+    // Explicitly pack all answers in memory and sync before submitting
+    if (activeSessionToken && Object.keys(answersMap).length > 0) {
+      const answerList = Object.entries(answersMap).map(([qId, val]) => ({
+        candidateExamSessionQuestionId: Number(qId),
+        submittedAnswerText: val.text || null,
+        selectedOptionIds: val.optionIds || [],
+        clientTimestamp: val.updatedAt || new Date().toISOString(),
+      }));
+
+      try {
+        await saveAnswerBatchApi({
+          sessionToken: activeSessionToken,
+          answers: answerList,
+        }).unwrap();
+      } catch (e) {
+        console.warn('Pre-submit answer sync error', e);
+      }
+    }
 
     try {
       const res = await submitExamApi({
@@ -390,7 +410,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
       setExamStep('submitted');
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     }
-  }, [activeSessionToken, flushAnswersToServer, submitExamApi]);
+  }, [activeSessionToken, answersMap, saveAnswerBatchApi, submitExamApi]);
 
   // ── 2. Proctoring & Security ────────────────────────────────────────────────
   const reportViolation = useCallback(
@@ -552,6 +572,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
         candidateCode: candidateCode.trim(),
         passcode: passcode.trim(),
         testSource: testMode,
+        roundNumber: initialRoundNumber,
       }).unwrap();
 
       if (res.success && res.data) {
@@ -593,7 +614,13 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
         setLoginError(res.message || 'Invalid examination credentials or expired test link.');
       }
     } catch (err: any) {
-      setLoginError(err?.data?.message || 'Verification failed. Check your Candidate Code and Passcode.');
+      const errMsg =
+        err?.data?.message ||
+        (Array.isArray(err?.data?.errors) ? err.data.errors[0]?.errorMessage : null) ||
+        (err?.data?.errors && typeof err.data.errors === 'object' ? Object.values(err.data.errors)[0] : null) ||
+        err?.data?.title ||
+        'Verification failed. Check your Candidate Code and Passcode.';
+      setLoginError(typeof errMsg === 'string' ? errMsg : String(errMsg));
     }
   };
 
@@ -611,6 +638,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 
   // ── 6. Answer Selection & Keyboard Shortcuts ────────────────────────────────
   const handleSelectOption = (questionId: number, optionId: number, isMulti: boolean) => {
+    const timeStamp = new Date().toISOString();
     setAnswersMap((prev) => {
       const currentOptIds = prev[questionId]?.optionIds || [];
       let nextOptIds: number[];
@@ -628,13 +656,25 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
         [questionId]: {
           ...prev[questionId],
           optionIds: nextOptIds,
-          updatedAt: new Date().toISOString(),
+          updatedAt: timeStamp,
         },
       };
 
       persistLocally(updated, activeQuestionIndex, totalTimeLeftSeconds);
       return updated;
     });
+
+    // Real-time optimistic backend persistence
+    if (activeSessionToken) {
+      saveAnswerBatchApi({
+        sessionToken: activeSessionToken,
+        answers: [{
+          candidateExamSessionQuestionId: questionId,
+          selectedOptionIds: isMulti ? undefined : [optionId],
+          clientTimestamp: timeStamp,
+        }],
+      }).catch((e) => console.warn('Instant save error', e));
+    }
   };
 
   const handleToggleEliminateOption = (questionId: number, optionId: number, e: React.MouseEvent) => {

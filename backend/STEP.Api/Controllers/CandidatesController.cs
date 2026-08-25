@@ -69,7 +69,7 @@ namespace STEP.Api.Controllers
         public async Task<IActionResult> EvaluateStage(int id, [FromBody] EvaluateStageRequestBody body)
         {
             var candidate = await mediator.Send(new STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage.EvaluateCandidateStageCommand(
-                id, body.RoundNumber, body.Passed, body.Remarks));
+                id, body.RoundNumber, body.Passed, body.Remarks, body.DirectorPin));
             return Ok(ApiResponse<object>.Ok(candidate, "Stage evaluated successfully"));
         }
 
@@ -140,7 +140,7 @@ namespace STEP.Api.Controllers
     }
 
     public record AssignPipelineFlowRequestBody(int VacancyPipelineFlowId);
-    public record EvaluateStageRequestBody(int RoundNumber, bool Passed, string? Remarks);
+    public record EvaluateStageRequestBody(int RoundNumber, bool Passed, string? Remarks, string? DirectorPin = null);
     public record AssignEvaluatorRequestBody(int RoundNumber, int EvaluatorUserId);
     public record ScheduleTestRequestBody(string TestMode, string ScheduledDate, string StartTime, string EndTime, string? Passcode);
     public record GenerateDirectorAccessLinkRequestBody(bool Regenerate);

@@ -16,6 +16,7 @@ import {
 } from '@/design-system/motion';
 import { CandidateAssessmentEvaluationView } from '@/features/assessments/components/CandidateAssessmentEvaluationView';
 import { TempExamLinkModalV2 } from '@/features/assessments/components/TempExamLinkModalV2';
+import { CandidateExamPassModal } from './CandidateExamPassModal';
 import { DirectorAccessShareModal } from './DirectorAccessShareModal';
 import {
   getApiBaseUrl,
@@ -316,6 +317,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
   const [candidate, setCandidate] = useState({
     id: candidateId,
+    code: '',
     name: 'Candidate Profile',
     avatar: '',
     status: 'In Process',
@@ -396,6 +398,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
       setCandidate({
         id: String(apiData.id || candidateId),
+        code: apiData.candidateCode || apiData.code || `CND-2026-${apiData.id || candidateId}`,
         name: `${apiData.firstName || ''} ${apiData.lastName || ''}`.trim() || 'Aditya Bhange',
         avatar: savedAvatar,
         status: candidateStatus,
@@ -443,16 +446,17 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           const isCurrentRoundFailed = p.status?.toLowerCase() === 'failed' || p.status?.toLowerCase() === 'rejected' || p.resultStatus?.toLowerCase() === 'fail';
           const isCurrentRoundPassed = p.status?.toLowerCase() === 'passed' || p.status?.toLowerCase() === 'cleared' || p.status?.toLowerCase() === 'completed' || p.resultStatus?.toLowerCase() === 'pass' || isAutoPassedRound;
 
-          let isLocked = false;
-          if (p.roundNumber === 1) {
-            isLocked = false;
-          } else if (p.roundNumber === 2 || p.roundNumber === 3) {
-            // Technical rounds are only locked if Paper Aptitude (Round 1) failed
-            isLocked = r1Failed;
-          } else if (p.roundNumber >= 4) {
-            // Director & Offer rounds lock only if BOTH Round 2 & 3 failed (or Round 1 failed)
-            isLocked = isDirectorAndOfferLocked;
-          }
+          // Strict stage progression locking:
+          // A stage is locked if ANY previous stage was failed, or if candidate is Rejected
+          const hasPriorFailure = history.some((prev: any) => 
+            prev.roundNumber < p.roundNumber && (
+              prev.status?.toLowerCase() === 'failed' ||
+              prev.status?.toLowerCase() === 'rejected' ||
+              prev.resultStatus?.toLowerCase() === 'fail'
+            )
+          );
+          const isCandidateRejected = (apiData.status || '').toLowerCase() === 'rejected';
+          const isLocked = p.roundNumber > 1 && (hasPriorFailure || isCandidateRejected);
 
           const hasCompletedTest = Boolean(p.completedAt || p.scoreObtained !== null || p.candidateExamSessionId);
           const isDirectorRound = p.roundType === 'Director' || (p.roundTitle || '').toLowerCase().includes('director');
@@ -467,7 +471,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               ? new Date(p.completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
               : p.startedAt
                 ? new Date(p.startedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                : candDate,
+                : p.roundNumber === 1
+                  ? candDate
+                  : '—',
             interviewer: p.interviewerName || (isDirectorRound ? 'Director of Engineering' : p.roundNumber === 1 ? 'Talent Acquisition' : 'Unassigned'),
             interviewerInitials: p.interviewerName
               ? p.interviewerName.split(' ').filter(Boolean).map((n: string) => n[0].toUpperCase()).slice(0, 2).join('')
@@ -479,9 +485,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
             interviewerRole: p.roundNumber === 1 ? 'HR Talent Acquisition' : (p.roundType || (isDirectorRound ? 'Director of Engineering' : 'Evaluator')),
             mode: p.roundNumber === 1 ? 'Offline / Direct Screening' : p.roundType === 'Assessment' ? 'Online Proctored' : 'In Office',
             feedback: isLocked
-              ? r1Failed
-                ? 'Round locked — candidate failed Round 1 (Paper Aptitude).'
-                : 'Round locked — candidate failed prerequisite technical rounds.'
+              ? 'Round locked — candidate failed previous round.'
               : (() => {
                 if (p.roundNumber === 1 && (isAutoPassedRound || p.interviewerName)) {
                   const hrName = p.interviewerName || 'HR Talent Acquisition';
@@ -725,6 +729,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   const [selectedFeedbackStage, setSelectedFeedbackStage] = useState<StageItem | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [directorDecision, setDirectorDecision] = useState<'offer' | 'reject' | 'hold'>('offer');
+  const [directorPin, setDirectorPin] = useState('');
   const [feedbackSuccessToast, setFeedbackSuccessToast] = useState(false);
 
   // Real panelist scorecard fields (SubmitInterviewFeedbackCommand shape) — only used for
@@ -771,6 +776,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
   // Candidate Assessment Evaluation & Schedule Test Modal State
   const [showAssessmentEvaluationModal, setShowAssessmentEvaluationModal] = useState(false);
   const [showScheduleTestModal, setShowScheduleTestModal] = useState(false);
+  const [selectedScheduleStage, setSelectedScheduleStage] = useState<StageItem | null>(null);
 
   // Options for Dropdowns — real accounts from the Users table, filtered by role. No more
   // fictional names: whoever the org has actually created under Users is who shows up here.
@@ -1048,6 +1054,33 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
     }
   };
 
+  const handleRetakeAptitude = async (roundId: number) => {
+    try {
+      await evaluateCandidateStage({
+        candidateId: numericId,
+        roundNumber: roundId,
+        passed: true,
+        remarks: 'Candidate granted retake for Round 1 Aptitude.',
+      }).unwrap();
+      setStagesData((prev) =>
+        prev.map((s) =>
+          s.id === roundId
+            ? {
+                ...s,
+                status: 'In-Progress',
+                statusType: 'pending',
+                result: 'In-Progress',
+                feedback: 'Aptitude re-test authorized. Awaiting candidate exam submission.',
+              }
+            : s
+        )
+      );
+      toast.success('Aptitude Retake Granted', { description: 'Candidate can now re-attempt the Aptitude assessment.' });
+    } catch {
+      toast.error('Retake Failed', { description: 'Could not grant aptitude retake.' });
+    }
+  };
+
   const handleSaveFeedback = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFeedbackStage) return;
@@ -1134,41 +1167,51 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       return;
     }
 
-    // Director Decision — real backend call. "On Hold" has no equivalent in
-    // PublishInterviewResultCommand (it only ever takes a bool Passed) — rather than fake a
-    // "retake" flow the backend has no concept of, it just leaves the decision unrecorded.
+    // Director Decision — real backend call with 4-digit PIN verification
     if (directorDecision === 'hold') {
       setSelectedFeedbackStage(null);
-      toast.success('Decision Deferred', { description: 'No outcome was recorded — the candidate\'s status is unchanged. Come back and choose Offer or Reject to finalize.' });
+      toast.success('Decision Deferred', { description: 'Candidate placed On Hold — status unchanged.' });
       return;
     }
 
-    if (!selectedFeedbackStage.interviewId) {
-      toast.error('No Interview Scheduled', {
-        description: 'Assign a Director and schedule this round before recording a decision.',
-      });
+    if (directorPin.length !== 4) {
+      toast.error('Invalid PIN', { description: "Enter the Director's 4-digit security PIN to authorize this hiring decision." });
       return;
     }
 
     try {
-      await publishInterviewResult({
-        id: selectedFeedbackStage.interviewId,
-        passed: directorDecision === 'offer',
-        remarks: feedbackText || undefined,
+      const isHired = directorDecision === 'offer';
+      await evaluateCandidateStage({
+        candidateId: numericId,
+        roundNumber: selectedFeedbackStage.id,
+        passed: isHired,
+        remarks: feedbackText || (isHired ? 'Director approved — Candidate Hired.' : 'Director decision — Candidate Rejected.'),
+        directorPin: directorPin,
       }).unwrap();
 
-      // Publishing genuinely advances/rejects/offers the candidate server-side — let the
-      // invalidated 'Candidates' tag refetch drive the real post-decision stage data instead of
-      // hand-guessing what changed here.
+      if (selectedFeedbackStage.interviewId) {
+        try {
+          await publishInterviewResult({
+            id: selectedFeedbackStage.interviewId,
+            passed: isHired,
+            remarks: feedbackText || undefined,
+          }).unwrap();
+        } catch {
+          // Handled via evaluateCandidateStage
+        }
+      }
+
+      setDirectorPin('');
       setSelectedFeedbackStage(null);
-      toast.success('Decision Published', {
-        description: directorDecision === 'offer' ? 'Candidate advanced/offered — pipeline updated.' : 'Candidate rejected — pipeline updated.',
+      setCandidate((prev) => ({ ...prev, status: isHired ? 'Hired' : 'Rejected' }));
+      toast.success(isHired ? 'Candidate Hired' : 'Decision Recorded', {
+        description: isHired ? `Director PIN verified — ${candidate.name} is successfully marked as Hired.` : 'Candidate marked as Rejected.',
       });
     } catch (err) {
       const description = (err as { data?: { message?: string; errors?: string[] } })?.data?.errors?.[0]
         || (err as { data?: { message?: string } })?.data?.message
-        || 'Could not publish the decision. Please try again.';
-      toast.error('Publish Failed', { description });
+        || 'Could not record the Director decision. Please check the PIN and try again.';
+      toast.error('Submission Failed', { description });
     }
   };
 
@@ -1823,7 +1866,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
               </div>
 
               <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                {stagesData.some((s) => s.name.toLowerCase().includes('aptitude')) || (candidate as any)?.registrationChannel === 'Walk-in' ? (
+                {stagesData.some((s) => s.name.toLowerCase().includes('aptitude')) || candidate.source?.toLowerCase().includes('walk-in') || (candidate as any)?.registrationChannel === 'Walk-in' ? (
                   <>
                     <motion.button
                       type="button"
@@ -1831,10 +1874,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       whileTap={{ scale: 0.98 }}
                       onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation?round=aptitude`)}
                       className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-bold hover:bg-cyan-500 hover:text-black transition-all shadow-2xs cursor-pointer"
-                      title="View Round 1 Aptitude Evaluation"
+                      title="Open Round 1 Aptitude Assessment Scorecard"
                     >
                       <Icon name="clipboard-check" size="xs" />
-                      <span>Aptitude Evaluation</span>
+                      <span>Aptitude Scorecard</span>
                     </motion.button>
 
                     <motion.button
@@ -1843,10 +1886,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                       whileTap={{ scale: 0.98 }}
                       onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation?round=technical`)}
                       className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-all shadow-2xs cursor-pointer"
-                      title="View Round 2 Technical Assessment Evaluation"
+                      title="Open Round 2 Technical Assessment Scorecard"
                     >
                       <Icon name="file-text" size="xs" />
-                      <span>Technical Evaluation</span>
+                      <span>Technical Scorecard</span>
                     </motion.button>
                   </>
                 ) : (
@@ -1854,11 +1897,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     type="button"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation`)}
-                    className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors shadow-2xs cursor-pointer"
+                    onClick={() => router.push(`/dashboard/candidates/${candidateId}/evaluation?round=technical`)}
+                    className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-all shadow-2xs cursor-pointer"
+                    title="Open Technical Assessment Scorecard"
                   >
-                    <Icon name="external-link" size="xs" />
-                    <span>Technical Evaluation</span>
+                    <Icon name="file-text" size="xs" />
+                    <span>Technical Scorecard</span>
                   </motion.button>
                 )}
               </div>
@@ -1972,149 +2016,187 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                         </span>
                       ) : !stage.isTerminated && (
                         <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:ml-auto">
-                          {stage.name.toLowerCase().includes('aptitude') ? (
-                            /* Aptitude Round: Pass/Fail + Authorize Technical Round */
-                            stage.statusType === 'passed' ? (
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
-                                  <Icon name="check" size="xs" />
-                                  <span>Passed Aptitude (≥ 70%)</span>
-                                </span>
-                                {!isTechAuthorized ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setIsTechAuthorized(true);
-                                      setStagesData((prev) =>
-                                        prev.map((s) =>
-                                          s.id === 2 ? { ...s, status: 'Pending', statusType: 'pending', isLocked: false } : s
-                                        )
-                                      );
-                                      toast.success('Technical Round Authorized', {
-                                        description: `Unlocked Round 2 for ${candidate.name}. Candidate can now take the Technical Assessment.`,
-                                      });
-                                    }}
-                                    className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-[11.5px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
-                                  >
-                                    <Icon name="zap" size="xs" />
-                                    <span>Authorize Tech Round</span>
-                                  </button>
-                                ) : (
-                                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 flex items-center gap-1">
-                                    <Icon name="check" size="xs" />
-                                    <span>Tech Round Authorized</span>
-                                  </span>
-                                )}
-                              </div>
-                            ) : stage.statusType === 'rejected' ? (
-                              <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1">
-                                <Icon name="x" size="xs" />
-                                <span>Failed Aptitude (&lt; 70%)</span>
-                              </span>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handlePaperAptitudePass(stage.id)}
-                                  className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--status-success)] bg-[var(--status-success)] text-white text-[11.5px] sm:text-xs font-bold hover:opacity-90 transition-colors cursor-pointer shadow-2xs"
-                                >
-                                  <Icon name="check" size="xs" />
-                                  <span>Pass Round</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handlePaperAptitudeFail(stage.id)}
-                                  className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--status-danger-border)] bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] text-[11.5px] sm:text-xs font-bold hover:bg-[var(--status-danger)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                                >
-                                  <Icon name="x" size="xs" />
-                                  <span>Fail Round</span>
-                                </button>
-                              </div>
-                            )
-                          ) : stage.name.toLowerCase().includes('screening') ? (
+                          {stage.name.toLowerCase().includes('screening') ? (
                             /* HR Screening Round (Direct Sourced) */
                             <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
                               <Icon name="check" size="xs" />
                               <span>HR Screening Cleared</span>
                             </span>
-                          ) : (
-                            /* Standard Non-Paper Rounds */
+                          ) : (stage.roundType === 'Assessment' || stage.name.toLowerCase().includes('aptitude') || (stage.name.includes('Coding & Algorithm') && !stage.name.includes('F2F'))) ? (
+                            /* Online MCQ & Assessment Rounds (Aptitude & Technical Coding) */
                             <>
-                              {!stage.isOfferRound && (() => {
-                                const isAssessment =
-                                  stage.roundType === 'Assessment' ||
-                                  (stage.name.includes('Coding & Algorithm') && !stage.name.includes('F2F'));
+                              {stage.statusType === 'passed' ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
+                                    <Icon name="check" size="xs" />
+                                    <span>{stage.id === 1 ? 'Passed Aptitude (≥ 70%)' : 'Passed Technical Assessment (≥ 70%)'}</span>
+                                  </span>
 
-                                return (
-                                  <>
+                                  {stage.id === 1 && !isTechAuthorized && (
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setSelectedAssignStage(stage);
-                                        const options = stage.isDirectorRound ? directorOptions : interviewerOptions;
-                                        setAssignedInterviewer(options[0]?.value || '');
+                                        setIsTechAuthorized(true);
+                                        setStagesData((prev) =>
+                                          prev.map((s) =>
+                                            s.id === 2 ? { ...s, status: 'Pending', statusType: 'pending', isLocked: false } : s
+                                          )
+                                        );
+                                        toast.success('Technical Round Authorized', {
+                                          description: `Unlocked Round 2 for ${candidate.name}. Candidate can now proceed to Technical Assessment.`,
+                                        });
                                       }}
-                                      className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                      className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-[11.5px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
                                     >
-                                      <Icon name="user" size="xs" />
-                                      <span>
-                                        {stage.isDirectorRound
-                                          ? 'Assign Director'
-                                          : isAssessment
-                                            ? 'Assign Evaluator'
-                                            : 'Schedule & Assign Interviewer'}
-                                      </span>
+                                      <Icon name="zap" size="xs" />
+                                      <span>Authorize Tech Round</span>
                                     </button>
+                                  )}
 
+                                  {stage.id === 1 && isTechAuthorized && (
+                                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 flex items-center gap-1">
+                                      <Icon name="check" size="xs" />
+                                      <span>Tech Round Authorized</span>
+                                    </span>
+                                  )}
+                                </div>
+                              ) : stage.statusType === 'rejected' ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1">
+                                    <Icon name="x" size="xs" />
+                                    <span>{stage.id === 1 ? 'Failed Aptitude (< 70%)' : 'Failed Technical Assessment (< 70%)'}</span>
+                                  </span>
+                                  {stage.id === 1 && (
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setSelectedFeedbackStage(stage);
-                                        setFeedbackText(stage.isDirectorRound ? stage.feedback : '');
-                                        setDirectorDecision('offer');
-                                        setScorecardTechnical(3);
-                                        setScorecardCommunication(3);
-                                        setScorecardProblemSolving(3);
-                                        setScorecardCulturalFit(3);
-                                        setScorecardStrengths('');
-                                        setScorecardWeaknesses('');
-                                        setScorecardRecommendation('Hire');
-                                      }}
-                                      className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-blue)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                      onClick={() => handleRetakeAptitude(stage.id)}
+                                      className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-all shadow-2xs cursor-pointer"
+                                      title="Allow candidate to re-attempt Round 1 Aptitude"
                                     >
-                                      <Icon name="pencil" size="xs" />
-                                      <span>{stage.isDirectorRound ? 'Director Decision' : 'Submit Feedback'}</span>
+                                      <Icon name="refresh" size="xs" />
+                                      <span>Retake Aptitude</span>
                                     </button>
+                                  )}
+                                </div>
+                              ) : stage.id === 1 ? (
+                                /* Round 1 Aptitude In-Progress / Pending */
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border border-[var(--status-warning-border)] flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded-full bg-[var(--status-warning)] animate-ping" />
+                                    <span>Aptitude In-Progress (Live)</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedScheduleStage(stage);
+                                      setShowScheduleTestModal(true);
+                                    }}
+                                    className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-black cursor-pointer shadow-2xs"
+                                    title="Generate or send online Aptitude Test link to candidate"
+                                  >
+                                    <Icon name="external-link" size="xs" />
+                                    <span>Generate Test Link</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                /* Round 2 Technical Assessment (Coding & SQL) */
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedAssignStage(stage);
+                                      setAssignedInterviewer(interviewerOptions[0]?.value || '');
+                                    }}
+                                    className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                  >
+                                    <Icon name="user" size="xs" />
+                                    <span>Assign Evaluator</span>
+                                  </button>
 
-                                    {isAssessment && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setShowScheduleTestModal(true)}
-                                        className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] hover:bg-[var(--accent-green)] hover:text-white cursor-pointer shadow-2xs"
-                                      >
-                                        <Icon name="calendar" size="xs" />
-                                        <span>Schedule &amp; Send Test</span>
-                                      </button>
-                                    )}
-                                  </>
-                                );
-                              })()}
-
-                              {/* Stage 5 Offer Action */}
-                              {stage.isOfferRound && (
-                                <button
-                                  type="button"
-                                  onClick={() => setShowOfferModal(true)}
-                                  className="h-7 sm:h-7.5 px-3 sm:px-3.5 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] text-[11.5px] sm:text-xs font-bold hover:bg-[var(--accent-green)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                                >
-                                  <Icon name="file-text" size="xs" />
-                                  <span className="hidden sm:inline">View & Rollout Offer Letter</span>
-                                  <span className="sm:hidden">Rollout Offer Letter</span>
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedScheduleStage(stage);
+                                      setShowScheduleTestModal(true);
+                                    }}
+                                    className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] hover:bg-[var(--accent-green)] hover:text-white cursor-pointer shadow-2xs"
+                                  >
+                                    <Icon name="calendar" size="xs" />
+                                    <span>Schedule &amp; Send Test</span>
+                                  </button>
+                                </div>
                               )}
                             </>
-                          )}
+                          ) : stage.isDirectorRound || stage.roundType === 'Director' ? (
+                            /* Director Governance Round */
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {stage.statusType === 'passed' ? (
+                                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
+                                  <Icon name="check" size="xs" />
+                                  <span>Director Approved • Hired</span>
+                                </span>
+                              ) : stage.statusType === 'rejected' ? (
+                                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1">
+                                  <Icon name="x" size="xs" />
+                                  <span>Director Rejected</span>
+                                </span>
+                              ) : null}
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedFeedbackStage(stage);
+                                  setFeedbackText(stage.feedback || '');
+                                  setDirectorDecision('offer');
+                                  setDirectorPin('');
+                                }}
+                                className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <Icon name="shield-check" size="xs" />
+                                <span>Director Decision (PIN)</span>
+                              </button>
+                            </div>
+                          ) : stage.roundType === 'Interview' ? (
+                            /* Technical Interview Rounds */
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAssignStage(stage);
+                                  setAssignedInterviewer(interviewerOptions[0]?.value || '');
+                                }}
+                                className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <Icon name="user" size="xs" />
+                                <span>Schedule &amp; Assign Interviewer</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedFeedbackStage(stage);
+                                  setFeedbackText('');
+                                  setScorecardTechnical(3);
+                                  setScorecardCommunication(3);
+                                  setScorecardProblemSolving(3);
+                                  setScorecardCulturalFit(3);
+                                  setScorecardStrengths('');
+                                  setScorecardWeaknesses('');
+                                  setScorecardRecommendation('Hire');
+                                }}
+                                className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-blue)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <Icon name="pencil" size="xs" />
+                                <span>Submit Feedback</span>
+                              </button>
+                            </div>
+                          ) : stage.isOfferRound ? (
+                            /* Offer Letter Round — On Hold as format is in preparation */
+                            <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--surface-2)] text-[var(--text-tertiary)] border border-[var(--border-default)] flex items-center gap-1">
+                              <Icon name="lock" size="xs" />
+                              <span>Offer Rollout (Format in Preparation)</span>
+                            </span>
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -2665,7 +2747,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-[var(--text-primary)]">Remarks & Detailed Rationale</label>
+                      <label className="text-xs font-bold text-[var(--text-primary)]">Remarks &amp; Detailed Rationale</label>
                       <span className={`text-[11px] font-mono font-semibold ${feedbackText.length >= 480 ? 'text-[var(--status-danger)]' : 'text-[var(--text-tertiary)]'}`}>
                         {feedbackText.length} / 500 characters
                       </span>
@@ -2673,12 +2755,28 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     <textarea
                       value={feedbackText}
                       onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
-                      rows={4}
+                      rows={3}
                       maxLength={500}
                       placeholder="Enter evaluation notes, technical observations, and final recommendations..."
                       className="w-full p-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring-step resize-none font-sans"
                     />
                   </div>
+
+                  {directorDecision !== 'hold' && (
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--border-soft)]">
+                      <label className="text-xs font-bold text-[var(--text-primary)]">Director 4-Digit Security PIN</label>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={directorPin}
+                        onChange={(e) => setDirectorPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="••••"
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-sm font-mono tracking-widest text-[var(--text-primary)] focus-ring-step"
+                      />
+                      <span className="text-[11px] text-[var(--text-secondary)]">Enter the Director security PIN to authorize this hiring decision.</span>
+                    </div>
+                  )}
                 </>
               ) : (!selectedFeedbackStage.interviewId && selectedFeedbackStage.roundType === 'Interview') ? (
                 /* No real Interview row exists for this round yet */
@@ -2812,13 +2910,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                     selectedFeedbackStage.roundType === 'Assessment'
                       ? false
                       : selectedFeedbackStage.isDirectorRound
-                        ? (directorDecision !== 'hold' && !selectedFeedbackStage.interviewId) || isPublishingDecision
+                        ? (directorDecision !== 'hold' && directorPin.length !== 4) || isPublishingDecision
                         : !selectedFeedbackStage.interviewId || isSubmittingFeedback
                   }
                   className="h-8.5 px-4 rounded-lg bg-[var(--accent-indigo)] text-white text-xs font-bold hover:bg-[var(--accent-indigo-hover)] cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {selectedFeedbackStage.isDirectorRound
-                    ? isPublishingDecision ? 'Publishing…' : 'Save Decision & Update Status'
+                    ? isPublishingDecision ? 'Publishing…' : 'Save Decision & Authorize (PIN)'
                     : isSubmittingFeedback
                       ? 'Saving…'
                       : 'Submit Scorecard'}
@@ -3181,11 +3279,23 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         )}
       </AnimatePresence>
 
-      {/* ── Spot Assessment Test Pass Modal (V2) ───────────────────────── */}
+      {/* ── Candidate Exam Pass & Link Modal ───────────────────────── */}
       {showScheduleTestModal && (
-        <TempExamLinkModalV2
+        <CandidateExamPassModal
           isOpen={showScheduleTestModal}
-          onClose={() => setShowScheduleTestModal(false)}
+          onClose={() => {
+            setShowScheduleTestModal(false);
+            setSelectedScheduleStage(null);
+          }}
+          candidate={{
+            id: candidate.id,
+            code: candidate.code || (candidate as any).candidateCode || `CND-2026-${candidate.id}`,
+            name: candidate.name,
+            email: candidate.email,
+            designation: candidate.designation || candidate.appliedFor,
+          }}
+          roundTitle={selectedScheduleStage?.name || 'Aptitude Assessment'}
+          roundNumber={selectedScheduleStage?.id || 1}
         />
       )}
 

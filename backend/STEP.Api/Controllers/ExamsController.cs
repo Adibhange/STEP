@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.Exams.Commands.EvaluateCandidateAnswer;
 using STEP.Application.Features.Exams.Commands.PublishAssessmentResult;
@@ -32,7 +33,8 @@ namespace STEP.Api.Controllers
 
             var result = await mediator.Send(new StartExamSessionCommand(
                 body.CandidateCode, body.Passcode, testSource,
-                HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString()));
+                HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(),
+                body.RoundNumber));
             return Ok(ApiResponse<object>.Ok(result, "Assessment session ready"));
         }
 
@@ -53,6 +55,8 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("batch-answers")]
+        [HttpPost("answers/batch")]
+        [HttpPost("{sessionToken}/batch-answers")]
         [AllowAnonymous]
         public async Task<IActionResult> SaveAnswerBatch([FromBody] SaveExamAnswerBatchCommand command)
         {
@@ -61,10 +65,16 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("submit")]
+        [HttpPost("{sessionToken}/submit")]
         [AllowAnonymous]
-        public async Task<IActionResult> Submit([FromBody] SubmitExamRequestBody body)
+        public async Task<IActionResult> Submit([FromRoute] string? sessionToken, [FromBody] SubmitExamRequestBody? body)
         {
-            var result = await mediator.Send(new SubmitExamCommand(body.SessionToken));
+            var token = !string.IsNullOrWhiteSpace(sessionToken) ? sessionToken : body?.SessionToken;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("SessionToken", "Session token is required to submit.")]);
+            }
+            var result = await mediator.Send(new SubmitExamCommand(token));
             return Ok(ApiResponse<object>.Ok(result, "Assessment submitted successfully"));
         }
 
@@ -120,7 +130,7 @@ namespace STEP.Api.Controllers
         }
     }
 
-    public record StartExamSessionRequestBody(string CandidateCode, string Passcode, string? TestSource);
+    public record StartExamSessionRequestBody(string CandidateCode, string Passcode, string? TestSource, int? RoundNumber = null);
     public record SubmitExamRequestBody(string SessionToken);
     public record ReportExamViolationRequestBody(string SessionToken, string ViolationType);
     public record EvaluateAnswerRequestBody(int CandidateExamAnswerId, decimal MarksObtained, string? EvaluatorRemarks);

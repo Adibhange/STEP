@@ -14,5 +14,6 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
         string Passcode,
         string TestSource,
         string? IpAddress,
-        string? UserAgent) : IRequest<LiveExamWorkspaceDto>;
+        string? UserAgent,
+        int? RoundNumber = null) : IRequest<LiveExamWorkspaceDto>;
 }

@@ -103,12 +103,17 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
                     }
                 }
 
-                // candidate.Status is the authoritative terminal/interim status maintained by
-                // CandidateAdvancementService — trust it directly instead of recomputing from raw
-                // round data.
-                string effectiveStatus = c.Status is "Offered" or "Hired" or "Rejected" ? c.Status : "In-Progress";
+                var hasAnyFailedRound = c.PipelineProgressHistory.Any(p =>
+                    p.Status == "Failed" || p.Status == "Rejected" || p.Status == "Fail");
 
-                string effectiveStage = c.CurrentStage ?? "Screening";
+                string effectiveStatus = c.Status is "Offered" or "Hired" or "Rejected"
+                    ? c.Status
+                    : (hasAnyFailedRound ? "Rejected" : "In-Progress");
+
+                string effectiveStage = hasAnyFailedRound || effectiveStatus == "Rejected"
+                    ? (c.CurrentStage?.Contains("Failed", StringComparison.OrdinalIgnoreCase) == true ? c.CurrentStage : $"{c.CurrentStage ?? "Assessment"} (Failed)")
+                    : (c.CurrentStage ?? "Screening");
+
                 var defaultFlow = c.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
                     ?? c.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
                 var flowRound1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
@@ -117,7 +122,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
                 var r1 = c.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
                 var isR1AutoPassed = isDirectFlow || (r1 != null && (r1.RoundTitle ?? "").Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase));
 
-                if (effectiveStage == "Registered" || string.IsNullOrWhiteSpace(effectiveStage))
+                if ((effectiveStage == "Registered" || string.IsNullOrWhiteSpace(effectiveStage)) && !hasAnyFailedRound)
                 {
                     if (isR1AutoPassed)
                     {
@@ -129,11 +134,15 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
                 string hiringLocation = c.Vacancy?.HiringLocation?.Name ?? c.CurrentLocation ?? "Primary Center";
                 string testLocation = hiringLocation;
 
+                var effectiveChannel = !string.IsNullOrWhiteSpace(c.RegistrationChannel)
+                    ? c.RegistrationChannel
+                    : (c.QRCodeId.HasValue || c.PipelineProgressHistory.Any(p => p.RoundNumber == 1 && p.RoundType == "Assessment" && !(p.RoundTitle ?? "").Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase)) ? "Walk-in" : "Direct");
+
                 items.Add(new CandidateSummaryDto(
                     c.Id, c.CandidateCode, c.FirstName, c.LastName, c.Email, c.Phone,
                     c.VacancyId, c.Vacancy?.Title ?? "Position", effectiveStage, effectiveStatus, c.CreatedAt,
                     assignedInterviewer, hiringLocation, testLocation, c.PipelineProgressHistory.Count > 0,
-                    c.RegistrationChannel, c.TotalExperienceYears));
+                    effectiveChannel, c.TotalExperienceYears));
             }
 
             return new CandidateListResultDto(items, totalCount);

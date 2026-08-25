@@ -62,8 +62,8 @@ export const KpiSection: React.FC = () => {
     const rejectedCount =
       f?.rejectedCount ??
       candidates.filter((c: any) => {
-        const status = (c.status || c.currentStage || '').toLowerCase();
-        return status.includes('reject');
+        const status = (c.status || c.currentRound || c.currentStage || '').toLowerCase();
+        return status.includes('reject') || status.includes('fail');
       }).length;
 
     const hiredCount =
