@@ -90,6 +90,9 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
             var nextSequence = await db.Candidates.IgnoreQueryFilters().CountAsync(cancellationToken) + 1001;
             var candidateCode = $"CND-{DateTime.UtcNow:yyyy}-{nextSequence}";
 
+            var isDirectHiring = qrCode.Vacancy?.DriveType == "Direct" || qrCode.Vacancy?.DriveType == "Direct / Sourced Hiring" || qrCode.Vacancy?.DriveType == "Direct Hiring";
+            var channel = isDirectHiring ? "Direct Sourced" : "Walk-in";
+
             var candidate = new CandidateEntity
             {
                 CandidateCode = candidateCode,
@@ -98,9 +101,9 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 Email = request.Email.Trim(),
                 Phone = request.Phone.Trim(),
                 VacancyId = qrCode.VacancyId,
-                CurrentStage = "Registered",
+                CurrentStage = isDirectHiring ? "HR Sourced & Auto-Passed" : "Registered",
                 Status = "Applied",
-                RegistrationChannel = "Walk-in",
+                RegistrationChannel = channel,
                 QRCodeId = qrCode.Id,
                 TotalExperienceYears = request.TotalExperienceYears,
                 CurrentCTC = request.CurrentCTC,
@@ -119,7 +122,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 ?? qrCode.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
 
             var round1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
-            if (round1 != null && round1.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase))
+            if (round1 != null && (round1.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) || isDirectHiring))
             {
                 var hrId = qrCode.Vacancy?.CreatedBy;
                 if (hrId == null)
@@ -131,6 +134,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 var r1Progress = new CandidatePipelineProgress
                 {
                     CandidateId = candidate.Id,
+                    VacancyPipelineFlowRoundId = round1.Id,
                     RoundNumber = 1,
                     RoundTitle = round1.Name,
                     RoundType = "Assessment",
@@ -144,6 +148,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 db.CandidatePipelineProgresses.Add(r1Progress);
                 candidate.CurrentPipelineProgress = r1Progress;
                 candidate.CurrentStage = "HR Sourced & Auto-Passed";
+                await db.SaveChangesAsync(cancellationToken);
             }
 
             // Save Candidate Profile Photo / Avatar if provided

@@ -615,10 +615,20 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
       }
     } catch (err: any) {
       const errMsg =
-        err?.data?.message ||
-        (Array.isArray(err?.data?.errors) ? err.data.errors[0]?.errorMessage : null) ||
-        (err?.data?.errors && typeof err.data.errors === 'object' ? Object.values(err.data.errors)[0] : null) ||
+        (Array.isArray(err?.data?.errors)
+          ? typeof err.data.errors[0] === 'string'
+            ? err.data.errors[0]
+            : err.data.errors[0]?.errorMessage || err.data.errors[0]?.message
+          : null) ||
+        (err?.data?.errors && typeof err.data.errors === 'object'
+          ? Array.isArray(Object.values(err.data.errors)[0])
+            ? (Object.values(err.data.errors)[0] as string[])[0]
+            : String(Object.values(err.data.errors)[0])
+          : null) ||
+        (err?.data?.message && err.data.message !== 'Validation failed' ? err.data.message : null) ||
         err?.data?.title ||
+        err?.error ||
+        err?.message ||
         'Verification failed. Check your Candidate Code and Passcode.';
       setLoginError(typeof errMsg === 'string' ? errMsg : String(errMsg));
     }
@@ -941,26 +951,70 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
   }
 
   if (examStep === 'instructions' && !session && loginError) {
+    const isLockedError =
+      loginError.toLowerCase().includes('lock') ||
+      loginError.toLowerCase().includes('round') ||
+      loginError.toLowerCase().includes('aptitude') ||
+      loginError.toLowerCase().includes('prerequisite') ||
+      loginError.toLowerCase().includes('pass');
+
     return (
-      <div className="min-h-screen bg-canvas text-text-primary flex items-center justify-center p-4 font-sans" data-theme="dark">
-        <div className="max-w-md w-full bg-surface-1 border border-border-default rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-status-danger-bg text-status-danger-text border border-status-danger-border flex items-center justify-center mx-auto">
-            <Icon name="alert-triangle" size="md" />
+      <div className="min-h-screen bg-canvas text-text-primary flex items-center justify-center p-4 font-sans select-none relative overflow-hidden" data-theme="dark">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent-indigo-dim rounded-full blur-[140px] pointer-events-none" />
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="max-w-md w-full bg-surface-1 border border-border-default rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center relative z-10"
+        >
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto border ${
+            isLockedError
+              ? 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+              : 'bg-status-danger-bg text-status-danger-text border-status-danger-border'
+          }`}>
+            <Icon name={isLockedError ? 'lock' : 'alert-triangle'} size="md" />
           </div>
-          <h2 className="text-lg font-bold text-text-primary font-heading">
-            Assessment Authentication Failed
-          </h2>
-          <p className="text-xs text-status-danger-text bg-status-danger-bg/50 p-3 rounded-xl border border-status-danger-border font-mono">
-            {loginError}
-          </p>
-          <button
-            type="button"
-            onClick={handleLaunchSession}
-            className="w-full h-10 rounded-xl bg-accent-indigo text-text-on-accent font-bold text-xs hover:opacity-90 transition-all cursor-pointer"
-          >
-            Retry Launching Assessment
-          </button>
-        </div>
+
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-bold text-text-primary font-heading tracking-tight">
+              {isLockedError ? 'Assessment Stage Locked' : 'Assessment Access Restricted'}
+            </h2>
+            <p className="text-xs text-text-tertiary">
+              {isLockedError ? 'Prerequisite evaluation required' : 'Unable to initialize examination environment'}
+            </p>
+          </div>
+
+          <div className={`p-4 rounded-2xl border text-xs font-medium leading-relaxed text-left space-y-2 ${
+            isLockedError
+              ? 'bg-amber-500/5 border-amber-500/20 text-amber-300/90'
+              : 'bg-status-danger-bg/50 border-status-danger-border text-status-danger-text'
+          }`}>
+            <div className="flex items-start gap-2.5">
+              <Icon name="info" size="xs" className="shrink-0 mt-0.5" />
+              <span>{loginError}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2.5 pt-1">
+            {initialRoundNumber === 2 && isLockedError && (
+              <a
+                href={`/exam?code=${encodeURIComponent(candidateCode)}&pass=${encodeURIComponent(passcode)}&round=1`}
+                className="w-full h-11 rounded-xl bg-accent-indigo hover:bg-accent-indigo-hover text-text-on-accent font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Take Round 1: Aptitude Assessment</span>
+                <Icon name="arrow-right" size="xs" />
+              </a>
+            )}
+
+            <button
+              type="button"
+              onClick={handleLaunchSession}
+              className="w-full h-10 rounded-xl bg-surface-2 hover:bg-surface-hover border border-border-default text-text-secondary hover:text-text-primary font-semibold text-xs transition-all cursor-pointer"
+            >
+              Retry Verification
+            </button>
+          </div>
+        </motion.div>
       </div>
     );
   }

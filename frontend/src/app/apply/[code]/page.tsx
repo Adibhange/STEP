@@ -317,14 +317,17 @@ export default function CandidateRegistrationPortalPage() {
       }
     } catch (err: any) {
       const msg =
-        err?.data?.message ||
+        (Array.isArray(err?.data?.errors) ? err.data.errors[0] : null) ||
+        (err?.data?.errors && typeof err.data.errors === 'object' ? Object.values(err.data.errors)[0] : null) ||
+        (err?.data?.message && err.data.message !== 'Validation failed' ? err.data.message : null) ||
         err?.data?.title ||
         (typeof err?.data === 'string' ? err?.data : null) ||
         err?.error ||
+        err?.message ||
         'Registration failed. Please check your details and retry.';
       setErrors((prev) => ({
         ...prev,
-        formSubmit: msg,
+        formSubmit: typeof msg === 'string' ? msg : String(msg),
       }));
     }
   };

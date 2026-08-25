@@ -11,6 +11,8 @@ using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
 using STEP.Application.Features.Exams.Common;
 using STEP.Domain.Entities.Exam;
+using STEP.Domain.Entities.Candidate;
+using STEP.Application.Common;
 using CandidateEntity = STEP.Domain.Entities.Candidate.Candidate;
 
 namespace STEP.Application.Features.Exams.Commands.StartExamSession
@@ -26,7 +28,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
         {
             var cleanCode = request.CandidateCode?.Trim();
             var candidate = await db.Candidates
-                .Include(c => c.Vacancy)
+                .Include(c => c.Vacancy).ThenInclude(v => v.PipelineFlows).ThenInclude(f => f.Rounds)
                 .Include(c => c.CurrentPipelineProgress)
                 .Include(c => c.PipelineProgressHistory)
                 .FirstOrDefaultAsync(c =>
@@ -55,12 +57,39 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 await db.SaveChangesAsync(cancellationToken);
             }
 
-            var progress = (request.RoundNumber.HasValue
-                ? candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == request.RoundNumber.Value)
-                : null)
-                ?? candidate.CurrentPipelineProgress
-                ?? candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundType == "Assessment")
-                ?? candidate.PipelineProgressHistory.FirstOrDefault();
+            CandidatePipelineProgress? progress = null;
+            if (request.RoundNumber.HasValue)
+            {
+                progress = candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == request.RoundNumber.Value);
+                if (progress == null)
+                {
+                    var defaultFlow = candidate.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
+                        ?? candidate.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
+                    var flowRound = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == request.RoundNumber.Value && !r.IsDeleted);
+
+                    var roundTitle = flowRound?.Name ?? (request.RoundNumber.Value == 1 ? "General Aptitude & Logical Test" : "Coding & Algorithm Challenge");
+                    var roundType = flowRound != null ? PipelineRoundClassification.Classify(flowRound.RoundType) : "Assessment";
+
+                    var fallbackRoundId = await db.VacancyPipelineFlowRounds.Select(r => r.Id).FirstOrDefaultAsync(cancellationToken);
+                    progress = new STEP.Domain.Entities.Candidate.CandidatePipelineProgress
+                    {
+                        CandidateId = candidate.Id,
+                        VacancyPipelineFlowRoundId = flowRound?.Id ?? fallbackRoundId,
+                        RoundNumber = request.RoundNumber.Value,
+                        RoundTitle = roundTitle,
+                        RoundType = roundType,
+                        Status = "InProgress",
+                    };
+                    candidate.PipelineProgressHistory.Add(progress);
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+            }
+            else
+            {
+                progress = candidate.CurrentPipelineProgress
+                    ?? candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundType == "Assessment")
+                    ?? candidate.PipelineProgressHistory.FirstOrDefault();
+            }
 
             if (progress == null)
             {
@@ -69,8 +98,8 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 {
                     CandidateId = candidate.Id,
                     VacancyPipelineFlowRoundId = fallbackRoundId,
-                    RoundNumber = 2,
-                    RoundTitle = "Coding & Algorithm Challenge",
+                    RoundNumber = 1,
+                    RoundTitle = "General Aptitude & Logical Test",
                     RoundType = "Assessment",
                     Status = "InProgress",
                 };
@@ -83,18 +112,18 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             {
                 var r1 = candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
                 var isR1AutoPassed = r1?.Status == "Auto-Passed" || (r1?.RoundTitle?.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) ?? false);
+                var isDirectCandidate = candidate.RegistrationChannel == "Direct Sourced" || isR1AutoPassed;
 
-                // If Round 1 is an active assessment round and was not auto-passed by HR sourcing:
-                if (r1 != null && !isR1AutoPassed && (r1.RoundType == "Assessment" || r1.RoundTitle.Contains("Aptitude", StringComparison.OrdinalIgnoreCase)))
+                if (!isDirectCandidate)
                 {
-                    var isR1Cleared = r1.Status == "Passed" || (r1.ScoreObtained.HasValue && r1.ScoreObtained.Value >= 70.00m);
+                    var isR1Cleared = r1 != null && (r1.Status == "Passed" || r1.Status == "Auto-Passed" || (r1.ScoreObtained.HasValue && r1.ScoreObtained.Value >= 70.00m));
                     if (!isR1Cleared)
                     {
                         throw new ValidationException([new FluentValidation.Results.ValidationFailure("StageLock",
-                            "Round 2 Technical Assessment is locked. Candidate must complete and pass Round 1 Aptitude (≥ 70%) and be authorized by HR before taking the Technical Round.")]);
+                            "Round 2 Technical Assessment is locked. Candidate must complete and pass Round 1 Aptitude Assessment (score ≥ 70%) before taking the Technical Round.")]);
                     }
 
-                    if (r1.Status == "Failed" || candidate.Status == "Rejected")
+                    if (r1 != null && (r1.Status == "Failed" || candidate.Status == "Rejected"))
                     {
                         throw new ValidationException([new FluentValidation.Results.ValidationFailure("StageLock",
                             "Round 2 Technical Assessment is locked. Candidate was eliminated in Round 1 Aptitude Assessment.")]);
@@ -189,7 +218,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                         .FirstOrDefaultAsync(b => b.Id == blueprintId.Value, cancellationToken);
                 }
 
-                if (blueprint == null || blueprint.SectionRules.Count == 0)
+                if (blueprint == null || blueprint.Code == "RULE-MCQ-ONLY" || blueprint.SectionRules.Count <= 1)
                 {
                     if (vacTitle.Contains("sql") || vacTitle.Contains("database") || masterRole.Contains("sql") || masterRole.Contains("database"))
                     {
