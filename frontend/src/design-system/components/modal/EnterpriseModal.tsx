@@ -183,6 +183,7 @@ export const EnterpriseModal: React.FC<EnterpriseModalProps> = ({
               {submitText && (
                 <button
                   type={onSubmit ? 'submit' : 'button'}
+                  onClick={onSubmit ? (e) => onSubmit(e as any) : undefined}
                   disabled={submitDisabled || isSubmitting}
                   className={`h-9 sm:h-10 px-4 sm:px-5 rounded-xl text-xs font-bold shadow-[var(--shadow-xs)] flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none disabled:opacity-50 active:scale-95 ${
                     isDestructive

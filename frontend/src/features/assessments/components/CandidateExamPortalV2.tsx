@@ -2288,6 +2288,16 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
           </div>
         </div>
       )}
+
+      {/* ── SUBMIT CONFIRMATION MODAL ── */}
+      <ExamSubmissionModal
+        isOpen={isSubmissionModalOpen}
+        isSubmitting={isSubmittingExam}
+        totalQuestions={rawQuestions.length}
+        answeredCount={answeredCount}
+        onConfirm={() => handleFinalSubmit('Candidate confirmed assessment submission')}
+        onCancel={() => setIsSubmissionModalOpen(false)}
+      />
     </div>
   );
 };
