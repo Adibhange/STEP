@@ -1001,8 +1001,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
     // Step 2: offer exists and is awaiting the Director's PIN approval.
     if (currentOfferStatus === 'PendingApproval') {
-      if (offerApprovalPin.length !== 6) {
-        toast.error('Invalid PIN', { description: "Enter the Director's 6-digit security PIN." });
+      if (offerApprovalPin.length !== 4) {
+        toast.error('Invalid PIN', { description: "Enter the Director's 4-digit security PIN." });
         return;
       }
       try {
@@ -2385,14 +2385,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
                   {offerRes?.data?.status === 'PendingApproval' && (
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-bold text-[var(--text-primary)]">Director Security PIN (6 digits)</label>
+                      <label className="text-xs font-bold text-[var(--text-primary)]">Director Security PIN (4 digits)</label>
                       <input
                         type="password"
                         inputMode="numeric"
-                        maxLength={6}
+                        maxLength={4}
                         value={offerApprovalPin}
-                        onChange={(e) => setOfferApprovalPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        placeholder="••••••"
+                        onChange={(e) => setOfferApprovalPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="••••"
                         className="w-full h-9 px-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-sm font-mono tracking-widest text-[var(--text-primary)] focus-ring-step"
                       />
                       <span className="text-[11px] text-[var(--text-secondary)]">Only a Director account can approve this — verified against the same PIN used for Director login.</span>

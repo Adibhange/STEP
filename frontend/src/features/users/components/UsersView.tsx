@@ -445,7 +445,7 @@ export const UsersView: React.FC = () => {
                   maxLength={4}
                   placeholder="4-digit PIN"
                   value={formPin}
-                  onChange={(e) => setFormPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setFormPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   className="w-full h-9.5 pl-3 pr-10 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] text-[12.5px] text-[var(--text-primary)] font-mono outline-none focus:border-[var(--accent-indigo)]"
                 />
                 <button

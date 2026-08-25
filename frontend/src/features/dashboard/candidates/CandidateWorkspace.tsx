@@ -39,32 +39,41 @@ export const CandidateWorkspace: React.FC = () => {
 	const { data: apiCandidatesResponse, isLoading } = useGetCandidatesQuery();
 
 	const apiCandidates: DashboardCandidate[] = useMemo(() => {
-		return (apiCandidatesResponse?.data || []).map((c: any, index: number) => ({
-			id:
-				typeof c.id === "number" || typeof c.id === "string" ? c.id : index + 1,
-			code: c.candidateCode || `CND-2026-${c.id || index + 1}`,
-			name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || "Candidate",
-			email: c.email || "",
-			mobile: c.phone || "",
-			role: c.vacancyTitle || c.role || "Applicant",
-			experience: c.experienceYears ? `${c.experienceYears} Years` : "0 Years",
-			experienceYears: c.experienceYears || 0,
-			registrationChannel:
-				c.registrationChannel || (c.source === "WalkIn" ? "Walk-in" : "Direct"),
-			source: (c.registrationChannel === "Walk-in" ?
-				"WalkIn"
-			:	"HomeTest") as any,
-			stage: (c.currentStage || "Screening") as any,
-			currentRound: (c.currentStage || "Screening") as any,
-			assignedInterviewer: c.assignedInterviewer || "Unassigned",
-			status: (c.status || "In-Progress") as any,
-			hiringLocation: c.hiringLocation || c.currentLocation || "Primary Center",
-			testLocation: c.testLocation || c.currentLocation || "Test Center",
-			riskScore: 0,
-			city: c.currentLocation || "",
-			appliedDate:
-				c.createdAt ? new Date(c.createdAt).toISOString().split("T")[0] : "",
-		}));
+		return (apiCandidatesResponse?.data || []).map((c: any, index: number) => {
+			const channel =
+				c.registrationChannel ||
+				(c.source === "WalkIn" || c.qrCodeId ? "Walk-in" : "Direct");
+			const isWalkIn =
+				channel.toLowerCase().includes("walk") ||
+				c.source === "WalkIn" ||
+				Boolean(c.qrCodeId);
+			const expVal = c.totalExperienceYears ?? c.experienceYears ?? 0;
+			const expStr = expVal ? `${expVal} Years` : "0 Years";
+
+			return {
+				id:
+					typeof c.id === "number" || typeof c.id === "string" ? c.id : index + 1,
+				code: c.candidateCode || `CND-2026-${c.id || index + 1}`,
+				name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || "Candidate",
+				email: c.email || "",
+				mobile: c.phone || "",
+				role: c.vacancyTitle || c.role || "Applicant",
+				experience: expStr,
+				experienceYears: expVal,
+				registrationChannel: isWalkIn ? "Walk-in" : "Direct",
+				source: (isWalkIn ? "WalkIn" : "HomeTest") as any,
+				stage: (c.currentStage || "Screening") as any,
+				currentRound: (c.currentStage || "Screening") as any,
+				assignedInterviewer: c.assignedInterviewer || "Unassigned",
+				status: (c.status || "In-Progress") as any,
+				hiringLocation: c.hiringLocation || c.currentLocation || "Primary Center",
+				testLocation: c.testLocation || c.currentLocation || "Test Center",
+				riskScore: 0,
+				city: c.currentLocation || "",
+				appliedDate:
+					c.createdAt ? new Date(c.createdAt).toISOString().split("T")[0] : "",
+			};
+		});
 	}, [apiCandidatesResponse]);
 
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false);

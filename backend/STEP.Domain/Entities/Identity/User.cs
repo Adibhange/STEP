@@ -17,7 +17,7 @@ namespace STEP.Domain.Entities.Identity
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
 
-        /// <summary>BCrypt hash of the Director's 6-digit high-privilege approval PIN. Null for non-Director roles.</summary>
+        /// <summary>BCrypt hash of the Director's 4-digit high-privilege approval PIN. Null for non-Director roles.</summary>
         public string? PinHash { get; set; }
 
         public int RoleId { get; set; }

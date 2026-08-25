@@ -18,7 +18,9 @@ namespace STEP.Application.Features.Candidates.Common
         string? AssignedInterviewer = null,
         string? HiringLocation = null,
         string? TestLocation = null,
-        bool HasPipelineFlowAssigned = false);
+        bool HasPipelineFlowAssigned = false,
+        string? RegistrationChannel = null,
+        decimal? TotalExperienceYears = null);
 
     public record CandidateListResultDto(List<CandidateSummaryDto> Items, int TotalCount);
 
