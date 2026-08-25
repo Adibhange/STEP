@@ -131,7 +131,7 @@ namespace STEP.Api.Controllers
     }
 
     public record StartExamSessionRequestBody(string CandidateCode, string Passcode, string? TestSource, int? RoundNumber = null);
-    public record SubmitExamRequestBody(string SessionToken);
+    public record SubmitExamRequestBody(string? SessionToken, string? Reason = null);
     public record ReportExamViolationRequestBody(string SessionToken, string ViolationType);
     public record EvaluateAnswerRequestBody(int CandidateExamAnswerId, decimal MarksObtained, string? EvaluatorRemarks);
     public record PublishRequestBody(string? Remarks);

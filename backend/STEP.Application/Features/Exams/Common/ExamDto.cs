@@ -50,7 +50,8 @@ namespace STEP.Application.Features.Exams.Common
         bool EvaluationLocked,
         string? EvaluatorRemarks,
         List<EvaluationOptionDto> Options,
-        List<int> SelectedOptionIds);
+        List<int> SelectedOptionIds,
+        string? SectionName = null);
 
     public record ExamEvaluationViewDto(
         int CandidateExamSessionId,

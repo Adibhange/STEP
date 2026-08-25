@@ -26,7 +26,26 @@ namespace STEP.Application.Features.Users.Commands.CreateUser
             var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == request.RoleId, cancellationToken)
                 ?? throw new NotFoundException(nameof(Role), request.RoleId);
 
-            var nextSequence = await db.Users.IgnoreQueryFilters().CountAsync(cancellationToken) + 1001;
+            var existingCodes = await db.Users.IgnoreQueryFilters()
+                .Select(u => u.EmployeeCode)
+                .ToListAsync(cancellationToken);
+
+            var maxSequence = 1000;
+            foreach (var code in existingCodes)
+            {
+                if (code.StartsWith("EMP-", StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(code.Substring(4), out var num) &&
+                    num > maxSequence)
+                {
+                    maxSequence = num;
+                }
+            }
+
+            var nextSequence = maxSequence + 1;
+            while (existingCodes.Contains($"EMP-{nextSequence}", StringComparer.OrdinalIgnoreCase))
+            {
+                nextSequence++;
+            }
 
             var user = new User
             {

@@ -111,6 +111,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
   const [tabSwitchWarnings, setTabSwitchWarnings] = useState<number>(0);
   const [showWarningModal, setShowWarningModal] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [fullscreenReentrySeconds, setFullscreenReentrySeconds] = useState<number | null>(null);
   const [isMultiTabLocked, setIsMultiTabLocked] = useState<boolean>(false);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
@@ -442,8 +443,13 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
     };
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
+      const isFs = Boolean(document.fullscreenElement);
+      setIsFullscreen(isFs);
+      if (!isFs) {
         reportViolation('ExitFullscreen');
+        setFullscreenReentrySeconds(2);
+      } else {
+        setFullscreenReentrySeconds(null);
       }
     };
 
@@ -458,12 +464,54 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
     };
   }, [examStep, reportViolation]);
 
+  // ── Auto 2-Second Fullscreen Re-entry Handler ──────────────────────────────
+  useEffect(() => {
+    if (fullscreenReentrySeconds === null || examStep !== 'active') return;
+
+    if (fullscreenReentrySeconds <= 0) {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.()
+          .then(() => {
+            setIsFullscreen(true);
+            setFullscreenReentrySeconds(null);
+          })
+          .catch(() => {
+            // If browser requires explicit user activation, modal remains visible with 1-click button
+          });
+      } else {
+        setFullscreenReentrySeconds(null);
+      }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setFullscreenReentrySeconds((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [fullscreenReentrySeconds, examStep]);
+
+  const flushAnswersRef = useRef(flushAnswersToServer);
+  useEffect(() => {
+    flushAnswersRef.current = flushAnswersToServer;
+  }, [flushAnswersToServer]);
+
+  const handleFinalSubmitRef = useRef(handleFinalSubmit);
+  useEffect(() => {
+    handleFinalSubmitRef.current = handleFinalSubmit;
+  }, [handleFinalSubmit]);
+
+  const goToQuestionRef = useRef(goToQuestion);
+  useEffect(() => {
+    goToQuestionRef.current = goToQuestion;
+  }, [goToQuestion]);
+
   useEffect(() => {
     setIsOnline(navigator.onLine);
     const onOnline = () => {
       setIsOnline(true);
       setSyncStatusText('Connection Restored');
-      flushAnswersToServer();
+      flushAnswersRef.current();
     };
     const onOffline = () => {
       setIsOnline(false);
@@ -475,7 +523,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
     };
-  }, [flushAnswersToServer]);
+  }, []);
 
   // ── 4. Dynamic Countdown Timer & Automatic Section/Exam Progression ─────────
   useEffect(() => {
@@ -487,10 +535,10 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
         const nextTotal = prevTotal - 1;
         if (nextTotal <= 0) {
           clearInterval(interval);
-          handleFinalSubmit('Total examination time expired. Assessment automatically submitted.');
+          handleFinalSubmitRef.current('Total examination time expired. Assessment automatically submitted.');
           return 0;
         }
-        if (nextTotal % 30 === 0) flushAnswersToServer();
+        if (nextTotal % 30 === 0) flushAnswersRef.current();
         return nextTotal;
       });
 
@@ -514,7 +562,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
             if (nextSec) {
               const firstQOfNext = nextSec.questionIndices[0];
               if (firstQOfNext !== undefined) {
-                goToQuestion(firstQOfNext);
+                goToQuestionRef.current(firstQOfNext);
               }
               setSectionTransitionModal({
                 completedSectionTitle: activeSection.shortTitle,
@@ -527,7 +575,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
               });
             } else {
               // Final section timer concluded -> submit exam automatically
-              handleFinalSubmit(`Time expired for final Section ${activeSection.sectionId} (${activeSection.shortTitle}). Assessment submitted.`);
+              handleFinalSubmitRef.current(`Time expired for final Section ${activeSection.sectionId} (${activeSection.shortTitle}). Assessment submitted.`);
             }
 
             return { ...prevMap, [activeSection.sectionId]: 0 };
@@ -539,7 +587,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [examStep, isTimerRunning, activeSection, lockedSectionIds, sections, flushAnswersToServer, handleFinalSubmit, goToQuestion]);
+  }, [examStep, isTimerRunning, activeSection?.sectionId, lockedSectionIds.size, sections.length]);
 
   // ── Section Transition Modal 30s Auto-Countdown ─────────────────────────────
   useEffect(() => {
@@ -2197,15 +2245,49 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
         )}
       </AnimatePresence>
 
-      {/* ── SUBMISSION CONFIRMATION MODAL ── */}
-      <ExamSubmissionModal
-        isOpen={isSubmissionModalOpen}
-        isSubmitting={isSubmittingExam}
-        totalQuestions={rawQuestions.length}
-        answeredCount={answeredCount}
-        onConfirm={handleFinalSubmit}
-        onCancel={() => setIsSubmissionModalOpen(false)}
-      />
+      {/* ── FULL SCREEN REQUIRED / AUTO RE-ENTRY MODAL ── */}
+      {fullscreenReentrySeconds !== null && !isFullscreen && examStep === 'active' && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[var(--surface-1)] border border-rose-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-4 animate-in fade-in zoom-in-95">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/30 flex items-center justify-center font-bold text-2xl animate-pulse">
+              <Icon name="alert-triangle" size="md" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <h3 className="text-lg font-black text-[var(--text-primary)] font-heading">
+                Full Screen Required
+              </h3>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                This proctored assessment must remain in full screen. Returning to full screen mode automatically in{' '}
+                <span className="font-mono font-bold text-rose-500 text-sm">{fullscreenReentrySeconds}s</span>.
+              </p>
+            </div>
+
+            {/* 2-Second Countdown Progress Indicator */}
+            <div className="w-full bg-[var(--surface-3)] h-1.5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-rose-500 transition-all duration-1000 ease-linear rounded-full"
+                style={{ width: `${(fullscreenReentrySeconds / 2) * 100}%` }}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                document.documentElement.requestFullscreen?.()
+                  .then(() => {
+                    setIsFullscreen(true);
+                    setFullscreenReentrySeconds(null);
+                  })
+                  .catch(() => {});
+              }}
+              className="w-full h-11 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo)]/90 text-white font-extrabold text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 mt-1"
+            >
+              <span>Return to Full Screen Immediately</span>
+              <span className="text-[10px] font-mono opacity-80">({fullscreenReentrySeconds}s)</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

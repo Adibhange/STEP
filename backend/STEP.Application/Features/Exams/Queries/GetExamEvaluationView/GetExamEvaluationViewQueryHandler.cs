@@ -43,7 +43,8 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                             .OrderBy(o => o.DisplayOrder)
                             .Select(o => new EvaluationOptionDto(o.Id, o.DisplayOptionLabel, o.OptionText, o.IsCorrect))
                             .ToList(),
-                        a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList()))
+                        a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList(),
+                        a.CandidateExamSessionQuestion.SectionName))
                     .ToList();
 
                 var candName = $"{sessionV2.Candidate.FirstName} {sessionV2.Candidate.LastName}".Trim();
@@ -85,7 +86,8 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                         .OrderBy(o => o.DisplayOrder)
                         .Select(o => new EvaluationOptionDto(o.Id, o.DisplayOptionLabel, o.OptionText, o.IsCorrect))
                         .ToList(),
-                    a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList()))
+                    a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList(),
+                    a.CandidateExamSessionQuestion.SectionName))
                 .ToList();
 
             return new ExamEvaluationViewDto(

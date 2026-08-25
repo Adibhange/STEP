@@ -107,23 +107,46 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
     [answers, selectedAnswerId]
   );
 
-  // Group answers into round-like buckets by question type for the palette.
+  // Group answers dynamically by the section name defined in the DB blueprint
   const roundGroups = useMemo(() => {
-    return ROUND_GROUPS
-      .map((g) => ({ title: g.title, answers: answers.filter((a) => g.types.includes(a.questionType)) }))
-      .filter((g) => g.answers.length > 0);
+    const map = new Map<string, typeof answers>();
+    answers.forEach((a) => {
+      const sectionKey =
+        (a as any).sectionName ||
+        (isMcqType(a.questionType)
+          ? 'Multiple Choice (MCQ)'
+          : a.questionType === 'CODING'
+            ? 'Coding Challenges'
+            : a.questionType === 'SQL'
+              ? 'SQL Queries & Schema'
+              : 'Subjective Questions');
+      if (!map.has(sectionKey)) {
+        map.set(sectionKey, []);
+      }
+      map.get(sectionKey)!.push(a);
+    });
+    return Array.from(map.entries()).map(([title, grpAnswers]) => ({
+      title,
+      answers: grpAnswers,
+    }));
   }, [answers]);
 
-  const maxPossibleMarks = useMemo(() => answers.reduce((acc, a) => acc + a.marks, 0), [answers]);
-  const autoMcqScore = useMemo(
-    () => answers.filter((a) => isMcqType(a.questionType)).reduce((acc, a) => acc + a.marksObtained, 0),
-    [answers]
-  );
-  const manualScore = useMemo(
-    () => answers.filter((a) => !isMcqType(a.questionType)).reduce((acc, a) => acc + a.marksObtained, 0),
-    [answers]
-  );
-  const currentScore = autoMcqScore + manualScore;
+  const maxPossibleMarks = useMemo(() => {
+    const sum = answers.reduce((acc, a) => acc + a.marks, 0);
+    return Math.round(sum * 100) / 100;
+  }, [answers]);
+
+  const autoMcqScore = useMemo(() => {
+    const sum = answers.filter((a) => isMcqType(a.questionType)).reduce((acc, a) => acc + a.marksObtained, 0);
+    return Math.round(sum * 100) / 100;
+  }, [answers]);
+
+  const manualScore = useMemo(() => {
+    const sum = answers.filter((a) => !isMcqType(a.questionType)).reduce((acc, a) => acc + a.marksObtained, 0);
+    return Math.round(sum * 100) / 100;
+  }, [answers]);
+
+  const currentScore = Math.round((autoMcqScore + manualScore) * 100) / 100;
 
   const nonMcqAnswers = answers.filter((a) => !isMcqType(a.questionType));
   const allNonMcqEvaluated = nonMcqAnswers.length === 0 || nonMcqAnswers.every((a) => a.evaluationStatus === 'Evaluated' || a.evaluationLocked);
@@ -140,20 +163,23 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
     const marks = Math.min(selectedAnswer.marks, Math.max(0, marksDraft[selectedAnswer.candidateExamAnswerId] ?? 0));
     try {
       await evaluateAnswerApi({
+        sessionId: querySessionId,
         candidateExamAnswerId: selectedAnswer.candidateExamAnswerId,
         marksObtained: marks,
         evaluatorRemarks: notesDraft[selectedAnswer.candidateExamAnswerId] || undefined,
       }).unwrap();
-      toast.success('Evaluation Saved', { description: `Question #${selectedAnswer.questionDisplayOrder} scored ${marks}/${selectedAnswer.marks}.` });
+      toast.success('Answer Evaluated', {
+        description: `Question #${selectedAnswer.questionDisplayOrder} graded ${marks}/${selectedAnswer.marks} marks.`,
+      });
     } catch (err: any) {
-      toast.error('Save Failed', { description: err?.data?.message || 'Could not save this evaluation.' });
+      toast.error('Save Failed', { description: err?.data?.message || 'Could not save marks for this question.' });
     }
   };
 
   const handlePublish = async () => {
-    if (!candidateExamSessionId) return;
+    if (!querySessionId) return;
     try {
-      const res = await publishResultApi({ sessionId: candidateExamSessionId }).unwrap();
+      const res = await publishResultApi({ sessionId: querySessionId }).unwrap();
       const passed = res.data.resultStatus === 'Pass';
       toast.success('Assessment Result Published', {
         description: `Final Score: ${res.data.totalScore}/${res.data.totalMarks} (${res.data.percentage}% — ${res.data.resultStatus}). Result locked and candidate pipeline updated.`,
@@ -170,7 +196,7 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
     else router.push(`/dashboard/candidates/${candidateId}`);
   };
 
-  if (!candidateExamSessionId) {
+  if (!querySessionId) {
     return (
       <div className="min-h-screen bg-[var(--canvas,#f7f8fb)] flex items-center justify-center p-6 text-center">
         <div className="bg-white border border-amber-200 rounded-2xl p-8 shadow-xl max-w-md w-full flex flex-col items-center gap-3">
@@ -251,6 +277,31 @@ export const CandidateAssessmentEvaluationView: React.FC<CandidateAssessmentEval
           </div>
         </div>
 
+        {/* Multi-Round Switcher Tabs (if candidate has multiple assessment sessions) */}
+        {assessmentRounds && assessmentRounds.length > 1 && (
+          <div className="hidden md:flex items-center gap-1.5 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--border-default)]">
+            {assessmentRounds.map((rnd) => {
+              const isSelected = rnd.candidateExamSessionId === querySessionId;
+              return (
+                <button
+                  key={rnd.id || rnd.roundNumber}
+                  type="button"
+                  onClick={() => {
+                    if (rnd.candidateExamSessionId) setActiveSessionId(rnd.candidateExamSessionId);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-[var(--accent-indigo)] text-white shadow-xs'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+                  }`}
+                >
+                  <Icon name={rnd.roundNumber === 1 ? 'file-text' : 'layers'} size="xs" />
+                  <span>{rnd.roundTitle || `Round ${rnd.roundNumber}`}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Real session status badge */}
         <div className="flex items-center gap-2">

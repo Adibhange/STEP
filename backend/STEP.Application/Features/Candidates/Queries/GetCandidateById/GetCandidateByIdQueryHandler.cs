@@ -146,8 +146,12 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var isR1OrAutoPassed = isAutoPassed || r.RoundOrder == 1;
                         var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isR1OrAutoPassed ? defaultHrRecruiterName : null));
 
+                        var rawTitle = p.RoundTitle ?? r.Name;
+                        var isAssessment = hasSess || (rawTitle != null && (rawTitle.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Assessment", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Coding", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Challenge", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Track", StringComparison.OrdinalIgnoreCase)));
+                        var effectiveRoundType = isAssessment ? "Assessment" : (p.RoundType ?? PipelineRoundClassification.Classify(r.RoundType));
+
                         combinedProgressDtos.Add(new PipelineProgressDto(
-                            p.Id, p.RoundNumber, p.RoundTitle ?? r.Name, p.RoundType ?? PipelineRoundClassification.Classify(r.RoundType),
+                            p.Id, p.RoundNumber, rawTitle, effectiveRoundType,
                             effectiveStatus, effectiveScore, p.StartedAt, p.CompletedAt,
                             hasSess ? sessInfo.SessionId : null, interviewInfo?.Id, p.Remarks, interviewerName));
                     }
@@ -158,9 +162,11 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var defaultScore = isAutoPassed ? 100.00m : (decimal?)null;
                         var isR1OrAutoPassed = isAutoPassed || r.RoundOrder == 1;
                         var defaultInterviewer = isR1OrAutoPassed ? defaultHrRecruiterName : null;
+                        var isAssessment = r.Name.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Assessment", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Coding", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Challenge", StringComparison.OrdinalIgnoreCase) || r.Name.Contains("Track", StringComparison.OrdinalIgnoreCase);
+                        var effectiveRoundType = isAssessment ? "Assessment" : PipelineRoundClassification.Classify(r.RoundType);
 
                         combinedProgressDtos.Add(new PipelineProgressDto(
-                            0, r.RoundOrder, r.Name, PipelineRoundClassification.Classify(r.RoundType),
+                            0, r.RoundOrder, r.Name, effectiveRoundType,
                             defaultStatus, defaultScore, null, null, null, null, null, defaultInterviewer));
                     }
                 }
@@ -176,9 +182,12 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var effectiveScore = p.ScoreObtained ?? (isAutoPassed ? 100.00m : (hasSess ? sessInfo.Score : null));
                         var isR1OrAutoPassed = isAutoPassed || p.RoundNumber == 1;
                         var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isR1OrAutoPassed ? defaultHrRecruiterName : null));
+                        var rawTitle = p.RoundTitle ?? $"Round {p.RoundNumber}";
+                        var isAssessment = hasSess || rawTitle.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Assessment", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Coding", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Challenge", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Track", StringComparison.OrdinalIgnoreCase);
+                        var effectiveRoundType = isAssessment ? "Assessment" : p.RoundType;
 
                         return new PipelineProgressDto(
-                            p.Id, p.RoundNumber, p.RoundTitle, p.RoundType, effectiveStatus, effectiveScore, p.StartedAt, p.CompletedAt,
+                            p.Id, p.RoundNumber, rawTitle, effectiveRoundType, effectiveStatus, effectiveScore, p.StartedAt, p.CompletedAt,
                             hasSess ? sessInfo.SessionId : null, interviewInfo?.Id, p.Remarks, interviewerName);
                     })
                     .ToList();

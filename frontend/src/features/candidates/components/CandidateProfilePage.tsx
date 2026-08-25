@@ -121,7 +121,7 @@ const FormSelect: React.FC<FormSelectProps> = ({ value, onChange, options, disab
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl shadow-[var(--shadow-xl)] z-50 py-1 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute left-0 top-full mt-1 w-full bg-[var(--surface-1)] border border-[var(--border-default)] rounded-xl shadow-2xl z-[100] py-1 max-h-56 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -424,7 +424,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
         college: apiData.institutionName || 'COEP Technological University',
         passingYear: apiData.yearOfPassing ? String(apiData.yearOfPassing) : '2026',
         percentage: apiData.marksPercentage ? `${apiData.marksPercentage}%` : '85%',
-        source: apiData.registrationChannel || 'Walk-in Scan',
+        source: (apiData.registrationChannel || '').toLowerCase().includes('direct') || (history || []).some((p: any) => (p.roundTitle || '').toLowerCase().includes('auto-passed')) ? 'Direct Sourced' : (apiData.registrationChannel || 'Walk-in Scan'),
         refType: apiData.refType || (apiData.referralEmployeeName ? 'Internal' : 'Direct'),
         refName: apiData.refName || apiData.referralEmployeeName || '',
         refEmployeeId: apiData.refEmployeeId || '',
@@ -462,9 +462,20 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
           const isDirectorRound = p.roundType === 'Director' || (p.roundTitle || '').toLowerCase().includes('director');
           const isOfferRound = (p.roundTitle || '').toLowerCase().includes('offer') || (p.roundType === 'Director' && p.roundNumber === history.length);
 
+          const cleanRoundName = (() => {
+            const raw = p.roundTitle || `Round ${p.roundNumber}`;
+            if (p.roundNumber === 2 && (raw.toLowerCase().includes('mcq only') || raw.toLowerCase().includes('standard assessment track'))) {
+              if (cleanRole.toLowerCase().includes('sql') || cleanRole.toLowerCase().includes('database')) {
+                return 'Round 2: Database & SQL Engineering Track';
+              }
+              return 'Round 2: Coding & Algorithm Challenge';
+            }
+            return raw;
+          })();
+
           return {
             id: p.roundNumber,
-            name: p.roundTitle || `Round ${p.roundNumber}`,
+            name: cleanRoundName,
             status: isLocked ? 'Locked' : isCurrentRoundFailed ? 'Failed' : isCurrentRoundPassed ? 'Passed' : p.status || 'Pending',
             statusType: isLocked ? 'locked' : isCurrentRoundFailed ? 'rejected' : isCurrentRoundPassed ? 'passed' : 'pending',
             date: p.completedAt
@@ -2549,7 +2560,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 onSubmit={handleSaveAssign}
                 onClick={(e) => e.stopPropagation()}
-                className="dialog-card rounded-[var(--radius-xl)] p-5 max-w-md w-full flex flex-col gap-4 relative overflow-hidden"
+                className="dialog-card rounded-[var(--radius-xl)] p-5 max-w-md w-full flex flex-col gap-4 relative overflow-visible shadow-2xl"
               >
                 {/* Top Inset Highlight Catch */}
                 <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
@@ -2575,8 +2586,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                   </button>
                 </div>
 
-                <div className="flex flex-col gap-3 text-xs">
-                  <div>
+                <div className="flex flex-col gap-3 text-xs relative">
+                  <div className="relative">
                     <label className="font-bold text-[var(--text-primary)] block mb-1">
                       {selectedAssignStage.isDirectorRound
                         ? 'Select Director (Exclusive Role)'

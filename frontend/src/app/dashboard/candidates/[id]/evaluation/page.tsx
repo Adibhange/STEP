@@ -44,26 +44,29 @@ export default function CandidateAssessmentEvaluationPage() {
   }
 
   // Find all assessment rounds (e.g. Aptitude & Technical)
-  const assessmentRounds = (candidate.pipelineProgress || []).filter(
-    (p: any) => p.roundType === 'Assessment' && p.candidateExamSessionId
-  );
+  const assessmentRounds = (candidate.pipelineProgress || [])
+    .filter((p: any) => Boolean(p.candidateExamSessionId));
 
   const sessionParam = searchParams?.get('session');
-  const roundParam = searchParams?.get('round');
+  const roundParam = searchParams?.get('round')?.toLowerCase();
 
   let targetSessionId: number | null = null;
   if (sessionParam) {
     targetSessionId = Number(sessionParam);
-  } else if (roundParam === 'aptitude') {
-    const apt = assessmentRounds.find((r: any) => r.roundTitle?.toLowerCase().includes('aptitude'));
+  } else if (roundParam === 'aptitude' || roundParam === '1') {
+    const apt = assessmentRounds.find((r: any) => r.roundTitle?.toLowerCase().includes('aptitude') || r.roundNumber === 1);
     targetSessionId = apt?.candidateExamSessionId ?? null;
-  } else if (roundParam === 'technical') {
-    const tech = assessmentRounds.find((r: any) => !r.roundTitle?.toLowerCase().includes('aptitude'));
+  } else if (roundParam === 'technical' || roundParam === '2') {
+    const tech = assessmentRounds.find((r: any) => !r.roundTitle?.toLowerCase().includes('aptitude') && r.roundNumber !== 1);
     targetSessionId = tech?.candidateExamSessionId ?? null;
   }
 
   if (!targetSessionId && assessmentRounds.length > 0) {
-    targetSessionId = assessmentRounds[0].candidateExamSessionId;
+    if (roundParam === 'aptitude' || roundParam === '1') {
+      targetSessionId = assessmentRounds.find((r: any) => r.roundNumber === 1)?.candidateExamSessionId ?? assessmentRounds[0].candidateExamSessionId;
+    } else {
+      targetSessionId = assessmentRounds[0].candidateExamSessionId;
+    }
   }
 
   return (

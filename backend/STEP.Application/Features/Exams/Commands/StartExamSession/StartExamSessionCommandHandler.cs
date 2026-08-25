@@ -326,7 +326,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     {
                         usedMasterQuestionIds.Add(masterQ.Id);
 
-                        var marks = rule.MarksPerQuestion > 0 ? rule.MarksPerQuestion : masterQ.Marks;
+                        var marks = masterQ.Marks > 0 ? masterQ.Marks : (rule.MarksPerQuestion > 0 ? rule.MarksPerQuestion : 1.00m);
                         calculatedTotalMarks += marks;
 
                         var snapshotQuestion = new CandidateExamSessionQuestionV2
@@ -335,7 +335,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                             SectionRuleId = rule.Id,
                             OriginalMasterQuestionId = masterQ.Id,
                             OriginalMasterQuestion = masterQ,
-                            SectionName = isAptitudeRound ? "Aptitude & Logical Reasoning" : rule.SectionName,
+                            SectionName = isAptitudeRound ? "Aptitude & Logical Reasoning" : (!string.IsNullOrWhiteSpace(rule.SectionName) ? rule.SectionName : rule.SectionType),
                             SectionType = isAptitudeRound ? "Aptitude" : rule.SectionType,
                             DisplayOrder = globalDisplayOrder++,
                             QuestionType = masterQ.QuestionType,
