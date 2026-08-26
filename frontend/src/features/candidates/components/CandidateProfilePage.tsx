@@ -2134,7 +2134,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                     <span>{stage.id === 1 ? 'Passed Aptitude (≥ 70%)' : 'Passed Technical Assessment (≥ 70%)'}</span>
                                   </span>
 
-                                  {isHrOrDirectorOrAdmin && stage.id === 1 && !isTechAuthorized && (
+                                  {isHrOrDirectorOrAdmin && stage.id === 1 && !isTechAuthorized && candidate.status !== 'Hired' && candidate.status !== 'Rejected' && stagesData.find(s => s.id === 2)?.status === 'Locked' && (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -2153,13 +2153,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                       <Icon name="zap" size="xs" />
                                       <span>Authorize Tech Round</span>
                                     </button>
-                                  )}
-
-                                  {stage.id === 1 && isTechAuthorized && (
-                                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--accent-indigo)]/30 flex items-center gap-1">
-                                      <Icon name="check" size="xs" />
-                                      <span>Tech Round Authorized</span>
-                                    </span>
                                   )}
                                 </div>
                               ) : stage.statusType === 'rejected' ? (
@@ -2193,7 +2186,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                     <span className="w-2 h-2 rounded-full bg-[var(--status-warning)] animate-ping" />
                                     <span>Aptitude In-Progress (Live)</span>
                                   </span>
-                                  {isHrOrDirectorOrAdmin && (
+                                  {isHrOrDirectorOrAdmin && candidate.status !== 'Hired' && candidate.status !== 'Rejected' && (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -2211,60 +2204,64 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                               ) : (
                                 /* Round 2 Technical Assessment (Coding & SQL) */
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  {isHrOrDirectorOrAdmin && (
+                                  {candidate.status !== 'Hired' && candidate.status !== 'Rejected' && (
                                     <>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedAssignStage(stage);
-                                          setAssignedInterviewer(interviewerOptions[0]?.value || '');
-                                        }}
-                                        className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                                      >
-                                        <Icon name="user" size="xs" />
-                                        <span>Assign Evaluator</span>
-                                      </button>
+                                      {isHrOrDirectorOrAdmin && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setSelectedAssignStage(stage);
+                                              setAssignedInterviewer(interviewerOptions[0]?.value || '');
+                                            }}
+                                            className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                          >
+                                            <Icon name="user" size="xs" />
+                                            <span>Assign Evaluator</span>
+                                          </button>
 
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedScheduleStage(stage);
-                                          setShowScheduleTestModal(true);
-                                        }}
-                                        className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] hover:bg-[var(--accent-green)] hover:text-white cursor-pointer shadow-2xs"
-                                      >
-                                        <Icon name="calendar" size="xs" />
-                                        <span>Schedule &amp; Send Test</span>
-                                      </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setSelectedScheduleStage(stage);
+                                              setShowScheduleTestModal(true);
+                                            }}
+                                            className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg text-[11.5px] sm:text-xs font-semibold transition-colors border border-[var(--accent-green)] bg-[var(--accent-green-dim)] text-[var(--accent-green)] hover:bg-[var(--accent-green)] hover:text-white cursor-pointer shadow-2xs"
+                                          >
+                                            <Icon name="calendar" size="xs" />
+                                            <span>Schedule &amp; Send Test</span>
+                                          </button>
+                                        </>
+                                      )}
+                                      
+                                      {(isInterviewer || isHrOrDirectorOrAdmin) && (
+                                        <button
+                                          type="button"
+                                          disabled={!isAssignedToUser}
+                                          onClick={() => {
+                                            if (!isAssignedToUser) return;
+                                            setSelectedFeedbackStage(stage);
+                                            setFeedbackText('');
+                                            setScorecardTechnical(3);
+                                            setScorecardCommunication(3);
+                                            setScorecardProblemSolving(3);
+                                            setScorecardCulturalFit(3);
+                                            setScorecardStrengths('');
+                                            setScorecardWeaknesses('');
+                                            setScorecardRecommendation('Hire');
+                                          }}
+                                          className={`h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border text-[11.5px] sm:text-xs font-semibold transition-colors shadow-2xs ${
+                                            !isAssignedToUser
+                                              ? 'bg-[var(--surface-3)] border-[var(--border-default)] text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
+                                              : 'border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] hover:bg-[var(--accent-blue)] hover:text-white cursor-pointer'
+                                          }`}
+                                          title={!isAssignedToUser ? `Only the assigned interviewer (${stage.interviewer}) can submit feedback for this round.` : 'Submit feedback scorecard'}
+                                        >
+                                          <Icon name="pencil" size="xs" />
+                                          <span>Submit Feedback</span>
+                                        </button>
+                                      )}
                                     </>
-                                  )}
-                                  
-                                  {(isInterviewer || isHrOrDirectorOrAdmin) && (
-                                    <button
-                                      type="button"
-                                      disabled={!isAssignedToUser}
-                                      onClick={() => {
-                                        if (!isAssignedToUser) return;
-                                        setSelectedFeedbackStage(stage);
-                                        setFeedbackText('');
-                                        setScorecardTechnical(3);
-                                        setScorecardCommunication(3);
-                                        setScorecardProblemSolving(3);
-                                        setScorecardCulturalFit(3);
-                                        setScorecardStrengths('');
-                                        setScorecardWeaknesses('');
-                                        setScorecardRecommendation('Hire');
-                                      }}
-                                      className={`h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border text-[11.5px] sm:text-xs font-semibold transition-colors shadow-2xs ${
-                                        !isAssignedToUser
-                                          ? 'bg-[var(--surface-3)] border-[var(--border-default)] text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
-                                          : 'border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] hover:bg-[var(--accent-blue)] hover:text-white cursor-pointer'
-                                      }`}
-                                      title={!isAssignedToUser ? `Only the assigned interviewer (${stage.interviewer}) can submit feedback for this round.` : 'Submit feedback scorecard'}
-                                    >
-                                      <Icon name="pencil" size="xs" />
-                                      <span>Submit Feedback</span>
-                                    </button>
                                   )}
                                 </div>
                               )}
@@ -2284,7 +2281,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                 </span>
                               ) : null}
 
-                              {(isDirector || isAdmin) && (
+                              {(isDirector || isAdmin) && stage.statusType !== 'passed' && stage.statusType !== 'rejected' && candidate.status !== 'Hired' && candidate.status !== 'Rejected' && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -2303,45 +2300,61 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                           ) : stage.roundType === 'Interview' ? (
                             /* Technical Interview Rounds */
                             <div className="flex items-center gap-2 flex-wrap">
-                              {isHrOrDirectorOrAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedAssignStage(stage);
-                                    setAssignedInterviewer(interviewerOptions[0]?.value || '');
-                                  }}
-                                  className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
-                                >
-                                  <Icon name="user" size="xs" />
-                                  <span>Schedule &amp; Assign Interviewer</span>
-                                </button>
-                              )}
+                              {stage.statusType === 'passed' ? (
+                                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1">
+                                  <Icon name="check" size="xs" />
+                                  <span>Passed Interview</span>
+                                </span>
+                              ) : stage.statusType === 'rejected' ? (
+                                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1">
+                                  <Icon name="x" size="xs" />
+                                  <span>Interview Rejected</span>
+                                </span>
+                              ) : null}
 
-                              <button
-                                type="button"
-                                disabled={!isAssignedToUser}
-                                onClick={() => {
-                                  if (!isAssignedToUser) return;
-                                  setSelectedFeedbackStage(stage);
-                                  setFeedbackText('');
-                                  setScorecardTechnical(3);
-                                  setScorecardCommunication(3);
-                                  setScorecardProblemSolving(3);
-                                  setScorecardCulturalFit(3);
-                                  setScorecardStrengths('');
-                                  setScorecardWeaknesses('');
-                                  setScorecardRecommendation('Hire');
-                                }}
-                                className={`h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border text-[11.5px] sm:text-xs font-semibold transition-colors shadow-2xs ${
-                                  !isAssignedToUser
-                                    ? 'bg-[var(--surface-3)] border-[var(--border-default)] text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
-                                    : 'border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] hover:bg-[var(--accent-blue)] hover:text-white cursor-pointer'
-                                }`}
-                                title={!isAssignedToUser ? `Only the assigned interviewer (${stage.interviewer}) can submit feedback for this round.` : 'Submit feedback scorecard'}
-                              >
-                                <Icon name="pencil" size="xs" />
-                                <span>Submit Feedback</span>
-                              </button>
+                              {stage.statusType !== 'passed' && stage.statusType !== 'rejected' && candidate.status !== 'Hired' && candidate.status !== 'Rejected' && (
+                                <>
+                                  {isHrOrDirectorOrAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedAssignStage(stage);
+                                        setAssignedInterviewer(interviewerOptions[0]?.value || '');
+                                      }}
+                                      className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                                    >
+                                      <Icon name="user" size="xs" />
+                                      <span>Schedule &amp; Assign Interviewer</span>
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    disabled={!isAssignedToUser}
+                                    onClick={() => {
+                                      if (!isAssignedToUser) return;
+                                      setSelectedFeedbackStage(stage);
+                                      setFeedbackText('');
+                                      setScorecardTechnical(3);
+                                      setScorecardCommunication(3);
+                                      setScorecardProblemSolving(3);
+                                      setScorecardCulturalFit(3);
+                                      setScorecardStrengths('');
+                                      setScorecardWeaknesses('');
+                                      setScorecardRecommendation('Hire');
+                                    }}
+                                    className={`h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border text-[11.5px] sm:text-xs font-semibold transition-colors shadow-2xs ${
+                                      !isAssignedToUser
+                                        ? 'bg-[var(--surface-3)] border-[var(--border-default)] text-[var(--text-tertiary)] opacity-40 cursor-not-allowed'
+                                        : 'border-[var(--accent-blue)] bg-[var(--accent-blue-dim)] text-[var(--accent-blue)] hover:bg-[var(--accent-blue)] hover:text-white cursor-pointer'
+                                    }`}
+                                    title={!isAssignedToUser ? `Only the assigned interviewer (${stage.interviewer}) can submit feedback for this round.` : 'Submit feedback scorecard'}
+                                  >
+                                    <Icon name="pencil" size="xs" />
+                                    <span>Submit Feedback</span>
+                                  </button>
+                                </>
+                              )}
                             </div>
                           ) : stage.isOfferRound ? (
                             /* Offer Letter Round — On Hold as format is in preparation */
