@@ -23,7 +23,7 @@ export const examsApi = stepApi.injectEndpoints({
       invalidatesTags: ['Exams'],
     }),
     resumeExamSession: builder.query<ApiEnvelope<LiveExamWorkspaceData>, string>({
-      query: (sessionToken) => `/exams/${sessionToken}/resume`,
+      query: (sessionToken) => `/exams/resume/${sessionToken}`,
       providesTags: ['Exams'],
     }),
     saveExamAnswer: builder.mutation<
@@ -38,10 +38,11 @@ export const examsApi = stepApi.injectEndpoints({
       }
     >({
       query: ({ sessionToken, ...body }) => ({
-        url: `/exams/${sessionToken}/save-answer`,
+        url: '/exams/answers',
         method: 'POST',
         body: {
-          questionId: body.questionId || body.candidateExamSessionQuestionId,
+          sessionToken,
+          candidateExamSessionQuestionId: body.candidateExamSessionQuestionId || body.questionId,
           ...body,
         },
       }),
@@ -57,7 +58,7 @@ export const examsApi = stepApi.injectEndpoints({
       query: ({ sessionToken, reason }) => ({
         url: `/exams/${sessionToken}/submit`,
         method: 'POST',
-        body: { reason },
+        body: { reason, sessionToken },
       }),
       invalidatesTags: ['Exams', 'Candidates'],
     }),
@@ -66,9 +67,9 @@ export const examsApi = stepApi.injectEndpoints({
       { sessionToken: string; violationType: string; metadata?: string }
     >({
       query: ({ sessionToken, violationType, metadata }) => ({
-        url: `/exams/${sessionToken}/violation`,
+        url: '/exams/violations',
         method: 'POST',
-        body: { violationType, metadata },
+        body: { sessionToken, violationType, metadata },
       }),
     }),
     getExamEvaluation: builder.query<ApiEnvelope<ExamEvaluationViewData>, number>({

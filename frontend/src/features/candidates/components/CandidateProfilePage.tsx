@@ -1096,25 +1096,28 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       await evaluateCandidateStage({
         candidateId: numericId,
         roundNumber: roundId,
-        passed: true,
-        remarks: 'Candidate granted retake for Round 1 Aptitude.',
+        passed: false,
+        isRetake: true,
+        remarks: 'Candidate granted retake for Round 1 Aptitude (Attempt 2 of 2).',
       }).unwrap();
       setStagesData((prev) =>
         prev.map((s) =>
           s.id === roundId
             ? {
                 ...s,
-                status: 'In-Progress',
+                status: 'Pending',
                 statusType: 'pending',
-                result: 'In-Progress',
-                feedback: 'Aptitude re-test authorized. Awaiting candidate exam submission.',
+                result: 'Pending',
+                score: null,
+                feedback: 'Aptitude re-test authorized (Attempt 2 of 2). Awaiting candidate exam submission.',
               }
             : s
         )
       );
-      toast.success('Aptitude Retake Granted', { description: 'Candidate can now re-attempt the Aptitude assessment.' });
-    } catch {
-      toast.error('Retake Failed', { description: 'Could not grant aptitude retake.' });
+      toast.success('Aptitude Retake Granted', { description: 'Candidate can now re-attempt the Aptitude assessment (Attempt 2 of 2).' });
+    } catch (err: any) {
+      const errorMsg = err?.data?.message || err?.data?.errors?.[0] || 'Could not grant aptitude retake.';
+      toast.error('Retake Failed', { description: errorMsg });
     }
   };
 
@@ -1264,6 +1267,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
       setDirectorPin('');
       setSelectedFeedbackStage(null);
       setCandidate((prev) => ({ ...prev, status: isHired ? 'Hired' : 'Rejected' }));
+      refetchCandidate();
       toast.success(isHired ? 'Candidate Hired' : 'Decision Recorded', {
         description: isHired ? `Director PIN verified — ${candidate.name} is successfully marked as Hired.` : 'Candidate marked as Rejected.',
       });
@@ -2165,15 +2169,21 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                                     <span>{stage.id === 1 ? 'Failed Aptitude (< 70%)' : 'Failed Technical Assessment (< 70%)'}</span>
                                   </span>
                                   {isHrOrDirectorOrAdmin && stage.id === 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRetakeAptitude(stage.id)}
-                                      className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-all shadow-2xs cursor-pointer"
-                                      title="Allow candidate to re-attempt Round 1 Aptitude"
-                                    >
-                                      <Icon name="refresh" size="xs" />
-                                      <span>Retake Aptitude</span>
-                                    </button>
+                                    stage.feedback?.includes('Attempt 2') || stage.feedback?.includes('2 of 2') ? (
+                                      <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--surface-2)] text-[var(--text-tertiary)] border border-[var(--border-default)] font-mono">
+                                        Max 2 Attempts Exhausted
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRetakeAptitude(stage.id)}
+                                        className="h-7 sm:h-7.5 px-3 inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-xs font-bold hover:bg-[var(--accent-indigo)] hover:text-white transition-all shadow-2xs cursor-pointer"
+                                        title="Allow candidate to re-attempt Round 1 Aptitude (Max 2 Attempts)"
+                                      >
+                                        <Icon name="refresh" size="xs" />
+                                        <span>Retake Aptitude (Attempt 2)</span>
+                                      </button>
+                                    )
                                   )}
                                 </div>
                               ) : stage.id === 1 ? (
@@ -2201,21 +2211,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
                               ) : (
                                 /* Round 2 Technical Assessment (Coding & SQL) */
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  {stage.candidateExamSessionId ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedEvaluationSessionId(stage.candidateExamSessionId ?? null);
-                                        setShowEvaluationModal(true);
-                                      }}
-                                      className="h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black transition-colors cursor-pointer shadow-2xs font-semibold text-[11.5px] sm:text-xs"
-                                      title="Open technical assessment evaluation and scorecard"
-                                    >
-                                      <Icon name="award" size="xs" />
-                                      <span>Evaluate Assessment</span>
-                                    </button>
-                                  ) : null}
-
                                   {isHrOrDirectorOrAdmin && (
                                     <>
                                       <button

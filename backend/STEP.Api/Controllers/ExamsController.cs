@@ -39,6 +39,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpGet("resume/{sessionToken}")]
+        [HttpGet("{sessionToken}/resume")]
         [AllowAnonymous]
         public async Task<IActionResult> Resume(string sessionToken)
         {
@@ -47,10 +48,15 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("answers")]
+        [HttpPost("save-answer")]
+        [HttpPost("{sessionToken}/save-answer")]
         [AllowAnonymous]
-        public async Task<IActionResult> SaveAnswer([FromBody] SaveExamAnswerCommand command)
+        public async Task<IActionResult> SaveAnswer([FromRoute] string? sessionToken, [FromBody] SaveExamAnswerCommand command)
         {
-            await mediator.Send(command);
+            var effectiveCommand = !string.IsNullOrWhiteSpace(sessionToken) && string.IsNullOrWhiteSpace(command.SessionToken)
+                ? command with { SessionToken = sessionToken }
+                : command;
+            await mediator.Send(effectiveCommand);
             return Ok(ApiResponse<object>.Ok(new { }, "Answer saved"));
         }
 
@@ -85,10 +91,14 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("violations")]
+        [HttpPost("violation")]
+        [HttpPost("{sessionToken}/violation")]
+        [HttpPost("{sessionToken}/violations")]
         [AllowAnonymous]
-        public async Task<IActionResult> ReportViolation([FromBody] ReportExamViolationRequestBody body)
+        public async Task<IActionResult> ReportViolation([FromRoute] string? sessionToken, [FromBody] ReportExamViolationRequestBody body)
         {
-            var result = await mediator.Send(new ReportExamViolationCommand(body.SessionToken, body.ViolationType));
+            var token = !string.IsNullOrWhiteSpace(sessionToken) ? sessionToken : body.SessionToken;
+            var result = await mediator.Send(new ReportExamViolationCommand(token, body.ViolationType));
             return Ok(ApiResponse<object>.Ok(result, "Violation recorded"));
         }
 

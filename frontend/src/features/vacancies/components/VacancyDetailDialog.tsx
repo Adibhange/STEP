@@ -39,10 +39,10 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
   const vacancyIdNum = Number(vacancy?.id);
   const isDirectHiring = vacancy?.driveType === 'Direct / Sourced Hiring';
 
-  const { data: vacancyDetailRes } = useGetVacancyByIdQuery(vacancyIdNum, { skip: !vacancyIdNum || isDirectHiring });
+  const { data: vacancyDetailRes } = useGetVacancyByIdQuery(vacancyIdNum, { skip: !vacancyIdNum });
   const vacancyDetail = vacancyDetailRes?.data;
 
-  const { data: qrCodeRes, isLoading: isQrLoading, refetch: refetchQrCode } = useGetQRCodeByVacancyQuery(vacancyIdNum, { skip: !vacancyIdNum || isDirectHiring });
+  const { data: qrCodeRes, isLoading: isQrLoading, refetch: refetchQrCode } = useGetQRCodeByVacancyQuery(vacancyIdNum, { skip: !vacancyIdNum });
   const qrCode = qrCodeRes?.data;
   const { data: qrAnalyticsRes } = useGetQRCodeAnalyticsQuery(qrCode?.id ?? 0, { skip: !qrCode });
   const qrAnalytics = qrAnalyticsRes?.data;

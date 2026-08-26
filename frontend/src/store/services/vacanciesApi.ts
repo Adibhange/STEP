@@ -33,20 +33,25 @@ export const vacanciesApi = stepApi.injectEndpoints({
       }),
       invalidatesTags: (result, error, { id }) => ['Vacancies', { type: 'Vacancies', id }],
     }),
-    createPipelineFlow: builder.mutation<ApiEnvelope<any>, Record<string, any>>({
-      query: (data) => ({
-        url: '/pipelineflows',
-        method: 'POST',
-        body: data,
-      }),
-      invalidatesTags: ['Vacancies'],
-    }),
-    updatePipelineFlow: builder.mutation<ApiEnvelope<any>, Record<string, any>>({
+    createPipelineFlow: builder.mutation<ApiEnvelope<any>, { vacancyId?: number; data?: Record<string, any>; [key: string]: any }>({
       query: (arg) => {
-        const id = arg.id || arg.flowId;
+        const vacancyId = arg.vacancyId || arg.data?.vacancyId;
         const body = arg.data || arg;
         return {
-          url: `/pipelineflows/${id}`,
+          url: vacancyId ? `/vacancies/${vacancyId}/pipeline-flows` : '/pipelineflows',
+          method: 'POST',
+          body,
+        };
+      },
+      invalidatesTags: ['Vacancies'],
+    }),
+    updatePipelineFlow: builder.mutation<ApiEnvelope<any>, { vacancyId?: number; flowId?: number; id?: number; data?: Record<string, any>; [key: string]: any }>({
+      query: (arg) => {
+        const vacancyId = arg.vacancyId;
+        const flowId = arg.flowId || arg.id;
+        const body = arg.data || arg;
+        return {
+          url: vacancyId ? `/vacancies/${vacancyId}/pipeline-flows/${flowId}` : `/pipelineflows/${flowId}`,
           method: 'PUT',
           body,
         };
@@ -55,9 +60,11 @@ export const vacanciesApi = stepApi.injectEndpoints({
     }),
     deletePipelineFlow: builder.mutation<ApiEnvelope<any>, number | { vacancyId?: number; flowId: number }>({
       query: (arg) => {
-        const id = typeof arg === 'number' ? arg : arg.flowId;
+        if (typeof arg === 'number') {
+          return { url: `/vacancies/pipeline-flows/${arg}`, method: 'DELETE' };
+        }
         return {
-          url: `/pipelineflows/${id}`,
+          url: arg.vacancyId ? `/vacancies/${arg.vacancyId}/pipeline-flows/${arg.flowId}` : `/vacancies/pipeline-flows/${arg.flowId}`,
           method: 'DELETE',
         };
       },
@@ -65,7 +72,7 @@ export const vacanciesApi = stepApi.injectEndpoints({
     }),
     assignQuestionPaperToRound: builder.mutation<ApiEnvelope<any>, { roundId: number; vacancyQuestionPaperId: number }>({
       query: ({ roundId, vacancyQuestionPaperId }) => ({
-        url: `/pipelineflows/rounds/${roundId}/assign-question-paper`,
+        url: `/vacancies/pipeline-rounds/${roundId}/question-paper`,
         method: 'POST',
         body: { vacancyQuestionPaperId },
       }),

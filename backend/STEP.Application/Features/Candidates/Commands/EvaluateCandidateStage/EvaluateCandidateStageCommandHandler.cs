@@ -20,7 +20,8 @@ namespace STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage
         int RoundNumber,
         bool Passed,
         string? Remarks,
-        string? DirectorPin = null
+        string? DirectorPin = null,
+        bool IsRetake = false
     ) : IRequest<CandidateDto>;
 
     public class EvaluateCandidateStageCommandHandler(IApplicationDbContext db, ICandidateAdvancementService advancement, IPasswordHasher hasher)
@@ -30,10 +31,12 @@ namespace STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage
         {
             if (!string.IsNullOrWhiteSpace(request.DirectorPin))
             {
-                var isPinValid = await db.Users
+                var activeDirectors = await db.Users
                     .Include(u => u.Role)
                     .Where(u => u.Role.Name == "Director" && u.IsActive && u.PinHash != null)
-                    .AnyAsync(u => hasher.Verify(request.DirectorPin, u.PinHash!), cancellationToken);
+                    .ToListAsync(cancellationToken);
+
+                var isPinValid = activeDirectors.Any(u => hasher.Verify(request.DirectorPin, u.PinHash!));
 
                 if (!isPinValid)
                 {
@@ -107,9 +110,83 @@ namespace STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage
                 await db.SaveChangesAsync(cancellationToken);
             }
 
-            var progress = candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == request.RoundNumber)
-                ?? candidate.PipelineProgressHistory.OrderBy(p => p.RoundNumber).FirstOrDefault()
-                ?? throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(request.RoundNumber), "Round not found.")]);
+            var progress = candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == request.RoundNumber);
+
+            if (progress == null)
+            {
+                var flowRound = await db.VacancyPipelineFlowRounds
+                    .Include(r => r.VacancyPipelineFlow)
+                    .Where(r => r.VacancyPipelineFlow.VacancyId == candidate.VacancyId && r.RoundOrder == request.RoundNumber && !r.IsDeleted)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                var roundTitle = flowRound?.Name ?? (request.RoundNumber == 4 ? "Round 4: Director Final & Offer" : $"Round {request.RoundNumber}");
+                var roundType = flowRound != null ? STEP.Application.Common.PipelineRoundClassification.Classify(flowRound.RoundType) : (request.RoundNumber == 4 ? "Director" : "Interview");
+
+                var fallbackRoundId = await db.VacancyPipelineFlowRounds.Select(r => r.Id).FirstOrDefaultAsync(cancellationToken);
+
+                progress = new CandidatePipelineProgressEntity
+                {
+                    CandidateId = candidate.Id,
+                    VacancyPipelineFlowRoundId = flowRound?.Id ?? fallbackRoundId,
+                    RoundNumber = request.RoundNumber,
+                    RoundTitle = roundTitle,
+                    RoundType = roundType,
+                    Status = "Pending"
+                };
+                candidate.PipelineProgressHistory.Add(progress);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            if (request.IsRetake)
+            {
+                // Count completed attempts to enforce maximum 2 attempts limit
+                var completedAttempts = await db.CandidateExamSessionsV2
+                    .CountAsync(s => s.CandidateId == candidate.Id && s.CandidatePipelineProgressId == progress.Id
+                        && (s.SessionStatus == "Submitted" || s.SessionStatus == "AutoSubmitted" || s.SessionStatus == "Evaluated"), cancellationToken);
+
+                if (completedAttempts >= 2)
+                {
+                    throw new ValidationException([new FluentValidation.Results.ValidationFailure("RetakeLimit", "Candidate has already utilized the maximum limit of 2 attempts. No further retakes can be granted.")]);
+                }
+
+                var prevScore = progress.ScoreObtained;
+                progress.Status = "Pending";
+                progress.ScoreObtained = null;
+                progress.CompletedAt = null;
+                progress.EvaluatedAt = null;
+                progress.StartedAt = null;
+                progress.TestPasscode = "1234";
+                progress.Remarks = $"Retake authorized (Attempt {completedAttempts + 1} of 2). Previous attempt score: {prevScore ?? 0:0.##}%.";
+
+                // Unblock candidate from Rejected/Eliminated
+                candidate.Status = "Applied";
+                candidate.CurrentStage = progress.RoundTitle;
+                candidate.CurrentPipelineProgress = progress;
+
+                db.AuditLogs.Add(new AuditLog
+                {
+                    CorrelationId = Guid.NewGuid(),
+                    Action = "AuthorizeRetake",
+                    EntityName = nameof(CandidateEntity),
+                    EntityId = candidate.CandidateCode,
+                });
+
+                await db.SaveChangesAsync(cancellationToken);
+
+                var retakeHistoryDtos = candidate.PipelineProgressHistory
+                    .OrderBy(p => p.RoundNumber)
+                    .Select(p => new PipelineProgressDto(
+                        p.Id, p.RoundNumber, p.RoundTitle, p.RoundType, p.Status,
+                        p.ScoreObtained, p.StartedAt, p.CompletedAt, null, null))
+                    .ToList();
+
+                return new CandidateDto(
+                    candidate.Id, candidate.CandidateCode, candidate.FirstName, candidate.LastName, candidate.Email, candidate.Phone,
+                    candidate.VacancyId, candidate.Vacancy?.Title ?? "N/A", candidate.CurrentStage, candidate.Status, candidate.RegistrationChannel,
+                    candidate.ReferralEmployeeName, candidate.TotalExperienceYears, candidate.CurrentCTC, candidate.ExpectedCTC,
+                    candidate.NoticePeriodDays, candidate.CurrentLocation, candidate.HighestQualification, candidate.CreatedAt,
+                    retakeHistoryDtos, []);
+            }
 
             progress.Status = request.Passed ? "Passed" : "Failed";
             progress.EvaluatedAt = DateTime.UtcNow;

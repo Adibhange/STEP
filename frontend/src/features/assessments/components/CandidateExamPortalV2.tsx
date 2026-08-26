@@ -82,13 +82,8 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
     [activeQuestionIndex]
   );
 
-  // ── Coding & SQL Simulation Sandboxes ───────────────────────────────────────
-  const [activeTerminalTab, setActiveTerminalTab] = useState<'testcases' | 'console'>('testcases');
-  const [simulatedCodeRunning, setSimulatedCodeRunning] = useState<boolean>(false);
-  const [codeExecutionPassed, setCodeExecutionPassed] = useState<boolean | null>(null);
-  const [codeConsoleOutput, setCodeConsoleOutput] = useState<string>('');
-  const [sqlQueryResult, setSqlQueryResult] = useState<{ columns: string[]; rows: any[][]; rowCount: number; executionTimeMs: number } | null>(null);
-  const [sqlRunning, setSqlRunning] = useState<boolean>(false);
+  // ── Coding & SQL Solution State ─────────────────────────────────────────────
+  const [justSavedQuestionId, setJustSavedQuestionId] = useState<number | null>(null);
   const [showSchemaModal, setShowSchemaModal] = useState<boolean>(false);
 
   // ── Timers & HUD ────────────────────────────────────────────────────────────
@@ -807,33 +802,22 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [examStep, currentQuestion]);
 
-  // ── 8. Code & SQL Simulators ────────────────────────────────────────────────
-  const handleRunCodeTest = () => {
-    setSimulatedCodeRunning(true);
-    setCodeExecutionPassed(null);
-    setTimeout(() => {
-      setSimulatedCodeRunning(false);
-      setCodeExecutionPassed(true);
-      setCodeConsoleOutput(
-        `> Compiling C# Source with .NET 10 Roslyn Compiler...\n> Optimizations: Enabled (Release mode)\n> Running Test Suite...\n[PASS] Test Case 1: LRU Eviction Order (Expected: 1, Actual: 1) — 12ms\n[PASS] Test Case 2: Capacity Boundary Limit — 14ms\n[PASS] Test Case 3: Thread-Safety Concurrency Stress (10,000 ops) — 22ms\n\n✓ All 3 Test Cases Verified Successfully (Total: 48ms | Memory: 24.2 MB)`
-      );
-      setActiveTerminalTab('console');
-    }, 850);
-  };
-
-  const handleRunSqlQuery = () => {
-    setSqlRunning(true);
-    setTimeout(() => {
-      setSqlRunning(false);
-      setSqlQueryResult({
-        columns: ['EmployeeId', 'FullName', 'Salary', 'SalaryRank'],
-        rows: [
-          ['104', 'Vikram Deshmukh', '$142,000.00', '2'],
-        ],
-        rowCount: 1,
-        executionTimeMs: 18,
-      });
-    }, 650);
+  // ── 8. Solution Save Handler ───────────────────────────────────────────────
+  const handleExplicitSave = (questionId: number) => {
+    const textVal = answersMap[questionId]?.text || '';
+    if (activeSessionToken) {
+      saveAnswerBatchApi({
+        sessionToken: activeSessionToken,
+        answers: [{
+          candidateExamSessionQuestionId: questionId,
+          submittedAnswerText: textVal,
+          clientTimestamp: new Date().toISOString(),
+        }],
+      }).then(() => {
+        setJustSavedQuestionId(questionId);
+        setTimeout(() => setJustSavedQuestionId(null), 3000);
+      }).catch((e) => console.warn('Save error', e));
+    }
   };
 
   // Time format
@@ -1886,98 +1870,35 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
                         language={currentQuestion.programmingLanguage || 'csharp'}
                         questionType="CODING"
                         defaultTemplate={currentQuestion.codeTemplate || '// Write your C# / TypeScript solution here...'}
-                        title="CODE EDITOR"
+                        title="CODE SOLUTION"
                       />
 
-                      {/* Integrated Terminal & Test Cases Console */}
-                      <div className="border-t border-border-default bg-surface-1 p-4 space-y-3">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2 font-mono text-xs">
-                            <button
-                              type="button"
-                              onClick={() => setActiveTerminalTab('testcases')}
-                              className={`px-3 py-1 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${
-                                activeTerminalTab === 'testcases'
-                                  ? 'bg-accent-indigo text-text-on-accent border-accent-indigo'
-                                  : 'bg-surface-2 text-text-secondary border-border-default'
-                              }`}
-                            >
-                              Test Cases (3)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setActiveTerminalTab('console')}
-                              className={`px-3 py-1 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${
-                                activeTerminalTab === 'console'
-                                  ? 'bg-accent-indigo text-text-on-accent border-accent-indigo'
-                                  : 'bg-surface-2 text-text-secondary border-border-default'
-                              }`}
-                            >
-                              Terminal Output
-                            </button>
-                          </div>
+                      {/* Clean Solution Save Action Bar */}
+                      <div className="border-t border-border-default bg-surface-1 p-3.5 flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2 text-xs font-mono text-text-tertiary">
+                          <Icon name="info" size="xs" className="text-accent-indigo" />
+                          <span>Write and structure your code solution. It will be reviewed by the technical evaluator.</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {justSavedQuestionId === currentQuestion.id && (
+                            <span className="text-xs font-mono text-status-success-text font-bold flex items-center gap-1 bg-status-success-bg px-2.5 py-1 rounded-lg border border-status-success-border">
+                              <Icon name="check-circle" size="xs" />
+                              <span>Code Saved</span>
+                            </span>
+                          )}
 
                           <motion.button
                             type="button"
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
-                            onClick={handleRunCodeTest}
-                            disabled={simulatedCodeRunning}
-                            className="h-8.5 px-4 rounded-xl bg-accent-indigo hover:bg-accent-indigo-hover text-text-on-accent text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 shadow-md"
+                            onClick={() => handleExplicitSave(currentQuestion.id)}
+                            className="h-8.5 px-4 rounded-xl bg-accent-indigo hover:bg-accent-indigo-hover text-text-on-accent text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 shadow-xs"
                           >
-                            {simulatedCodeRunning ? (
-                              <>
-                                <Icon name="spinner" size="xs" className="animate-spin" />
-                                <span>Executing Test Suite...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Icon name="code-2" size="xs" />
-                                <span>RUN CODE &amp; VALIDATE</span>
-                              </>
-                            )}
+                            <Icon name="file-check" size="xs" />
+                            <span>Save Solution</span>
                           </motion.button>
                         </div>
-
-                        {/* Console View */}
-                        {activeTerminalTab === 'console' && (
-                          <pre className="p-3.5 rounded-xl bg-canvas border border-border-default text-[11px] font-mono text-accent-cyan whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
-                            {codeConsoleOutput || '> Click "Run Code & Validate" to compile and execute test cases.'}
-                          </pre>
-                        )}
-
-                        {/* Test Case Breakdown */}
-                        {activeTerminalTab === 'testcases' && (
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px] font-mono">
-                            <div className="p-2.5 rounded-xl bg-surface-2 border border-border-soft space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-text-primary font-bold">Case 1: Basic O(1)</span>
-                                <span className={`text-[10px] ${codeExecutionPassed ? 'text-status-success-text' : 'text-text-tertiary'}`}>
-                                  {codeExecutionPassed ? 'PASSED' : 'READY'}
-                                </span>
-                              </div>
-                              <div className="text-[10px] text-text-tertiary">Put(1,1), Get(1)</div>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-surface-2 border border-border-soft space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-text-primary font-bold">Case 2: Eviction</span>
-                                <span className={`text-[10px] ${codeExecutionPassed ? 'text-status-success-text' : 'text-text-tertiary'}`}>
-                                  {codeExecutionPassed ? 'PASSED' : 'READY'}
-                                </span>
-                              </div>
-                              <div className="text-[10px] text-text-tertiary">Capacity Exceeded</div>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-surface-2 border border-border-soft space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-text-primary font-bold">Case 3: Concurrency</span>
-                                <span className={`text-[10px] ${codeExecutionPassed ? 'text-status-success-text' : 'text-text-tertiary'}`}>
-                                  {codeExecutionPassed ? 'PASSED' : 'READY'}
-                                </span>
-                              </div>
-                              <div className="text-[10px] text-text-tertiary">Multi-Threaded Ops</div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -2013,67 +1934,44 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
                       </pre>
                     )}
 
-                    <CodeEditorIDE
-                      value={currentAnswer.text || ''}
-                      onChange={(val) => handleTextAnswerChange(currentQuestion.id, val)}
-                      language="sql"
-                      questionType="SQL"
-                      defaultTemplate="-- Write your SQL query here\nSELECT "
-                      title="SQL QUERY RUNNER"
-                    />
+                    <div className="rounded-2xl border border-border-default bg-surface-2 overflow-hidden">
+                      <CodeEditorIDE
+                        value={currentAnswer.text || ''}
+                        onChange={(val) => handleTextAnswerChange(currentQuestion.id, val)}
+                        language="sql"
+                        questionType="SQL"
+                        defaultTemplate="-- Write your SQL query here\nSELECT "
+                        title="SQL QUERY SOLUTION"
+                      />
 
-                    <div className="flex items-center justify-between bg-surface-1 p-3 rounded-2xl border border-border-default">
-                      <span className="text-[11px] font-mono text-text-tertiary">Target Engine: T-SQL / SQL Server 2022</span>
-                      <motion.button
-                        type="button"
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={handleRunSqlQuery}
-                        disabled={sqlRunning}
-                        className="h-8.5 px-4 rounded-xl bg-accent-cyan hover:opacity-90 text-text-on-accent text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
-                      >
-                        {sqlRunning ? (
-                          <>
-                            <Icon name="spinner" size="xs" className="animate-spin" />
-                            <span>Executing Query...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Icon name="file-text" size="xs" />
-                            <span>RUN SQL QUERY</span>
-                          </>
-                        )}
-                      </motion.button>
-                    </div>
-
-                    {sqlQueryResult && (
-                      <div className="p-4 rounded-2xl bg-surface-2 border border-accent-cyan-dim space-y-2.5">
-                        <div className="flex items-center justify-between text-xs font-mono text-status-success-text font-bold">
-                          <span>Query Result ({sqlQueryResult.rowCount} rows in {sqlQueryResult.executionTimeMs}ms)</span>
-                          <span className="text-accent-cyan">MATCHES EXPECTED CRITERIA ✓</span>
+                      {/* Clean Query Save Action Bar */}
+                      <div className="border-t border-border-default bg-surface-1 p-3.5 flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2 text-xs font-mono text-text-tertiary">
+                          <Icon name="info" size="xs" className="text-accent-cyan" />
+                          <span>Compose your SQL query. Target Engine: T-SQL / SQL Server 2022.</span>
                         </div>
-                        <div className="overflow-x-auto rounded-xl border border-border-soft">
-                          <table className="w-full text-left text-xs font-mono">
-                            <thead className="bg-surface-3 text-text-secondary">
-                              <tr>
-                                {sqlQueryResult.columns.map((c) => (
-                                  <th key={c} className="p-2.5 border-b border-border-soft">{c}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border-soft bg-surface-2">
-                              {sqlQueryResult.rows.map((row, rIdx) => (
-                                <tr key={rIdx}>
-                                  {row.map((val, cIdx) => (
-                                    <td key={cIdx} className="p-2.5 text-text-primary">{val}</td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+
+                        <div className="flex items-center gap-2">
+                          {justSavedQuestionId === currentQuestion.id && (
+                            <span className="text-xs font-mono text-status-success-text font-bold flex items-center gap-1 bg-status-success-bg px-2.5 py-1 rounded-lg border border-status-success-border">
+                              <Icon name="check-circle" size="xs" />
+                              <span>Query Saved</span>
+                            </span>
+                          )}
+
+                          <motion.button
+                            type="button"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => handleExplicitSave(currentQuestion.id)}
+                            className="h-8.5 px-4 rounded-xl bg-accent-cyan hover:opacity-90 text-text-on-accent text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+                          >
+                            <Icon name="file-check" size="xs" />
+                            <span>Save Query</span>
+                          </motion.button>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </motion.div>
                 )}
 

@@ -12,7 +12,7 @@ export const qrCodesApi = stepApi.injectEndpoints({
   endpoints: (builder) => ({
     generateQRCode: builder.mutation<ApiEnvelope<QRCodeData>, Record<string, any>>({
       query: (data) => ({
-        url: '/qrcodes/generate',
+        url: '/qrcodes',
         method: 'POST',
         body: data,
       }),

@@ -139,11 +139,12 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                 {
                     if (progressByRoundOrder.TryGetValue(r.RoundOrder, out var p))
                     {
-                        var hasSess = latestSessionByProgress.TryGetValue(p.Id, out var sessInfo);
+                        var isPendingStage = p.Status == "Pending" || string.IsNullOrWhiteSpace(p.Status);
+                        var hasSess = latestSessionByProgress.TryGetValue(p.Id, out var sessInfo) && !isPendingStage;
                         var interviewInfo = latestInterviewByProgress.GetValueOrDefault(p.Id);
                         var isAutoPassed = (p.RoundTitle ?? r.Name).Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase);
-                        var effectiveStatus = isAutoPassed && (p.Status == "Pending" || string.IsNullOrWhiteSpace(p.Status)) ? "Passed" : p.Status;
-                        var effectiveScore = p.ScoreObtained ?? (isAutoPassed ? 100.00m : (hasSess ? sessInfo.Score : null));
+                        var effectiveStatus = isAutoPassed && isPendingStage ? "Passed" : p.Status;
+                        var effectiveScore = isPendingStage ? null : (p.ScoreObtained ?? (isAutoPassed ? 100.00m : (hasSess ? sessInfo.Score : null)));
                         var isR1OrAutoPassed = isAutoPassed || r.RoundOrder == 1;
                         var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isR1OrAutoPassed ? defaultHrRecruiterName : null));
                         var interviewerUserId = interviewInfo?.InterviewerUserId ?? p.EvaluatorId;

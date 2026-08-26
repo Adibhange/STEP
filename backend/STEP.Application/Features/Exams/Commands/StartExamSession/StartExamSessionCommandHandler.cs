@@ -132,15 +132,20 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             }
 
             // 1. Completion Lock Check (Re-attempt lock unless Director marked 'On Hold' and HR rescheduled the test)
-            var hasCompletedSession = await db.CandidateExamSessions
-                .AnyAsync(s => s.CandidatePipelineProgressId == progress.Id
+            var completedSessionsCount = await db.CandidateExamSessionsV2
+                .CountAsync(s => s.CandidateId == candidate.Id && s.CandidatePipelineProgressId == progress.Id
                     && (s.SessionStatus == "Submitted" || s.SessionStatus == "AutoSubmitted" || s.SessionStatus == "Evaluated"), cancellationToken);
+
+            if (completedSessionsCount >= 2)
+            {
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CandidateExamSession", "Maximum limit of 2 assessment attempts reached. Retakes are exhausted for this candidate.")]);
+            }
 
             var isCompletedStatus = progress.Status == "Passed" || progress.Status == "Failed" || progress.Status == "Evaluated" || progress.Status == "Submitted";
 
-            if (hasCompletedSession && isCompletedStatus)
+            if (completedSessionsCount > 0 && isCompletedStatus)
             {
-                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CandidateExamSession", "Assessment has already been completed and submitted. Re-attempts are locked unless Director places candidate 'On Hold' and HR reschedules the test.")]);
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure("CandidateExamSession", "Assessment has already been completed and submitted. Re-attempt is locked unless HR authorizes a Retake.")]);
             }
 
             // 2. Scheduled Time Slot Window Enforcement (For 'From Home' remote tests)

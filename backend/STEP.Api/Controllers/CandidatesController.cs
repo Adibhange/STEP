@@ -42,6 +42,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("{id:int}/assign-pipeline-flow")]
+        [HttpPost("{id:int}/assign-flow")]
         [Authorize(Policy = "Candidate.Approve")]
         public async Task<IActionResult> AssignPipelineFlow(int id, [FromBody] AssignPipelineFlowRequestBody body)
         {
@@ -69,8 +70,8 @@ namespace STEP.Api.Controllers
         public async Task<IActionResult> EvaluateStage(int id, [FromBody] EvaluateStageRequestBody body)
         {
             var candidate = await mediator.Send(new STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage.EvaluateCandidateStageCommand(
-                id, body.RoundNumber, body.Passed, body.Remarks, body.DirectorPin));
-            return Ok(ApiResponse<object>.Ok(candidate, "Stage evaluated successfully"));
+                id, body.RoundNumber, body.Passed, body.Remarks, body.DirectorPin, body.IsRetake));
+            return Ok(ApiResponse<object>.Ok(candidate, body.IsRetake ? "Stage retake authorized successfully" : "Stage evaluated successfully"));
         }
 
         [HttpPost("{id:int}/assign-evaluator")]
@@ -140,7 +141,7 @@ namespace STEP.Api.Controllers
     }
 
     public record AssignPipelineFlowRequestBody(int VacancyPipelineFlowId);
-    public record EvaluateStageRequestBody(int RoundNumber, bool Passed, string? Remarks, string? DirectorPin = null);
+    public record EvaluateStageRequestBody(int RoundNumber, bool Passed, string? Remarks, string? DirectorPin = null, bool IsRetake = false);
     public record AssignEvaluatorRequestBody(int RoundNumber, int EvaluatorUserId);
     public record ScheduleTestRequestBody(string TestMode, string ScheduledDate, string StartTime, string EndTime, string? Passcode);
     public record GenerateDirectorAccessLinkRequestBody(bool Regenerate);

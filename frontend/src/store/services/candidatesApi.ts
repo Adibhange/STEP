@@ -45,9 +45,9 @@ export const candidatesApi = stepApi.injectEndpoints({
       { candidateId: number; flowTemplateId?: number; vacancyPipelineFlowId?: number }
     >({
       query: ({ candidateId, flowTemplateId, vacancyPipelineFlowId }) => ({
-        url: `/candidates/${candidateId}/assign-flow`,
+        url: `/candidates/${candidateId}/assign-pipeline-flow`,
         method: 'POST',
-        body: { flowTemplateId: flowTemplateId || vacancyPipelineFlowId },
+        body: { vacancyPipelineFlowId: vacancyPipelineFlowId || flowTemplateId },
       }),
       invalidatesTags: ['Candidates'],
     }),
@@ -99,11 +99,14 @@ export const candidatesApi = stepApi.injectEndpoints({
       }),
       invalidatesTags: ['Candidates'],
     }),
-    evaluateCandidateStage: builder.mutation<ApiEnvelope<any>, { candidateId: number; roundNumber: number; passed: boolean; remarks?: string; directorPin?: string }>({
-      query: ({ candidateId, roundNumber, passed, remarks, directorPin }) => ({
+    evaluateCandidateStage: builder.mutation<
+      ApiEnvelope<any>,
+      { candidateId: number; roundNumber: number; passed?: boolean; remarks?: string; directorPin?: string; isRetake?: boolean }
+    >({
+      query: ({ candidateId, roundNumber, passed = false, remarks, directorPin, isRetake = false }) => ({
         url: `/candidates/${candidateId}/evaluate-stage`,
         method: 'POST',
-        body: { roundNumber, passed, remarks, directorPin },
+        body: { roundNumber, passed, remarks, directorPin, isRetake },
       }),
       invalidatesTags: ['Candidates', 'Interviews'],
     }),
