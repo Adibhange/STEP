@@ -42,6 +42,14 @@ namespace STEP.Api.Controllers
             var candidate = await mediator.Send(command);
             return Ok(ApiResponse<object>.Ok(candidate, "Registration submitted successfully"));
         }
+
+        [HttpPost("universal")]
+        [HttpPost("register-universal")]
+        public async Task<IActionResult> RegisterUniversal([FromBody] STEP.Application.Features.QR.Commands.RegisterUniversalCandidate.RegisterUniversalCandidateCommand command)
+        {
+            var result = await mediator.Send(command);
+            return Ok(ApiResponse<object>.Ok(result, "Candidate universal registration completed successfully"));
+        }
     }
 }
 

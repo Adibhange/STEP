@@ -5,22 +5,22 @@
 **Enterprise:** SCIPL (Sthapatya Consultants India Pvt. Ltd.)  
 **Current Version:** 2.4.0 (Enterprise Production Architecture)  
 **Last Synchronized:** 2026-08-30  
-**Rule:** *This document is the authoritative single source of truth. It MUST be consulted before making code changes and updated immediately after any architectural or feature modifications.*
+**Rule:** _This document is the authoritative single source of truth. It MUST be consulted before making code changes and updated immediately after any architectural or feature modifications._
 
 ---
 
 ## 1. System Overview & Technology Matrix
 
-| Layer | Technology / Framework | Key Libraries & Standards |
-| :--- | :--- | :--- |
-| **Frontend Framework** | **Next.js 14+ (App Router)** | React 18, TypeScript (Strict Mode) |
-| **Styling & Design System** | **Tailwind CSS v4** | CSS Variables Theme Tokens, Radix UI Primitives, Lucide Icons |
-| **Animation & UI Micro-interactions** | **Framer Motion 11+** | Kinetic feedback, slide transitions, spring physics |
-| **Client State & Network Cache** | **Redux Toolkit + RTK Query** | Tag-based cache invalidation, typed queries & mutations |
-| **Backend Core** | **.NET 8 (C# 12)** | Clean Architecture (Domain, Application, Persistence, Infrastructure, Api) |
-| **CQRS & Mediator Pattern** | **MediatR 12+** | Isolated Queries, Commands, Pipeline Behaviors, FluentValidation |
-| **Database & ORM** | **Microsoft SQL Server / Azure SQL** | Entity Framework Core 8, Code-First Migrations, Isolated Schemas |
-| **Auth & Security** | **JWT Bearer + Director 4-Digit PIN** | ASP.NET Identity, PBKDF2/Argon2 PIN hashing, CORS policies |
+| Layer                                 | Technology / Framework                | Key Libraries & Standards                                                  |
+| :------------------------------------ | :------------------------------------ | :------------------------------------------------------------------------- |
+| **Frontend Framework**                | **Next.js 14+ (App Router)**          | React 18, TypeScript (Strict Mode)                                         |
+| **Styling & Design System**           | **Tailwind CSS v4**                   | CSS Variables Theme Tokens, Radix UI Primitives, Lucide Icons              |
+| **Animation & UI Micro-interactions** | **Framer Motion 11+**                 | Kinetic feedback, slide transitions, spring physics                        |
+| **Client State & Network Cache**      | **Redux Toolkit + RTK Query**         | Tag-based cache invalidation, typed queries & mutations                    |
+| **Backend Core**                      | **.NET 10 (C# 13 / net10.0)**         | Clean Architecture (Domain, Application, Persistence, Infrastructure, Api) |
+| **CQRS & Mediator Pattern**           | **MediatR 12+**                       | Isolated Queries, Commands, Pipeline Behaviors, FluentValidation           |
+| **Database & ORM**                    | **Microsoft SQL Server / Azure SQL**  | Entity Framework Core 9 / 10, Code-First Migrations, Isolated Schemas      |
+| **Auth & Security**                   | **JWT Bearer + Director 4-Digit PIN** | ASP.NET Identity, PBKDF2/Argon2 PIN hashing, CORS policies                 |
 
 ---
 
@@ -38,64 +38,70 @@ STEP utilizes strict PostgreSQL/SQL Server schema isolation across business doma
 ```
 
 ### 2.1 Schema Breakdown & Entities
+
 1. **`master` Schema**:
-   * `MasterRoles`: Canonical enterprise designations (e.g. *Senior .NET Core Architect*, *QA Lead*).
-   * `MasterDepartments`: Business units (*Engineering*, *QA*, *DevOps*, *Human Resources*).
-   * `MasterHiringLocations`: Official company locations (*Pune Center*, *Mumbai HQ*, *Bengaluru*).
-   * `MasterEmploymentTypes`: Work contracts (*Full-time*, *Contract*, *Internship*).
-   * `MasterExperienceLevels`: Seniority brackets (*Fresher*, *1-3 Yrs*, *3-5 Yrs*, *5+ Yrs*).
+   - `MasterRoles`: Canonical enterprise designations (e.g. _Senior .NET Core Architect_, _QA Lead_).
+   - `MasterDepartments`: Business units (_Engineering_, _QA_, _DevOps_, _Human Resources_).
+   - `MasterHiringLocations`: Official company locations (_Pune Center_, _Mumbai HQ_, _Bengaluru_).
+   - `MasterEmploymentTypes`: Work contracts (_Full-time_, _Contract_, _Internship_).
+   - `MasterExperienceLevels`: Seniority brackets (_Fresher_, _1-3 Yrs_, _3-5 Yrs_, _5+ Yrs_).
 2. **`identity` Schema**:
-   * `Users`: Enterprise admins, HR recruiters, interviewers, directors.
-   * `Roles` / `UserRoles`: Role-based access control permissions.
+   - `Users`: Enterprise admins, HR recruiters, interviewers, directors.
+   - `Roles` / `UserRoles`: Role-based access control permissions.
 3. **`vacancy` Schema**:
-   * `Vacancies`: Hiring campaigns with hiring location, role, department, open positions, and status (`Active`, `Draft`, `Closed`).
-   * `VacancyRounds`: Configured hiring stages (e.g., Round 1: *Aptitude/Technical Assessment*, Round 2: *Technical Interview*, Round 3: *Director Round*).
-   * `VacancyInterviewers`: Assigned interviewers and stage evaluators.
+   - `Vacancies`: Hiring campaigns with hiring location, role, department, open positions, and status (`Active`, `Draft`, `Closed`).
+   - `VacancyRounds`: Configured hiring stages (e.g., Round 1: _Aptitude/Technical Assessment_, Round 2: _Technical Interview_, Round 3: _Director Round_).
+   - `VacancyInterviewers`: Assigned interviewers and stage evaluators.
 4. **`candidate` Schema**:
-   * `Candidates`: Master candidate profile (`Code`, `Name`, `Email`, `Phone`, `CurrentLocation`, `ResumeUrl`, `RegistrationChannel` [Direct/WalkIn]).
-   * `CandidatePipelineProgress`: Live round progression tracker (`CurrentRoundId`, `RoundStatus` [Scheduled, In-Progress, Passed, Failed], `InterviewerId`).
-   * `CandidateEvaluationRatings`: Detailed scoring rubrics per interview round.
+   - `Candidates`: Master candidate profile (`Code`, `Name`, `Email`, `Phone`, `CurrentLocation`, `ResumeUrl`, `RegistrationChannel` [Direct/WalkIn]).
+   - `CandidatePipelineProgress`: Live round progression tracker (`CurrentRoundId`, `RoundStatus` [Scheduled, In-Progress, Passed, Failed], `InterviewerId`).
+   - `CandidateEvaluationRatings`: Detailed scoring rubrics per interview round.
 5. **`examv2` Schema**:
-   * `AssessmentBlueprints`: Reusable test blueprints with rule sections, question counts, difficulty, and pass cutoffs.
-   * `CandidateExamSessionsV2`: Immutable snapshot of a candidate's exam attempt (`SessionToken`, `IntegrityScore`, `TabSwitchCount`, `TotalScore`, `ResultStatus` [Pass/Fail]).
-   * `CandidateExamSessionQuestionsV2` / `Options`: Frozen test questions.
-   * `CandidateExamAnswersV2`: Submitted candidate code, SQL queries, and MCQ choices.
-   * `ExamProctoringLogs` & `ExamProctoringSnapshots`: Tab-switch incidents, audio spikes, and webcam frames.
+   - `AssessmentBlueprints`: Reusable test blueprints with rule sections, question counts, difficulty, and pass cutoffs.
+   - `CandidateExamSessionsV2`: Immutable snapshot of a candidate's exam attempt (`SessionToken`, `IntegrityScore`, `TabSwitchCount`, `TotalScore`, `ResultStatus` [Pass/Fail]).
+   - `CandidateExamSessionQuestionsV2` / `Options`: Frozen test questions.
+   - `CandidateExamAnswersV2`: Submitted candidate code, SQL queries, and MCQ choices.
+   - `ExamProctoringLogs` & `ExamProctoringSnapshots`: Tab-switch incidents, audio spikes, and webcam frames.
 
 ---
 
 ## 3. Backend CQRS & API Endpoint Directory
 
 ### 3.1 Authentication (`STEP.Api/Controllers/AuthController.cs`)
-* `POST /api/auth/login`: Standard corporate email & password JWT authentication.
-* `POST /api/auth/director-pin`: 4-digit PIN access for instant Director evaluation mode.
-* `POST /api/auth/refresh-token`: Session token renewal.
+
+- `POST /api/auth/login`: Standard corporate email & password JWT authentication.
+- `POST /api/auth/director-pin`: 4-digit PIN access for instant Director evaluation mode.
+- `POST /api/auth/refresh-token`: Session token renewal.
 
 ### 3.2 Candidates (`STEP.Api/Controllers/CandidatesController.cs`)
-* `GET /api/candidates`: Query handler with stage, role, location, status, and date-range filtering.
-* `GET /api/candidates/{id}`: Full candidate 360° profile with pipeline history and documents.
-* `POST /api/candidates`: Manual candidate registration (HR form).
-* `POST /api/candidates/public-register`: Public walk-in QR code registration.
-* `POST /api/candidates/{id}/advance-stage`: Advances candidate to the next hiring round.
-* `POST /api/candidates/{id}/reject`: Archives/rejects candidate with reason.
+
+- `GET /api/candidates`: Query handler with stage, role, location, status, and date-range filtering.
+- `GET /api/candidates/{id}`: Full candidate 360° profile with pipeline history and documents.
+- `POST /api/candidates`: Manual candidate registration (HR form).
+- `POST /api/candidates/public-register`: Public walk-in QR code registration.
+- `POST /api/candidates/{id}/advance-stage`: Advances candidate to the next hiring round.
+- `POST /api/candidates/{id}/reject`: Archives/rejects candidate with reason.
 
 ### 3.3 Vacancies & Campaigns (`STEP.Api/Controllers/VacanciesController.cs`)
-* `GET /api/vacancies`: List all campaigns with real-time candidate count and fulfillment %.
-* `GET /api/vacancies/{id}`: Detailed vacancy campaign view with assigned rounds & candidates.
-* `POST /api/vacancies`: Create new vacancy campaign.
-* `PUT /api/vacancies/{id}`: Update vacancy details, requirements, and hiring targets.
-* `POST /api/vacancies/instant-drive`: Generate Instant Walk-in Drive QR code and link.
+
+- `GET /api/vacancies`: List all campaigns with real-time candidate count and fulfillment %.
+- `GET /api/vacancies/{id}`: Detailed vacancy campaign view with assigned rounds & candidates.
+- `POST /api/vacancies`: Create new vacancy campaign.
+- `PUT /api/vacancies/{id}`: Update vacancy details, requirements, and hiring targets.
+- `POST /api/vacancies/instant-drive`: Generate Instant Walk-in Drive QR code and link.
 
 ### 3.4 Examination & Proctoring (`STEP.Api/Controllers/ExamsController.cs`)
-* `POST /api/exams/session/start`: Validates candidate passcode & returns frozen test workspace.
-* `POST /api/exams/session/answers`: Batched auto-save for MCQ answers, SQL, and code editor.
-* `POST /api/exams/session/submit`: Final submission & automated grading engine.
-* `POST /api/exams/session/violation`: Reports tab-switch, audio spike, or camera violation (3-strike rule).
+
+- `POST /api/exams/session/start`: Validates candidate passcode & returns frozen test workspace.
+- `POST /api/exams/session/answers`: Batched auto-save for MCQ answers, SQL, and code editor.
+- `POST /api/exams/session/submit`: Final submission & automated grading engine.
+- `POST /api/exams/session/violation`: Reports tab-switch, audio spike, or camera violation (3-strike rule).
 
 ### 3.5 Master Data & Users (`STEP.Api/Controllers/MasterDataController.cs`, `UsersController.cs`)
-* `GET /api/master-data/{category}`: Dynamic master data loader (`roles`, `departments`, `hiringlocations`, etc.).
-* `POST /api/master-data/{category}` / `PUT /api/master-data/{category}/{id}`: Master CRUD.
-* `GET /api/users` / `POST /api/users`: Enterprise user & interviewer management.
+
+- `GET /api/master-data/{category}`: Dynamic master data loader (`roles`, `departments`, `hiringlocations`, etc.).
+- `POST /api/master-data/{category}` / `PUT /api/master-data/{category}/{id}`: Master CRUD.
+- `GET /api/users` / `POST /api/users`: Enterprise user & interviewer management.
 
 ---
 
@@ -105,7 +111,8 @@ STEP utilizes strict PostgreSQL/SQL Server schema isolation across business doma
 frontend/src/
 ├── app/
 │   ├── page.tsx                           # Login / Director Mode Entry
-│   ├── apply/[code]/page.tsx              # Public Walk-in Candidate Registration
+│   ├── apply/page.tsx                     # Universal Candidate Application Portal (Single QR / Open Intake)
+│   ├── apply/[code]/page.tsx              # Specific Vacancy Campaign Registration
 │   ├── exam/page.tsx                      # Candidate Proctored Exam Portal
 │   └── dashboard/
 │       ├── page.tsx                       # Main Dashboard (Candidates Table & Metrics)
@@ -145,40 +152,44 @@ frontend/src/
 
 ## 5. UI/UX Standards & Canonical Design Tokens
 
-* **Color Tokens (Tailwind CSS v4 & CSS Variables)**:
-  * Surface Backgrounds: `bg-surface-base` (`#0c0f17`), `bg-surface-1` (`#121624`), `bg-surface-2` (`#181d2f`), `bg-surface-3` (`#22283f`).
-  * Borders: `border-border-default`, `border-border-soft`, `border-border-strong`.
-  * Accents: `accent-indigo` (`#6366f1`), `accent-cyan` (`#06b6d4`), `accent-green` (`#10b981`), `accent-orange` (`#f59e0b`).
-* **Interactive Element Rules**:
-  * **Dropdowns & Selects**: Always use `rounded-xl` with `h-10 px-3.5` and `text-xs`.
-  * **Paginator**: Re-exported from `@/features/shared` (`TablePagination`) with active page buttons in `bg-accent-indigo text-white size-8`.
-  * **Micro-interactions**: Framer motion buttons with `hover:scale-[1.02] active:scale-95`.
+- **Color Tokens (Tailwind CSS v4 & CSS Variables)**:
+  - Surface Backgrounds: `bg-surface-base` (`#0c0f17`), `bg-surface-1` (`#121624`), `bg-surface-2` (`#181d2f`), `bg-surface-3` (`#22283f`).
+  - Borders: `border-border-default`, `border-border-soft`, `border-border-strong`.
+  - Accents: `accent-indigo` (`#6366f1`), `accent-cyan` (`#06b6d4`), `accent-green` (`#10b981`), `accent-orange` (`#f59e0b`).
+- **Interactive Element Rules**:
+  - **Dropdowns & Selects**: Always use `rounded-xl` with `h-10 px-3.5` and `text-xs`.
+  - **Paginator**: Re-exported from `@/features/shared` (`TablePagination`) with active page buttons in `bg-accent-indigo text-white size-8`.
+  - **Micro-interactions**: Framer motion buttons with `hover:scale-[1.02] active:scale-95`.
 
 ---
 
 ## 6. Living Architectural Invariants (DO NOT VIOLATE)
 
 1. **Master Data Single Truth**:
-   * Locations are managed exclusively under **`hiringlocations`** (`MasterHiringLocations`). Test locations are consolidated into hiring locations.
+   - Locations are managed exclusively under **`hiringlocations`** (`MasterHiringLocations`). Test locations are consolidated into hiring locations.
 2. **Form Single Date vs Filter Date Range**:
-   * Forms (`DOB`, `Offer Joining Date`, `Drive Date`) MUST ALWAYS use **`CustomCalendarPicker`** (Single-date).
-   * Filter bars & reports MUST ALWAYS use **`CustomDateRangePicker`** (Range with Presets).
+   - Forms (`DOB`, `Offer Joining Date`, `Drive Date`) MUST ALWAYS use **`CustomCalendarPicker`** (Single-date).
+   - Filter bars & reports MUST ALWAYS use **`CustomDateRangePicker`** (Range with Presets).
 3. **Table Row Click vs Actions**:
-   * Clicking a candidate row navigates to the Candidate Profile (`/dashboard/candidates/{id}`).
-   * The action button triggers the **Candidate Progress Stepper Modal** without page navigation.
+   - Clicking a candidate row navigates to the Candidate Profile (`/dashboard/candidates/{id}`).
+   - The action button triggers the **Candidate Progress Stepper Modal** without page navigation.
 4. **Anti-Cheat Enforcement**:
-   * Server-side auto-submission on 3 tab switches / proctoring strikes.
-   * Assessment integrity score drops by 10% on each violation ping.
+   - Server-side auto-submission on 3 tab switches / proctoring strikes.
+   - Assessment integrity score drops by 10% on each violation ping.
 
 ---
 
 ## 7. Change Log & Maintenance Protocol
 
-* **2026-08-24**: Standardized `TablePagination` across `MasterTable`, `UsersTable`, `CandidateWorkspace`, and `VacancyCandidatesTab`.
-* **2026-08-24**: Consolidated `TEST LOCATION` into `HIRING LOCATION`; freed table width and expanded `EMAIL`, `ROLE`, and `CANDIDATE` columns.
-* **2026-08-24**: Unified Candidate Table header toolbar into a single-line command bar with inline filter dropdowns.
-* **2026-08-24**: Built `CustomDateRangePicker` with quick presets (`Today`, `7 Days`, `30 Days`, `This Month`) and 1:1 `CustomSelect` visual harmonization.
-* **2026-08-30**: Created `PROCTORING_CAMERA_MIC_SPECIFICATION.md` for AI audio/video proctoring and initialized `CODEBASE_MASTER_AUDIT.md`.
+- **2026-08-24**: Standardized `TablePagination` across `MasterTable`, `UsersTable`, `CandidateWorkspace`, and `VacancyCandidatesTab`.
+- **2026-08-24**: Consolidated `TEST LOCATION` into `HIRING LOCATION`; freed table width and expanded `EMAIL`, `ROLE`, and `CANDIDATE` columns.
+- **2026-08-24**: Unified Candidate Table header toolbar into a single-line command bar with inline filter dropdowns.
+- **2026-08-24**: Built `CustomDateRangePicker` with quick presets (`Today`, `7 Days`, `30 Days`, `This Month`) and 1:1 `CustomSelect` visual harmonization.
+- **2026-08-30**: Created `PROCTORING_CAMERA_MIC_SPECIFICATION.md` for AI audio/video proctoring and initialized `CODEBASE_MASTER_AUDIT.md`.
+- **2026-08-31**: Created `UNIVERSAL_QR_REGISTRATION_SPECIFICATION.md` for Universal QR open registration & smart vacancy auto-matching (0 DB changes required).
+- **2026-08-31**: Built **Universal Candidate Registration Portal** ([`/apply/page.tsx`](file:///home/adibhange/Downloads/STEP/frontend/src/app/apply/page.tsx)) with dynamic role & location selectors, dual-stream intake switch, photo/resume upload, and instant exam onboarding.
+- **2026-08-31**: Implemented **Universal Candidate Registration Backend** ([`RegisterUniversalCandidateCommand`](file:///home/adibhange/Downloads/STEP/backend/STEP.Application/Features/QR/Commands/RegisterUniversalCandidate/RegisterUniversalCandidateCommand.cs) + [`RegisterUniversalCandidateCommandHandler`](file:///home/adibhange/Downloads/STEP/backend/STEP.Application/Features/QR/Commands/RegisterUniversalCandidate/RegisterUniversalCandidateCommandHandler.cs) + [`PublicRegistrationController.RegisterUniversal`](file:///home/adibhange/Downloads/STEP/backend/STEP.Api/Controllers/PublicRegistrationController.cs#L45-L51)) with Smart Vacancy Auto-Matching, On-the-fly Active Vacancy Fallback Provisioning, Candidate Code Generation, On-site Passcode Hashing, and File Storage integration.
 
 ---
-*Protocol: Every future modification to STEP must be preceded by reviewing this document and followed by updating its entries.*
+
+_Protocol: Every future modification to STEP must be preceded by reviewing this document and followed by updating its entries._
