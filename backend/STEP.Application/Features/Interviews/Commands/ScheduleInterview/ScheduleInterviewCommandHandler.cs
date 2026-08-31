@@ -11,7 +11,10 @@ using CandidateEntity = STEP.Domain.Entities.Candidate.Candidate;
 
 namespace STEP.Application.Features.Interviews.Commands.ScheduleInterview
 {
-    public class ScheduleInterviewCommandHandler(IApplicationDbContext db) : IRequestHandler<ScheduleInterviewCommand, InterviewDto>
+    public class ScheduleInterviewCommandHandler(
+        IApplicationDbContext db,
+        IInterviewerNotificationService notificationService,
+        ICurrentUserService? currentUserService = null) : IRequestHandler<ScheduleInterviewCommand, InterviewDto>
     {
         public async Task<InterviewDto> Handle(ScheduleInterviewCommand request, CancellationToken cancellationToken)
         {
@@ -122,11 +125,41 @@ namespace STEP.Application.Features.Interviews.Commands.ScheduleInterview
 
             var interviewer = await db.Users.FirstAsync(u => u.Id == request.InterviewerUserId, cancellationToken);
 
+            var teamsChatLink = notificationService.GenerateTeamsDirectChatLink(
+                interviewerEmail: interviewer.Email,
+                interviewerFirstName: interviewer.FirstName,
+                candidateName: $"{candidate.FirstName} {candidate.LastName}".Trim(),
+                candidateCode: candidate.CandidateCode,
+                vacancyTitle: candidate.Vacancy?.Title ?? "Position",
+                roundTitle: progress.RoundTitle ?? "Technical Interview",
+                experienceYears: candidate.TotalExperienceYears,
+                candidateId: candidate.Id,
+                mode: interview.Mode,
+                meetingLink: interview.MeetingLinkOrLocation);
+
+            try
+            {
+                var currentHrEmail = currentUserService?.Email;
+                var currentHrName = currentUserService?.UserId != null ? $"HR Recruiter #{currentUserService.UserId}" : null;
+
+                await notificationService.SendInterviewNotificationsAsync(
+                    interview.Id,
+                    currentHrEmail,
+                    currentHrName,
+                    cancellationToken);
+            }
+            catch
+            {
+                // Notifications shouldn't fail the primary scheduling transaction
+            }
+
             return new InterviewDto(
                 interview.Id, candidate.Id, $"{candidate.FirstName} {candidate.LastName}", candidate.Vacancy?.Title ?? "Position",
                 interview.InterviewerUserId, $"{interviewer.FirstName} {interviewer.LastName}",
                 interview.ScheduledAt, interview.DurationMinutes, interview.Mode, interview.MeetingLinkOrLocation,
-                interview.Status, []);
+                interview.Status, [],
+                TeamsChatLink: teamsChatLink,
+                InterviewerEmail: interviewer.Email);
         }
     }
 }

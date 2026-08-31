@@ -29,7 +29,9 @@ namespace STEP.Application.Features.Interviews.Common
         string Mode,
         string? MeetingLinkOrLocation,
         string Status,
-        List<InterviewRoundDetailDto> RoundDetails);
+        List<InterviewRoundDetailDto> RoundDetails,
+        string? TeamsChatLink = null,
+        string? InterviewerEmail = null);
 
     public record InterviewPublishResultDto(
         int InterviewId,

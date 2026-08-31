@@ -9,5 +9,7 @@ namespace STEP.Application.Common.Interfaces
     {
         int? UserId { get; }
         string? Role { get; }
+        string? Email { get; }
+        string? Name { get; }
     }
 }

@@ -16,5 +16,9 @@ namespace STEP.Api.Services
         }
 
         public string? Role => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Role);
+        public string? Email => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email)
+                             ?? httpContextAccessor.HttpContext?.User?.FindFirstValue("email");
+        public string? Name => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Name)
+                            ?? httpContextAccessor.HttpContext?.User?.FindFirstValue("name");
     }
 }

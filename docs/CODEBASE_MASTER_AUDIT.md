@@ -187,8 +187,83 @@ frontend/src/
 - **2026-08-24**: Built `CustomDateRangePicker` with quick presets (`Today`, `7 Days`, `30 Days`, `This Month`) and 1:1 `CustomSelect` visual harmonization.
 - **2026-08-30**: Created `PROCTORING_CAMERA_MIC_SPECIFICATION.md` for AI audio/video proctoring and initialized `CODEBASE_MASTER_AUDIT.md`.
 - **2026-08-31**: Created `UNIVERSAL_QR_REGISTRATION_SPECIFICATION.md` for Universal QR open registration & smart vacancy auto-matching (0 DB changes required).
-- **2026-08-31**: Built **Universal Candidate Registration Portal** ([`/apply/page.tsx`](file:///home/adibhange/Downloads/STEP/frontend/src/app/apply/page.tsx)) with dynamic role & location selectors, dual-stream intake switch, photo/resume upload, and instant exam onboarding.
-- **2026-08-31**: Implemented **Universal Candidate Registration Backend** ([`RegisterUniversalCandidateCommand`](file:///home/adibhange/Downloads/STEP/backend/STEP.Application/Features/QR/Commands/RegisterUniversalCandidate/RegisterUniversalCandidateCommand.cs) + [`RegisterUniversalCandidateCommandHandler`](file:///home/adibhange/Downloads/STEP/backend/STEP.Application/Features/QR/Commands/RegisterUniversalCandidate/RegisterUniversalCandidateCommandHandler.cs) + [`PublicRegistrationController.RegisterUniversal`](file:///home/adibhange/Downloads/STEP/backend/STEP.Api/Controllers/PublicRegistrationController.cs#L45-L51)) with Smart Vacancy Auto-Matching, On-the-fly Active Vacancy Fallback Provisioning, Candidate Code Generation, On-site Passcode Hashing, and File Storage integration.
+
+---
+
+## 8. Universal Candidate Registration & Smart Auto-Matching System
+
+### 8.1 Architecture & Problem Solved
+
+Previously, candidates registered via unique campaign-specific URLs (`/apply/[code]`), requiring HR to print new QR codes for every single drive or job opening.
+
+The **Universal Registration Portal** (`/apply`) introduces a permanent, single enterprise QR code that can be printed once at office reception, posted on LinkedIn, or featured on the careers portal.
+
+### 8.2 Smart Auto-Matching Resolution Ladder
+
+When a candidate submits their application at `/apply`:
+
+```
+[Candidate Submits Form at /apply]
+         │
+         ▼
+[Step 1: Resolve Master Role & Hiring Location]
+Resolve MasterRoleId and MasterHiringLocationId from dynamic dropdown selections.
+         │
+         ▼
+[Step 2: Query Active Matching Vacancy]
+Find active vacancy where:
+  • MasterRoleId == request.RoleId
+  • HiringLocationId == request.LocationId
+  • DriveType == request.Channel ("Walk-in" vs "Direct")
+  • Status == "Active"
+         │
+         ├───────────────────────────────┐
+         │ Found Exact Match             │ No Match Found
+         ▼                               ▼
+[Attach Candidate to Vacancy]   [Step 3: Fallback Role Match]
+                                Find any active vacancy for RoleId & Status == "Active"
+                                         │
+                                         ├───────────────────────────────┐
+                                         │ Found Fallback                │ No Vacancies Exist
+                                         ▼                               ▼
+                                [Attach to Fallback Vacancy]    [Step 4: Auto-Provision Vacancy]
+                                                                Creates standard active vacancy
+                                                                with canonical 3-round flow
+         │
+         ▼
+[Step 5: 90-Day Candidate Cooldown Check]
+Checks if candidate (Email / Phone) applied for the same role within 90 days.
+If within cooldown, rejects with exact eligible re-application date.
+         │
+         ▼
+[Step 6: Initialize Candidate & Pipeline Progress]
+  • Generate sequential code: CND-{YYYY}-{Sequence} (dynamically resolved)
+  • For Walk-in: Hashes default passcode "1234" via IPasswordHasher; initializes Round 1 Progress ("Ready")
+  • For Direct: Initializes Round 1 HR Sourcing & Screening ("Pending")
+  • Saves Profile Photo & Resume Base64 documents to IFileStorageService
+  • Returns Candidate Code, Exam Passcode ("1234"), and Exam Portal URL (/exam?code=...&pass=1234)
+```
+
+### 8.3 Endpoints & Controllers
+
+- `POST /api/apply/universal` & `POST /api/publicregistration/universal` ([`PublicRegistrationController.cs`](file:///home/adibhange/Downloads/STEP/backend/STEP.Api/Controllers/PublicRegistrationController.cs#L45-L51))
+- `POST /api/candidates/register-universal` ([`CandidatesController.cs`](file:///home/adibhange/Downloads/STEP/backend/STEP.Api/Controllers/CandidatesController.cs#L44-L51))
+- CQRS: [`RegisterUniversalCandidateCommand`](file:///home/adibhange/Downloads/STEP/backend/STEP.Application/Features/QR/Commands/RegisterUniversalCandidate/RegisterUniversalCandidateCommand.cs) + [`RegisterUniversalCandidateCommandHandler`](file:///home/adibhange/Downloads/STEP/backend/STEP.Application/Features/QR/Commands/RegisterUniversalCandidate/RegisterUniversalCandidateCommandHandler.cs) + [`RegisterUniversalCandidateCommandValidator`](file:///home/adibhange/Downloads/STEP/backend/STEP.Application/Features/QR/Commands/RegisterUniversalCandidate/RegisterUniversalCandidateCommandValidator.cs)
+- Frontend: [`frontend/src/app/apply/page.tsx`](file:///home/adibhange/Downloads/STEP/frontend/src/app/apply/page.tsx) + [`frontend/src/store/services/candidatesApi.ts`](file:///home/adibhange/Downloads/STEP/frontend/src/store/services/candidatesApi.ts#L166-L174)
+
+---
+
+## 9. Interview Notification, Email Dispatch & Teams Bridge Architecture
+
+- **Specification**: [`docs/INTERVIEWER_NOTIFICATION_SPECIFICATION.md`](file:///home/adibhange/Downloads/STEP/docs/INTERVIEWER_NOTIFICATION_SPECIFICATION.md)
+- **Central Sender Email**: `Recruitment@sthapatya.in` (Single source of truth in `appsettings.json` under `EmailSettings`).
+- **Multi-Address Support**: Central `DefaultCc` and `DefaultBcc` for organization tracking + dynamic `Reply-To` set to the logged-in HR recruiter.
+- **Interview Modes**: Dynamic `Mode` flag (`"Face-to-Face"` vs `"Online"`).
+- **Channels**:
+  1. **Candidate Email Invitation**: Branded HTML invitation with date/time, round details, video meeting link (if Online), and attached `.ics` calendar file.
+  2. **Interviewer Briefing Email**: On-site or online briefing with 1-click candidate dossier & scorecard link.
+  3. **1-Click Microsoft Teams Direct Chat Launcher**: Protocol URL `https://teams.microsoft.com/l/chat/0/0?users={email}&message={briefing}`.
+  4. **Outbox Resilience**: Guaranteed delivery via `OutboxMessage`.
 
 ---
 
