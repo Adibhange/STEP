@@ -12,6 +12,6 @@ namespace STEP.Application.Common.Models
         public bool EnableSsl { get; set; } = true;
         public string? Username { get; set; } = "Recruitment@sthapatya.in";
         public string? Password { get; set; }
-        public string AppBaseUrl { get; set; } = "http://localhost:3000";
+        public string? AppBaseUrl { get; set; }
     }
 }
