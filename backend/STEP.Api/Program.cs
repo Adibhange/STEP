@@ -119,7 +119,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // 5. Dynamic CORS Policy Driven by Environment Variable (ALLOWED_ORIGINS)
-var allowedOriginsEnv = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") 
+var allowedOriginsEnv = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")
     ?? builder.Configuration["ALLOWED_ORIGINS"];
 
 builder.Services.AddCors(options =>

@@ -16,6 +16,7 @@ import { CandidateTable } from "./CandidateTable";
 import { AddCandidateDialog } from "./AddCandidateDialog";
 import { CandidateProgressModal } from "./CandidateProgressModal";
 import { CANDIDATE_FILTERS, type FilterDef } from "../config/candidateFilters";
+import { useDebounce } from '@/hooks/useDebounce';
 import { useGetCandidatesQuery } from "@/store/services/api";
 import { toast } from "@/design-system/feedback/toast";
 import { exportCandidatesToExcel } from "./utils/candidateExcelExporter";
@@ -85,6 +86,7 @@ export const CandidateWorkspace: React.FC = () => {
 	const [selectedProgressCandidate, setSelectedProgressCandidate] =
 		useState<DashboardCandidate | null>(null);
 	const [search, setSearch] = useState("");
+	const debouncedSearch = useDebounce(search, 300);
 	const [searchFocused, setSearchFocused] = useState(false);
 	const [activeFilters, setActiveFilters] = useState<ActiveFilter>({});
 	const [currentPage, setCurrentPage] = useState(1);
@@ -199,8 +201,8 @@ export const CandidateWorkspace: React.FC = () => {
 	const filteredCandidates = useMemo<DashboardCandidate[]>(() => {
 		let result = apiCandidates;
 
-		if (search.trim()) {
-			const q = search.toLowerCase().trim();
+		if (debouncedSearch.trim()) {
+			const q = debouncedSearch.toLowerCase().trim();
 			result = result.filter(
 				(c) =>
 					c.name.toLowerCase().includes(q) ||
@@ -248,7 +250,7 @@ export const CandidateWorkspace: React.FC = () => {
 		}
 
 		return result;
-	}, [search, activeFilters, apiCandidates]);
+	}, [debouncedSearch, activeFilters, apiCandidates]);
 
 	// Pagination
 	const totalPages = Math.max(

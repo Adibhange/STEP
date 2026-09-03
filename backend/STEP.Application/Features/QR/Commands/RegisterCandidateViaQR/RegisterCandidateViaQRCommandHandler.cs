@@ -25,6 +25,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 .Include(q => q.Vacancy)
                     .ThenInclude(v => v.PipelineFlows)
                         .ThenInclude(f => f.Rounds)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(q => q.Code == request.Code, cancellationToken);
 
             if (qrCode == null)
@@ -32,6 +33,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 var vacancy = await db.Vacancies
                     .Include(v => v.PipelineFlows)
                         .ThenInclude(f => f.Rounds)
+                    .AsSplitQuery()
                     .FirstOrDefaultAsync(v => v.VacancyCode == request.Code, cancellationToken);
 
                 if (vacancy != null)
@@ -87,9 +89,6 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                     $"You already applied for this role on {eligibility.LastAppliedAt:dd MMM yyyy}. You can re-apply for the same role after {eligibility.EligibleFrom:dd MMM yyyy} ({CandidateReapplicationPolicy.CooldownDays}-day cooldown).")]);
             }
 
-            var nextSequence = await db.Candidates.IgnoreQueryFilters().CountAsync(cancellationToken) + 1001;
-            var candidateCode = $"CND-{DateTime.UtcNow:yyyy}-{nextSequence}";
-
             var isDirectHiring = qrCode.Vacancy?.DriveType == "Direct" || qrCode.Vacancy?.DriveType == "Direct / Sourced Hiring" || qrCode.Vacancy?.DriveType == "Direct Hiring";
             var channel = isDirectHiring ? "Direct Sourced" : "Walk-in";
 
@@ -100,7 +99,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
 
             var candidate = new CandidateEntity
             {
-                CandidateCode = candidateCode,
+                CandidateCode = $"TMP-{Guid.NewGuid().ToString("N")[..16]}",
                 FirstName = request.FirstName.Trim(),
                 LastName = request.LastName.Trim(),
                 Email = request.Email.Trim(),
@@ -121,6 +120,9 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
 
             db.Candidates.Add(candidate);
             await db.SaveChangesAsync(cancellationToken);
+
+            // Assign clean sequential candidate code based on auto-incrementing DB Id (e.g. CND-2026-0001)
+            candidate.CandidateCode = $"CND-{DateTime.UtcNow:yyyy}-{candidate.Id:D4}";
 
             // Initialize Direct Hiring Round 1 if it is Auto-Passed
             if (round1 != null && (round1.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) || isDirectHiring))
@@ -220,7 +222,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 CorrelationId = Guid.NewGuid(),
                 Action = "RegisterCandidateViaQR",
                 EntityName = nameof(CandidateEntity),
-                EntityId = candidateCode,
+                EntityId = candidate.CandidateCode,
             });
 
             await db.SaveChangesAsync(cancellationToken);

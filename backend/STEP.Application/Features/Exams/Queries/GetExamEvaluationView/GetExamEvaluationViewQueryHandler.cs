@@ -21,6 +21,7 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                 .Include(s => s.AssessmentBlueprint)
                 .Include(s => s.Answers).ThenInclude(a => a.CandidateExamSessionQuestion).ThenInclude(q => q.Options)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
+                .AsSplitQuery()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == request.CandidateExamSessionId, cancellationToken);
 
@@ -73,6 +74,7 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
             var session = await db.CandidateExamSessions
                 .Include(s => s.Answers).ThenInclude(a => a.CandidateExamSessionQuestion).ThenInclude(q => q.Options)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
+                .AsSplitQuery()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == request.CandidateExamSessionId, cancellationToken)
                 ?? throw new NotFoundException(nameof(CandidateExamSession), request.CandidateExamSessionId);

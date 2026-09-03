@@ -41,8 +41,8 @@ namespace STEP.Application.Features.V2.Blueprints
         {
             var isDefault = request.IsDefault ?? false;
             var passingCutoff = request.DefaultPassingPercentage ?? 70.00m;
-            var code = string.IsNullOrWhiteSpace(request.Code) 
-                ? $"RULE-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}" 
+            var code = string.IsNullOrWhiteSpace(request.Code)
+                ? $"RULE-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}"
                 : request.Code.Trim();
 
             if (isDefault)

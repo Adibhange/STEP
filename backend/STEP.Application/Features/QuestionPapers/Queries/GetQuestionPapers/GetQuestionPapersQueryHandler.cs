@@ -15,6 +15,7 @@ namespace STEP.Application.Features.QuestionPapers.Queries.GetQuestionPapers
         {
             var papers = await db.VacancyQuestionPapers
                 .Include(p => p.Questions).ThenInclude(q => q.Options)
+                .AsSplitQuery()
                 .AsNoTracking()
                 .OrderByDescending(p => p.Id)
                 .ToListAsync(cancellationToken);

@@ -55,8 +55,8 @@ namespace STEP.Application.Features.V2.DirectorAccess
             if (!request.Regenerate)
             {
                 var existing = await db.DirectorAccessLinks
-                    .FirstOrDefaultAsync(l => l.CandidateId == request.CandidateId 
-                                           && !l.IsRevoked 
+                    .FirstOrDefaultAsync(l => l.CandidateId == request.CandidateId
+                                           && !l.IsRevoked
                                            && l.ExpiresAt > DateTimeOffset.UtcNow, cancellationToken);
 
                 if (existing != null)

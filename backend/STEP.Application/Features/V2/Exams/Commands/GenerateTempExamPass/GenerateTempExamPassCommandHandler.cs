@@ -52,22 +52,21 @@ namespace STEP.Application.Features.V2.Exams.Commands.GenerateTempExamPass
                     "No active vacancy or drive available to bind this temporary exam pass.")]);
             }
 
-            var nextCandidateSeq = await db.Candidates.IgnoreQueryFilters().CountAsync(cancellationToken) + 1001;
-            var candidateCode = $"CAN-{DateTime.UtcNow:yyyy}-{nextCandidateSeq}";
             var rawPasscode = RandomNumberGenerator.GetInt32(1000, 9999).ToString();
             var passcodeHash = hasher.Hash(rawPasscode);
 
             var names = request.CandidateName.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             var firstName = names.Length > 0 ? names[0] : "Candidate";
-            var lastName = names.Length > 1 ? names[1] : $"{nextCandidateSeq}";
+            var tempTag = Guid.NewGuid().ToString("N")[..6];
+            var lastName = names.Length > 1 ? names[1] : $"{tempTag}";
 
             var candidate = new CandidateEntity
             {
                 VacancyId = vacancy.Id,
-                CandidateCode = candidateCode,
+                CandidateCode = $"TMP-{Guid.NewGuid().ToString("N")[..16]}",
                 FirstName = firstName,
                 LastName = lastName,
-                Email = string.IsNullOrWhiteSpace(request.Email) ? $"spot.{nextCandidateSeq}@sci-pl.com" : request.Email.Trim(),
+                Email = string.IsNullOrWhiteSpace(request.Email) ? $"spot.{tempTag}@sci-pl.com" : request.Email.Trim(),
                 Phone = string.IsNullOrWhiteSpace(request.Phone) ? "+91 9876543210" : request.Phone.Trim(),
                 CurrentStage = "Assessment",
                 Status = "In-Progress",
@@ -96,13 +95,17 @@ namespace STEP.Application.Features.V2.Exams.Commands.GenerateTempExamPass
             db.Candidates.Add(candidate);
             await db.SaveChangesAsync(cancellationToken);
 
+            // Assign clean sequential candidate code based on auto-incrementing DB Id (e.g. CAN-2026-0001)
+            candidate.CandidateCode = $"CAN-{DateTime.UtcNow:yyyy}-{candidate.Id:D4}";
+            await db.SaveChangesAsync(cancellationToken);
+
             var frontendUrlRaw = configuration["FRONTEND_URL"] ?? "http://localhost:3000";
             var frontendUrl = frontendUrlRaw.TrimEnd('/');
-            var examUrl = $"{frontendUrl}/exam/v2?code={candidateCode}&pass={rawPasscode}";
+            var examUrl = $"{frontendUrl}/exam/v2?code={candidate.CandidateCode}&pass={rawPasscode}";
             var validity = request.ValidityHours > 0 ? request.ValidityHours : 24;
 
             return new TempExamPassDto(
-                candidateCode,
+                candidate.CandidateCode,
                 rawPasscode,
                 $"{firstName} {lastName}",
                 vacancy.Title,

@@ -15,9 +15,9 @@ namespace STEP.Application.Features.V2.Blueprints
         public async Task<bool> Handle(DeleteAssessmentTemplateCommand request, CancellationToken cancellationToken)
         {
             var activeVacancyExists = await db.Vacancies
-                .AnyAsync(v => v.AssessmentBlueprintId == request.Id 
-                            && v.Status != "Closed" 
-                            && v.Status != "Cancelled" 
+                .AnyAsync(v => v.AssessmentBlueprintId == request.Id
+                            && v.Status != "Closed"
+                            && v.Status != "Cancelled"
                             && !v.IsDeleted, cancellationToken);
 
             if (activeVacancyExists)

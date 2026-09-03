@@ -7,6 +7,7 @@ using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
 using STEP.Application.Features.Candidates.Common;
 using STEP.Domain.Entities.Audit;
+using STEP.Domain.Entities.Candidate;
 using VacancyEntity = STEP.Domain.Entities.Vacancy.Vacancy;
 using CandidateEntity = STEP.Domain.Entities.Candidate.Candidate;
 
@@ -21,22 +22,17 @@ namespace STEP.Application.Features.Candidates.Commands.RegisterCandidate
                 .FirstOrDefaultAsync(v => v.Id == request.VacancyId, cancellationToken)
                 ?? throw new NotFoundException(nameof(VacancyEntity), request.VacancyId);
 
-            var nextSequence = await db.Candidates.IgnoreQueryFilters().CountAsync(cancellationToken) + 1001;
-            var candidateCode = $"CND-{DateTime.UtcNow:yyyy}-{nextSequence}";
-
             var isDirectHiring = vacancy.DriveType == "Direct" || vacancy.DriveType == "Direct / Sourced Hiring" || vacancy.DriveType == "Direct Hiring";
             var channel = !string.IsNullOrWhiteSpace(request.RegistrationChannel) ? request.RegistrationChannel : (isDirectHiring ? "Direct Sourced" : "Walk-in");
-
             var defaultFlow = vacancy.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
                 ?? vacancy.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
             var round1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
 
             var candidate = new CandidateEntity
             {
-                CandidateCode = candidateCode,
+                CandidateCode = $"TMP-{Guid.NewGuid().ToString("N")[..16]}",
                 FirstName = request.FirstName.Trim(),
                 LastName = request.LastName.Trim(),
-                Email = request.Email.Trim(),
                 Phone = request.Phone.Trim(),
                 VacancyId = request.VacancyId,
                 CurrentStage = round1 != null ? round1.Name : (isDirectHiring ? "Round 1: HR Sourcing & Screening (Auto-Passed)" : "Registered"),
@@ -54,15 +50,17 @@ namespace STEP.Application.Features.Candidates.Commands.RegisterCandidate
             db.Candidates.Add(candidate);
             await db.SaveChangesAsync(cancellationToken);
 
-            var pipelineProgressList = new System.Collections.Generic.List<PipelineProgressDto>();
+            // Assign clean sequential candidate code based on auto-incrementing DB Id (e.g. CND-2026-0001, CND-2026-0002)
+            candidate.CandidateCode = $"CND-{DateTime.UtcNow:yyyy}-{candidate.Id:D4}";
 
-            // Initialize Round 1 Progress based on vacancy pipeline flow
+            var pipelineProgressList = new List<PipelineProgressDto>();
+
             if (round1 != null)
             {
                 var isAutoPassed = round1.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) || isDirectHiring;
                 var hrUser = await db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Role.Name == "HR" && u.IsActive, cancellationToken);
 
-                var r1Progress = new STEP.Domain.Entities.Candidate.CandidatePipelineProgress
+                var r1Progress = new CandidatePipelineProgress
                 {
                     CandidateId = candidate.Id,
                     VacancyPipelineFlowRoundId = round1.Id,
@@ -94,11 +92,10 @@ namespace STEP.Application.Features.Candidates.Commands.RegisterCandidate
                 CorrelationId = Guid.NewGuid(),
                 Action = "RegisterCandidate",
                 EntityName = nameof(CandidateEntity),
-                EntityId = candidateCode,
+                EntityId = candidate.CandidateCode,
             });
 
             await db.SaveChangesAsync(cancellationToken);
-
             return new CandidateDto(
                 candidate.Id, candidate.CandidateCode, candidate.FirstName, candidate.LastName, candidate.Email, candidate.Phone,
                 candidate.VacancyId, vacancy.Title, candidate.CurrentStage, candidate.Status, candidate.RegistrationChannel,

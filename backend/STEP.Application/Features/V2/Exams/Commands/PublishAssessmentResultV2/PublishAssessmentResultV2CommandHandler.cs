@@ -28,6 +28,7 @@ namespace STEP.Application.Features.V2.Exams.Commands.PublishAssessmentResultV2
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)
                 .Include(s => s.CandidatePipelineProgress)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(s => s.Id == request.CandidateExamSessionId, cancellationToken);
 
             if (sessionV2 != null)

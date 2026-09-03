@@ -207,12 +207,19 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             // 4. Resolve Assessment Blueprint (V2 Dynamic Question Bank Architecture)
             AssessmentBlueprint? blueprint = null;
 
+            // Phase 2 Fix: Prevent N+1 Chatty Database queries. 
+            // Fetch all active blueprints once and resolve fallback chains in memory
+            var allBlueprints = await db.AssessmentBlueprints
+                .Include(b => b.SectionRules.Where(r => r.IsActive))
+                .Where(b => b.IsActive)
+                .AsSplitQuery()
+                .ToListAsync(cancellationToken);
+
             if (isAptitudeRound)
             {
                 // Round 1: Standard Aptitude MCQ Track
-                blueprint = await db.AssessmentBlueprints
-                    .Include(b => b.SectionRules.Where(r => r.IsActive))
-                    .FirstOrDefaultAsync(b => b.Code == "RULE-MCQ-ONLY" || b.IsDefault, cancellationToken);
+                blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-MCQ-ONLY")
+                         ?? allBlueprints.FirstOrDefault(b => b.IsDefault);
             }
             else
             {
@@ -223,35 +230,24 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
                 if (blueprintId.HasValue)
                 {
-                    blueprint = await db.AssessmentBlueprints
-                        .Include(b => b.SectionRules.Where(r => r.IsActive))
-                        .FirstOrDefaultAsync(b => b.Id == blueprintId.Value, cancellationToken);
+                    blueprint = allBlueprints.FirstOrDefault(b => b.Id == blueprintId.Value);
                 }
 
                 if (blueprint == null || blueprint.Code == "RULE-MCQ-ONLY" || blueprint.SectionRules.Count <= 1)
                 {
                     if (vacTitle.Contains("sql") || vacTitle.Contains("database") || masterRole.Contains("sql") || masterRole.Contains("database"))
                     {
-                        blueprint = await db.AssessmentBlueprints
-                            .Include(b => b.SectionRules.Where(r => r.IsActive))
-                            .FirstOrDefaultAsync(b => b.Code == "RULE-DATA-SQL" || b.Name.Contains("Database"), cancellationToken);
+                        blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-DATA-SQL" || b.Name.Contains("Database", StringComparison.OrdinalIgnoreCase));
                     }
                     else
                     {
-                        blueprint = await db.AssessmentBlueprints
-                            .Include(b => b.SectionRules.Where(r => r.IsActive))
-                            .FirstOrDefaultAsync(b => b.Code == "RULE-TECH-ENG" || b.Name.Contains("Software Engineering"), cancellationToken);
+                        blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-TECH-ENG" || b.Name.Contains("Software Engineering", StringComparison.OrdinalIgnoreCase));
                     }
                 }
             }
 
-            blueprint ??= await db.AssessmentBlueprints
-                .Include(b => b.SectionRules.Where(r => r.IsActive))
-                .FirstOrDefaultAsync(b => b.IsActive && b.IsDefault, cancellationToken)
-                ?? await db.AssessmentBlueprints
-                    .Include(b => b.SectionRules.Where(r => r.IsActive))
-                    .OrderBy(b => b.Id)
-                    .FirstOrDefaultAsync(cancellationToken);
+            blueprint ??= allBlueprints.FirstOrDefault(b => b.IsDefault)
+                       ?? allBlueprints.OrderBy(b => b.Id).FirstOrDefault();
 
             if (blueprint != null && blueprint.SectionRules.Count > 0)
             {
@@ -295,11 +291,17 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 decimal calculatedTotalMarks = 0;
 
                 var activeRules = blueprint.SectionRules.OrderBy(r => r.DisplayOrder).ToList();
+
+                // Phase 2 Fix: Pre-fetch all active questions to prevent N+1 DB loops
+                var allQuestions = await db.MasterQuestions
+                    .Include(q => q.Options)
+                    .Where(q => q.IsActive)
+                    .AsSplitQuery()
+                    .ToListAsync(cancellationToken);
+
                 foreach (var rule in activeRules)
                 {
-                    var query = db.MasterQuestions
-                        .Include(q => q.Options)
-                        .Where(q => q.IsActive);
+                    var query = allQuestions.AsEnumerable();
 
                     if (isAptitudeRound)
                     {
@@ -307,8 +309,8 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                         query = query.Where(q =>
                             q.SectionType == "Aptitude" ||
                             q.Language == "General Aptitude" ||
-                            q.Language.Contains("Aptitude") ||
-                            q.Language.Contains("Logic"));
+                            (q.Language?.Contains("Aptitude") ?? false) ||
+                            (q.Language?.Contains("Logic") ?? false));
                     }
                     else
                     {
@@ -324,7 +326,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
                             if (isSqlRole)
                             {
-                                query = query.Where(q => q.Language.Contains("SQL") || q.Language.Contains("Database") || q.SectionType == "TechnicalMCQ");
+                                query = query.Where(q => (q.Language?.Contains("SQL") ?? false) || (q.Language?.Contains("Database") ?? false) || q.SectionType == "TechnicalMCQ");
                             }
                         }
                         else if (rule.SectionType == "SQLQuery")
@@ -345,30 +347,25 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                         }
                     }
 
-                    var pool = await query.ToListAsync(cancellationToken);
+                    var pool = query.ToList();
                     if (pool.Count == 0 && isAptitudeRound)
                     {
                         // Fallback to any available Aptitude / MCQ questions if specific category rule was not found
-                        pool = await db.MasterQuestions
-                            .Include(q => q.Options)
-                            .Where(q => q.IsActive && (q.SectionType == "Aptitude" || q.Language == "General Aptitude" || q.QuestionType == "SINGLE_CHOICE"))
-                            .ToListAsync(cancellationToken);
+                        pool = allQuestions
+                            .Where(q => q.SectionType == "Aptitude" || q.Language == "General Aptitude" || q.QuestionType == "SINGLE_CHOICE")
+                            .ToList();
                     }
 
                     if (pool.Count == 0 && !isAptitudeRound && rule.SectionType == "TechnicalMCQ")
                     {
-                        pool = await db.MasterQuestions
-                            .Include(q => q.Options)
-                            .Where(q => q.IsActive && (q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE") && q.SectionType != "Aptitude")
-                            .ToListAsync(cancellationToken);
+                        pool = allQuestions
+                            .Where(q => (q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE") && q.SectionType != "Aptitude")
+                            .ToList();
                     }
 
                     if (pool.Count == 0)
                     {
-                        pool = await db.MasterQuestions
-                            .Include(q => q.Options)
-                            .Where(q => q.IsActive)
-                            .ToListAsync(cancellationToken);
+                        pool = allQuestions.ToList();
                     }
 
                     var unusedPool = pool.Where(q => !usedMasterQuestionIds.Contains(q.Id)).ToList();

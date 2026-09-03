@@ -22,6 +22,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         .ThenInclude(f => f.Rounds)
                 .Include(c => c.PipelineProgressHistory)
                 .Include(c => c.Documents)
+                .AsSplitQuery()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
                 ?? throw new NotFoundException(nameof(CandidateEntity), request.Id);
@@ -75,7 +76,8 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                 .GroupBy(i => i.CandidatePipelineProgressId)
                 .ToDictionary(
                     g => g.Key,
-                    g => {
+                    g =>
+                    {
                         var latest = g.OrderByDescending(i => i.Id).First();
                         var name = latest.InterviewerUser != null ? $"{latest.InterviewerUser.FirstName} {latest.InterviewerUser.LastName}".Trim() : null;
                         return new { latest.Id, InterviewerName = name, latest.InterviewerUserId };
@@ -178,7 +180,8 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
             else
             {
                 combinedProgressDtos = candidate.PipelineProgressHistory.OrderBy(p => p.RoundNumber)
-                    .Select(p => {
+                    .Select(p =>
+                    {
                         var hasSess = latestSessionByProgress.TryGetValue(p.Id, out var sessInfo);
                         var interviewInfo = latestInterviewByProgress.GetValueOrDefault(p.Id);
                         var isAutoPassed = (p.RoundTitle ?? string.Empty).Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase);

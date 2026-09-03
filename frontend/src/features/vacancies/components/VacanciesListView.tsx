@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useVirtualizer } from '@/hooks/useVirtualizer';
+import { useDebounce } from '@/hooks/useDebounce';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Icon, cardVariants, staggerContainer } from '@/design-system';
 import { VacancyDetailDialog } from './VacancyDetailDialog';
@@ -22,6 +24,7 @@ export const VacanciesListView: React.FC = () => {
   const { data: apiVacanciesResponse, isLoading, isError } = useGetVacanciesQuery();
   const { data: candidatesRes } = useGetCandidatesQuery();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [driveFilter, setDriveFilter] = useState<string>('All');
   const [isInstantDriveOpen, setIsInstantDriveOpen] = useState(false);
@@ -89,10 +92,10 @@ export const VacanciesListView: React.FC = () => {
   const filteredVacancies = useMemo(() => {
     return apiVacancies.filter((v) => {
       const matchSearch =
-        v.title.toLowerCase().includes(search.toLowerCase()) ||
-        v.code.toLowerCase().includes(search.toLowerCase()) ||
-        v.role.toLowerCase().includes(search.toLowerCase()) ||
-        v.hiringLocation.toLowerCase().includes(search.toLowerCase());
+        v.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        v.code.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        v.role.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        v.hiringLocation.toLowerCase().includes(debouncedSearch.toLowerCase());
 
       const matchStatus = statusFilter === 'All' || v.status === statusFilter;
       const matchDrive =
@@ -103,6 +106,16 @@ export const VacanciesListView: React.FC = () => {
       return matchSearch && matchStatus && matchDrive;
     });
   }, [apiVacancies, search, statusFilter, driveFilter]);
+
+  
+  const parentRef = React.useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredVacancies.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 180,
+    overscan: 3,
+  });
 
   const statusVariantMap: Record<string, string> = {
     Open: 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success)]',
@@ -242,29 +255,45 @@ export const VacanciesListView: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Vacancy Cards List with Staggered Motion */}
+      {/* Vacancy Cards List with Virtualization */}
       {!isLoading && !isError && filteredVacancies.length > 0 && (
-        <motion.div
-          key="list"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-1 gap-3.5 sm:gap-4"
+        <div
+          ref={parentRef}
+          className="h-[600px] overflow-auto scrollbar-step rounded-[var(--radius-lg)] p-2"
         >
-          {filteredVacancies.map((v) => {
+          <div
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {rowVirtualizer.virtualItems.map((virtualRow) => {
+              const v = filteredVacancies[virtualRow.index];
             const driveType = v.driveType || 'Walk-in Drive';
             const isDirect = driveType === 'Direct / Sourced Hiring';
 
             return (
-              <motion.div
+              <div
                 key={v.id}
-                layout
-                variants={cardVariants}
-                whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
-                whileTap={{ scale: 0.995 }}
-                onClick={() => setSelectedVacancy(v)}
-                className="group bg-[var(--surface-1)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)] rounded-[var(--radius-lg)] p-5 cursor-pointer shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-md)] flex flex-col gap-4 transition-all duration-200"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                  paddingBottom: '16px',
+                }}
               >
+                <motion.div
+                  layout
+                  variants={cardVariants}
+                  whileHover={{ y: -3, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } }}
+                  whileTap={{ scale: 0.995 }}
+                  onClick={() => setSelectedVacancy(v)}
+                  className="h-full group bg-[var(--surface-1)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)] rounded-[var(--radius-lg)] p-5 cursor-pointer shadow-[var(--shadow-xs)] flex flex-col gap-4 transition-all duration-200"
+                >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 border transition-transform duration-200 group-hover:scale-105 ${
@@ -332,10 +361,12 @@ export const VacanciesListView: React.FC = () => {
                     <span className="text-sm font-black font-mono text-[var(--status-success-text)] group-hover/stat:scale-105 transition-transform inline-block">{v.joinedCount}</span>
                   </div>
                 </div>
-              </motion.div>
+                </motion.div>
+              </div>
             );
           })}
-        </motion.div>
+          </div>
+        </div>
       )}
 
       {/* Create Vacancy Modal */}

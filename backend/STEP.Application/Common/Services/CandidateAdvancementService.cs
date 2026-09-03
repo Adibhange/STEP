@@ -3,16 +3,16 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using STEP.Application.Common.Interfaces;
 using CandidateEntity = STEP.Domain.Entities.Candidate.Candidate;
 using CandidatePipelineProgressEntity = STEP.Domain.Entities.Candidate.CandidatePipelineProgress;
 
 namespace STEP.Application.Common.Services
 {
-    /// <summary>Implemented directly in Application — no external I/O beyond IPasswordHasher, which is already an Application-layer abstraction.</summary>
-    public class CandidateAdvancementService(IPasswordHasher hasher) : ICandidateAdvancementService
+    public class CandidateAdvancementService(IApplicationDbContext db, IPasswordHasher hasher) : ICandidateAdvancementService
     {
-        public Task<CandidateAdvancementResult> AdvanceOrResolveAsync(
+        public async Task<CandidateAdvancementResult> AdvanceOrResolveAsync(
             CandidateEntity candidate, CandidatePipelineProgressEntity completedProgress, bool passed, CancellationToken cancellationToken)
         {
             var rounds = candidate.PipelineProgressHistory.OrderBy(p => p.RoundNumber).ToList();
@@ -20,17 +20,43 @@ namespace STEP.Application.Common.Services
 
             if (!passed)
             {
-                // Any stage failure = immediate candidate rejection
                 candidate.Status = "Rejected";
                 candidate.CurrentStage = $"{completedProgress.RoundTitle} (Failed)";
-                return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
+                return new CandidateAdvancementResult(false, null, null, candidate.Status);
             }
 
-            // passed == true from here on.
+            if (nextRound == null)
+            {
+                var defaultFlow = await db.VacancyPipelineFlows
+                    .Include(f => f.Rounds)
+                    .FirstOrDefaultAsync(f => f.VacancyId == candidate.VacancyId && f.IsDefault && !f.IsDeleted, cancellationToken)
+                    ?? await db.VacancyPipelineFlows
+                    .Include(f => f.Rounds)
+                    .FirstOrDefaultAsync(f => f.VacancyId == candidate.VacancyId && !f.IsDeleted, cancellationToken);
+
+                var targetRoundDef = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == completedProgress.RoundNumber + 1);
+
+                if (targetRoundDef != null)
+                {
+                    nextRound = new CandidatePipelineProgressEntity
+                    {
+                        CandidateId = candidate.Id,
+                        RoundNumber = targetRoundDef.RoundOrder,
+                        RoundTitle = targetRoundDef.Name,
+                        RoundType = targetRoundDef.RoundType ?? "Assessment",
+                        Status = "Pending",
+                        VacancyPipelineFlowRoundId = targetRoundDef.Id
+                    };
+                    db.CandidatePipelineProgresses.Add(nextRound);
+                    candidate.PipelineProgressHistory.Add(nextRound);
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+            }
+
             if (nextRound == null)
             {
                 candidate.Status = "Hired";
-                return Task.FromResult(new CandidateAdvancementResult(false, null, null, candidate.Status));
+                return new CandidateAdvancementResult(false, null, null, candidate.Status);
             }
 
             candidate.CurrentPipelineProgressId = nextRound.Id;
@@ -44,7 +70,7 @@ namespace STEP.Application.Common.Services
                 candidate.ExamPasscodeHash = hasher.Hash(nextRoundPasscode);
             }
 
-            return Task.FromResult(new CandidateAdvancementResult(true, nextRound.RoundTitle, nextRoundPasscode, candidate.Status));
+            return new CandidateAdvancementResult(true, nextRound.RoundTitle, nextRoundPasscode, candidate.Status);
         }
     }
 }

@@ -62,6 +62,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                     .ThenInclude(f => f.Rounds)
                 .Include(v => v.MasterRole)
                 .Include(v => v.HiringLocation)
+                .AsSplitQuery()
                 .Where(v => !v.IsDeleted && v.Status == "Active")
                 .Where(v => (masterRole == null || v.MasterRoleId == masterRole.Id))
                 .Where(v => (location == null || v.HiringLocationId == location.Id))
@@ -77,6 +78,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                         .ThenInclude(f => f.Rounds)
                     .Include(v => v.MasterRole)
                     .Include(v => v.HiringLocation)
+                    .AsSplitQuery()
                     .Where(v => !v.IsDeleted && v.Status == "Active" && v.MasterRoleId == masterRole.Id)
                     .OrderByDescending(v => v.CreatedAt)
                     .FirstOrDefaultAsync(cancellationToken);
@@ -110,12 +112,15 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                 {
                     VersionName = $"{roleName} Standard Pipeline",
                     IsDefault = true,
-                    Rounds = new System.Collections.Generic.List<VacancyPipelineFlowRound>
+                    Rounds = new List<VacancyPipelineFlowRound>
                     {
-                        new() { RoundOrder = 1, Name = isDirect ? "Round 1: HR Sourcing & Screening (Auto-Passed)" : "Round 1: Aptitude Assessment (Elimination)", RoundType = "Assessment", CutoffPercent = dynamicCutoff },
-                        new() { RoundOrder = 2, Name = "Round 2: Technical Assessment", RoundType = "Assessment", CutoffPercent = dynamicCutoff },
-                        new() { RoundOrder = 3, Name = "Round 3: Technical Interview", RoundType = "Interview", CutoffPercent = dynamicCutoff },
-                        new() { RoundOrder = 4, Name = "Round 4: Director Final & Offer", RoundType = "Director", CutoffPercent = dynamicCutoff }
+                        new() { RoundOrder = 1, Name = isDirect ? "Round 1: HR Sourcing & Screening (Auto-Passed)" : "Round 1: Aptitude Assessment (Elimination)", RoundType = "Assessment", CutoffPercent = 70.00m },
+                        new() { RoundOrder = 2, Name = "Round 2: Technical Assessment", RoundType = "Assessment", CutoffPercent = 70.00m },
+                        new() { RoundOrder = 3, Name = "Round 3: Technical Interview", RoundType = "Interview", CutoffPercent = 70.00m },
+                        new() { RoundOrder = 4, Name = "Round 4: Director Final & Offer", RoundType = "Director", CutoffPercent = 70.00m }
+                    }
+                };
+                matchingVacancy.PipelineFlows.Add(defaultFlow);
                 await db.SaveChangesAsync(cancellationToken);
             }
 
@@ -158,9 +163,6 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
             }
 
             // ── 6. Create Candidate Entity ─────────────────────────────────────────
-            var nextSequence = await db.Candidates.IgnoreQueryFilters().CountAsync(cancellationToken) + 1001;
-            var candidateCode = $"CND-{DateTime.UtcNow:yyyy}-{nextSequence}";
-
             var defaultFlowResolved = matchingVacancy.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
                 ?? matchingVacancy.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
             var round1 = defaultFlowResolved?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
@@ -169,7 +171,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
 
             var candidate = new CandidateEntity
             {
-                CandidateCode = candidateCode,
+                CandidateCode = $"TMP-{Guid.NewGuid().ToString("N")[..16]}",
                 FirstName = request.FirstName.Trim(),
                 LastName = request.LastName.Trim(),
                 Email = emailLower,
@@ -197,6 +199,9 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
 
             db.Candidates.Add(candidate);
             await db.SaveChangesAsync(cancellationToken);
+
+            // Assign clean sequential candidate code based on auto-incrementing DB Id (e.g. CND-2026-0001)
+            candidate.CandidateCode = $"CND-{DateTime.UtcNow:yyyy}-{candidate.Id:D4}";
 
             // Initialize Round 1 Candidate Pipeline Progress
             if (round1 != null)

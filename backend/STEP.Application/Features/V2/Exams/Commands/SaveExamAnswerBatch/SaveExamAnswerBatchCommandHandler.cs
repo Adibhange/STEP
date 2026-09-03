@@ -19,6 +19,7 @@ namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
             var sessionV2 = await db.CandidateExamSessionsV2
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(s => s.SessionToken == request.SessionToken, cancellationToken);
 
             if (sessionV2 != null)

@@ -19,6 +19,7 @@ namespace STEP.Application.Features.Exams.Queries.ResumeExamSession
                 .Include(s => s.AssessmentBlueprint)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
+                .AsSplitQuery()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.SessionToken == request.SessionToken, cancellationToken);
 

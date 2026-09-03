@@ -22,6 +22,7 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
                 .Include(s => s.Candidate)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(s => s.SessionToken == request.SessionToken, cancellationToken);
 
             if (sessionV2 != null)
