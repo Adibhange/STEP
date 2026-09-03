@@ -6,12 +6,13 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
+using STEP.Application.Common.Services;
 using STEP.Application.Features.Exams.Common;
 using STEP.Domain.Entities.Exam;
 
 namespace STEP.Application.Features.Exams.Commands.SubmitExam
 {
-    public class SubmitExamCommandHandler(IApplicationDbContext db) : IRequestHandler<SubmitExamCommand, SubmitExamResultDto>
+    public class SubmitExamCommandHandler(IApplicationDbContext db, ICandidateAdvancementService advancementService) : IRequestHandler<SubmitExamCommand, SubmitExamResultDto>
     {
         private static readonly string[] McqTypes = ["SINGLE_CHOICE", "MULTI_CHOICE", "Single Choice", "Multi Choice"];
 
@@ -20,6 +21,8 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
             // 1. Try V2 Session
             var sessionV2 = await db.CandidateExamSessionsV2
                 .Include(s => s.Candidate)
+                .Include(s => s.Candidate).ThenInclude(c => c.Vacancy)
+                .Include(s => s.Candidate).ThenInclude(c => c.PipelineProgressHistory)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)
                 .AsSplitQuery()
@@ -98,6 +101,15 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
                         progress.Remarks = pendingManualCount == 0
                             ? $"Assessment Score: {sessionV2.TotalScore}/{sessionV2.TotalMarks} ({sessionV2.Percentage}% — {sessionV2.ResultStatus})"
                             : $"MCQ Auto-Graded: {mcqScoreObtained}/{mcqMarksTotal} ({mcqPercentage}% - {(mcqPassed ? "Passed" : "Failed")}) • {pendingManualCount} Practical challenges awaiting evaluator review";
+
+                        var isDirect = sessionV2.Candidate?.RegistrationChannel?.Contains("Direct", StringComparison.OrdinalIgnoreCase) == true ||
+                                       sessionV2.Candidate?.Vacancy?.DriveType?.Contains("Direct", StringComparison.OrdinalIgnoreCase) == true;
+                        
+                        if (pendingManualCount == 0 && isDirect)
+                        {
+                            // Automatically advance Direct Hire candidates if fully auto-graded
+                            await advancementService.AdvanceOrResolveAsync(sessionV2.Candidate!, progress, sessionV2.ResultStatus == "Pass", cancellationToken);
+                        }
                     }
                 }
 
@@ -113,6 +125,8 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
 
             // 2. Fallback to V1 Session
             var session = await db.CandidateExamSessions
+                .Include(s => s.Candidate).ThenInclude(c => c.Vacancy)
+                .Include(s => s.Candidate).ThenInclude(c => c.PipelineProgressHistory)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)
                 .FirstOrDefaultAsync(s => s.SessionToken == request.SessionToken, cancellationToken)
@@ -165,6 +179,14 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
                     prog.Status = v1PendingManualCount == 0
                         ? (session.Percentage >= session.FrozenPassingPercentage ? "Passed" : "Failed")
                         : "Evaluated";
+
+                    var isDirect = session.Candidate?.RegistrationChannel?.Contains("Direct", StringComparison.OrdinalIgnoreCase) == true ||
+                                   session.Candidate?.Vacancy?.DriveType?.Contains("Direct", StringComparison.OrdinalIgnoreCase) == true;
+                    
+                    if (v1PendingManualCount == 0 && isDirect)
+                    {
+                        await advancementService.AdvanceOrResolveAsync(session.Candidate!, prog, session.Percentage >= session.FrozenPassingPercentage, cancellationToken);
+                    }
                 }
             }
 

@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
+using STEP.Application.Common.Services;
 using STEP.Application.Features.Candidates.Common;
 using STEP.Domain.Entities.Audit;
 using STEP.Domain.Entities.Candidate;
@@ -13,7 +14,7 @@ using CandidateEntity = STEP.Domain.Entities.Candidate.Candidate;
 
 namespace STEP.Application.Features.Candidates.Commands.RegisterCandidate
 {
-    public class RegisterCandidateCommandHandler(IApplicationDbContext db) : IRequestHandler<RegisterCandidateCommand, CandidateDto>
+    public class RegisterCandidateCommandHandler(IApplicationDbContext db, ICandidateAdvancementService advancementService) : IRequestHandler<RegisterCandidateCommand, CandidateDto>
     {
         public async Task<CandidateDto> Handle(RegisterCandidateCommand request, CancellationToken cancellationToken)
         {
@@ -77,9 +78,23 @@ namespace STEP.Application.Features.Candidates.Commands.RegisterCandidate
                 };
 
                 db.CandidatePipelineProgresses.Add(r1Progress);
+                candidate.PipelineProgressHistory.Add(r1Progress);
                 candidate.CurrentPipelineProgress = r1Progress;
                 candidate.CurrentStage = round1.Name;
-                await db.SaveChangesAsync(cancellationToken);
+                await db.SaveChangesAsync(cancellationToken); // Save to generate r1Progress.Id
+
+                if (isAutoPassed)
+                {
+                    var advResult = await advancementService.AdvanceOrResolveAsync(candidate, r1Progress, true, cancellationToken);
+                    if (candidate.CurrentPipelineProgress != null)
+                    {
+                        var r2 = candidate.CurrentPipelineProgress;
+                        pipelineProgressList.Add(new PipelineProgressDto(
+                            r2.Id, r2.RoundNumber, r2.RoundTitle, r2.RoundType,
+                            r2.Status, r2.ScoreObtained, r2.StartedAt, r2.CompletedAt,
+                            null, null, r2.Remarks, null, null));
+                    }
+                }
 
                 pipelineProgressList.Add(new PipelineProgressDto(
                     r1Progress.Id, r1Progress.RoundNumber, r1Progress.RoundTitle, r1Progress.RoundType,
