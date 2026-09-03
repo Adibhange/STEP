@@ -2061,18 +2061,44 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 			setDocumentsData((prev) => [newDoc, ...prev]);
 
 			try {
-				await uploadCandidateDocument({
+				const uploadRes = await uploadCandidateDocument({
 					candidateId: numericId,
 					documentType: "Profile Photo",
 					file,
 				}).unwrap();
+
+				const savedDoc = (uploadRes as any)?.data;
+				if (savedDoc?.id) {
+					const serverUrl = `${getApiBaseUrl()}/candidates/${numericId}/documents/${savedDoc.id}/file`;
+					setCandidate((prev) => ({ ...prev, avatar: serverUrl }));
+					setDocumentsData((prev) => [
+						{
+							id: savedDoc.id,
+							name: savedDoc.fileName || file.name,
+							date: new Date().toLocaleDateString("en-GB", {
+								day: "2-digit",
+								month: "short",
+								year: "numeric",
+							}),
+							size: `${Math.round((savedDoc.fileSizeBytes || file.size) / 1024)} KB`,
+							type: savedDoc.documentType || "Profile Photo",
+						},
+						...prev.filter(
+							(d) => d.id !== newDoc.id && d.type !== "Profile Photo",
+						),
+					]);
+				}
+
 				toast.success("Profile Photo Updated", {
-					description: `${file.name} uploaded successfully and persisted to candidate record.`,
+					description: `${file.name} uploaded successfully and saved to server storage.`,
 				});
-			} catch (err) {
-				console.warn("Backend upload document notice:", err);
-				toast.success("Profile Photo Updated", {
-					description: `${file.name} uploaded successfully as Candidate Profile Photo.`,
+			} catch (err: any) {
+				console.error("Backend upload photo error:", err);
+				toast.error("Photo Upload Failed", {
+					description:
+						err?.data?.message ||
+						err?.message ||
+						"Failed to save photo to the server disk.",
 				});
 			}
 		};
@@ -2123,18 +2149,40 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 		setDocumentsData((prev) => [newDoc, ...prev]);
 
 		try {
-			await uploadCandidateDocument({
+			const uploadRes = await uploadCandidateDocument({
 				candidateId: numericId,
 				documentType: docType,
 				file,
 			}).unwrap();
-			toast.success("Document Saved to Database", {
-				description: `${file.name} attached successfully as ${docType} and persisted to SQL database.`,
+
+			const savedDoc = (uploadRes as any)?.data;
+			if (savedDoc?.id) {
+				setDocumentsData((prev) => [
+					{
+						id: savedDoc.id,
+						name: savedDoc.fileName || file.name,
+						date: new Date().toLocaleDateString("en-GB", {
+							day: "2-digit",
+							month: "short",
+							year: "numeric",
+						}),
+						size: `${Math.round((savedDoc.fileSizeBytes || file.size) / 1024)} KB`,
+						type: savedDoc.documentType || docType,
+					},
+					...prev.filter((d) => d.id !== newDoc.id),
+				]);
+			}
+
+			toast.success("Document Saved", {
+				description: `${file.name} saved successfully to server storage.`,
 			});
-		} catch (err) {
-			console.warn("Backend upload document notice:", err);
-			toast.success("Document Uploaded", {
-				description: `${file.name} attached successfully as ${docType}.`,
+		} catch (err: any) {
+			console.error("Backend upload document error:", err);
+			toast.error("Document Upload Failed", {
+				description:
+					err?.data?.message ||
+					err?.message ||
+					`Failed to upload ${file.name} to server.`,
 			});
 		}
 	};

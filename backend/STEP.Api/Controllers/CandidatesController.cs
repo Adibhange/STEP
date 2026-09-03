@@ -109,6 +109,7 @@ namespace STEP.Api.Controllers
         }
 
         [HttpGet("{id:int}/documents/{docId:int}/download")]
+        [AllowAnonymous]
         public async Task<IActionResult> DownloadDocument(int id, int docId)
         {
             var docFile = await mediator.Send(new STEP.Application.Features.Candidates.Queries.GetCandidateDocumentFile.GetCandidateDocumentFileQuery(id, docId));
@@ -117,6 +118,7 @@ namespace STEP.Api.Controllers
 
         [HttpGet("{id:int}/documents/{docId:int}/file")]
         [HttpGet("{id:int}/documents/{docId:int}/view")]
+        [AllowAnonymous]
         public async Task<IActionResult> ViewDocument(int id, int docId)
         {
             var docFile = await mediator.Send(new STEP.Application.Features.Candidates.Queries.GetCandidateDocumentFile.GetCandidateDocumentFileQuery(id, docId));
