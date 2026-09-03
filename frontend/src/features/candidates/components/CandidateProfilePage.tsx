@@ -64,6 +64,8 @@ export interface StageItem {
 	isDirectorRound?: boolean;
 	roundType?: "Assessment" | "Interview" | string;
 	isLocked?: boolean;
+	hasPriorFailure?: boolean;
+	failedRoundNumber?: number;
 	isTerminated?: boolean;
 	hasCompletedTest?: boolean;
 	terminationReason?: string;
@@ -680,19 +682,34 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 						p.resultStatus?.toLowerCase() === "pass" ||
 						isAutoPassedRound;
 
-					// Strict stage progression locking:
-					// A stage is locked if ANY previous stage was failed, or if candidate is Rejected
-					const hasPriorFailure = history.some(
+					// Strict sequential stage progression:
+					// Check if any prior round actually failed
+					const failedPriorRound = history.find(
 						(prev: any) =>
 							prev.roundNumber < p.roundNumber &&
 							(prev.status?.toLowerCase() === "failed" ||
 								prev.status?.toLowerCase() === "rejected" ||
 								prev.resultStatus?.toLowerCase() === "fail"),
 					);
-					const isCandidateRejected =
-						(apiData.status || "").toLowerCase() === "rejected";
+					const hasPriorFailure = Boolean(failedPriorRound);
+
+					// Check if the immediately preceding round is cleared/passed
+					const prevRound = history.find(
+						(prev: any) => prev.roundNumber === p.roundNumber - 1,
+					);
+					const isPrevRoundPassed =
+						p.roundNumber === 1 ||
+						(prevRound &&
+							(prevRound.status?.toLowerCase() === "passed" ||
+								prevRound.status?.toLowerCase() === "cleared" ||
+								prevRound.status?.toLowerCase() === "completed" ||
+								prevRound.resultStatus?.toLowerCase() === "pass" ||
+								(prevRound.roundTitle || "")
+									.toLowerCase()
+									.includes("auto-passed")));
+
 					const isLocked =
-						p.roundNumber > 1 && (hasPriorFailure || isCandidateRejected);
+						p.roundNumber > 1 && (hasPriorFailure || !isPrevRoundPassed);
 
 					const hasCompletedTest = Boolean(
 						p.completedAt ||
@@ -779,7 +796,9 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 							: "In Office",
 						feedback:
 							isLocked ?
-								"Round locked — candidate failed previous round."
+								hasPriorFailure ?
+									`Round locked — candidate failed Round ${failedPriorRound?.roundNumber || 1}.`
+								:	`Round pending — complete Round ${p.roundNumber - 1} first.`
 							:	(() => {
 									if (
 										p.roundNumber === 1 &&
@@ -827,6 +846,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 						isDirectorRound: isDirectorRound,
 						isOfferRound: isOfferRound,
 						isLocked: isLocked,
+						hasPriorFailure: hasPriorFailure,
+						failedRoundNumber: failedPriorRound?.roundNumber,
 						hasCompletedTest: hasCompletedTest,
 					};
 				});
@@ -966,38 +987,21 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 					},
 					{
 						id: 4,
-						name: "Director Interview",
+						name: "Round 4: Director Final & Offer",
 						status: "Pending",
 						statusType: "pending",
 						date: "Pending",
 						interviewer: "Unassigned",
-						interviewerInitials: "UA",
+						interviewerInitials: "DR",
 						interviewerRole: "Director of Engineering",
 						mode: "In Office",
-						feedback: "Director decision round pending.",
+						feedback: "Director final decision and offer approval pending.",
 						result: "Pending",
 						actionLabel: null,
 						isDirectorRound: true,
-						isOfferRound: false,
-						isLocked: false,
-						roundType: "Interview",
-					},
-					{
-						id: 5,
-						name: "Offer",
-						status: "Pending",
-						statusType: "pending",
-						date: "Pending",
-						interviewer: "—",
-						interviewerInitials: "—",
-						interviewerRole: "HR Operations",
-						mode: "Official Document",
-						feedback: "Awaiting pipeline clearance for offer rollout.",
-						result: "Pending",
-						actionLabel: null,
-						isDirectorRound: false,
 						isOfferRound: true,
 						isLocked: false,
+						roundType: "Director",
 					},
 				]);
 			}
@@ -1594,10 +1598,29 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 									`Assessment evaluation submitted (${scorecardRecommendation}).`,
 								actionLabel: null,
 							}
+						: s.id === selectedFeedbackStage.id + 1 && isPassed ?
+							{
+								...s,
+								status: "Pending",
+								statusType: "pending",
+								result: "Pending",
+								isLocked: false,
+								hasPriorFailure: false,
+								feedback:
+									(
+										s.feedback.includes("locked") ||
+										s.feedback.includes("pending")
+									) ?
+										"Round open — ready for scheduling / evaluation."
+									:	s.feedback,
+							}
 						:	s,
 					),
 				);
 				setSelectedFeedbackStage(null);
+				try {
+					refetchCandidate();
+				} catch (_) {}
 				toast.success("Assessment Evaluated", {
 					description: "Coding assessment scorecard submitted and persisted.",
 				});
@@ -1675,11 +1698,29 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 								result: isPassed ? "Passed" : "Failed",
 								interviewId: targetInterviewId,
 							}
+						: s.id === selectedFeedbackStage.id + 1 && isPassed ?
+							{
+								...s,
+								status: "Pending",
+								statusType: "pending",
+								result: "Pending",
+								isLocked: false,
+								hasPriorFailure: false,
+								feedback:
+									(
+										s.feedback.includes("locked") ||
+										s.feedback.includes("pending")
+									) ?
+										"Round open — ready for scheduling / evaluation."
+									:	s.feedback,
+							}
 						:	s,
 					),
 				);
 				setSelectedFeedbackStage(null);
-				refetchCandidate();
+				try {
+					refetchCandidate();
+				} catch (_) {}
 				toast.success("Scorecard Saved", {
 					description:
 						"Interview scorecard submitted and persisted successfully.",
@@ -2860,7 +2901,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 														className='text-[var(--text-tertiary)]'
 													/>
 													<span>
-														Round Locked (Candidate Failed Previous Round)
+														{stage.hasPriorFailure ?
+															`Round Locked (Candidate Failed Round ${stage.failedRoundNumber || 1})`
+														:	`Round Pending (Complete Round ${stage.id - 1} First)`
+														}
 													</span>
 												</span>
 											:	!stage.isTerminated && (
@@ -3179,6 +3223,35 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 																				</button>
 																			)}
 
+																			{!isHrOrDirectorOrAdmin &&
+																				(!stage.interviewerUserId ||
+																					stage.interviewer?.toLowerCase() ===
+																						"unassigned") && (
+																					<button
+																						type='button'
+																						onClick={() => {
+																							const currentId =
+																								currentUser?.id ||
+																								currentUserId;
+																							setSelectedAssignStage(stage);
+																							if (currentId) {
+																								setAssignedInterviewer(
+																									String(currentId),
+																								);
+																							}
+																						}}
+																						className='h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-[var(--accent-indigo)] bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] text-[11.5px] sm:text-xs font-semibold hover:bg-[var(--accent-indigo)] hover:text-white transition-colors cursor-pointer shadow-2xs'
+																						title='Claim and assign yourself as the interviewer for this candidate'>
+																						<Icon
+																							name='user-check'
+																							size='xs'
+																						/>
+																						<span>
+																							Claim &amp; Take Interview
+																						</span>
+																					</button>
+																				)}
+
 																			<button
 																				type='button'
 																				disabled={!isAssignedToUser}
@@ -3201,7 +3274,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 																				}`}
 																				title={
 																					!isAssignedToUser ?
-																						`Only the assigned interviewer (${stage.interviewer}) can submit feedback for this round.`
+																						`Only the assigned interviewer (${stage.interviewer}) or HR can submit feedback for this round.`
 																					:	"Submit feedback scorecard"
 																				}>
 																				<Icon

@@ -267,4 +267,56 @@ If within cooldown, rejects with exact eligible re-application date.
 
 ---
 
+## 10. Canonical 4-Round Pipeline Architecture (Walk-in Drive vs. Direct Sourcing)
+
+### 10.1 Unified 4-Round Invariant
+
+Across all vacancy generation points (`CreateInstantDriveCommandHandler`, `RegisterUniversalCandidateCommandHandler`, and database stored procedures), STEP enforces a strict, unified **4-Round Pipeline Structure**:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                   STEP 4-ROUND PIPELINE ARCHITECTURE                             │
+├─────────┬───────────────────────────────┬──────────────────────────────┬─────────┤
+│  Round  │ 🏢 Walk-in Drive Track        │ 🌐 Direct Sourced Track      │  Type   │
+├─────────┼───────────────────────────────┼──────────────────────────────┼─────────┤
+│ Round 1 │ Aptitude Assessment (Elim)    │ HR Sourcing & Screening      │ Assess- │
+│         │ • Proctored written/online    │ • Resume & phone screening   │ ment    │
+│         │ • Cutoff ≥ 70% (Max 2 tries)  │ • Auto-Passed on creation    │         │
+├─────────┼───────────────────────────────┼──────────────────────────────┼─────────┤
+│ Round 2 │ Technical Assessment          │ Technical Assessment         │ Assess- │
+│         │ • Coding / SQL / Algorithms   │ • Coding / SQL / Algorithms  │ ment    │
+│         │ • Evaluator scores questions  │ • Evaluator scores questions │         │
+├─────────┼───────────────────────────────┼──────────────────────────────┼─────────┤
+│ Round 3 │ Technical / Domain Interview  │ Technical / Domain Interview │ Inter-  │
+│         │ • F2F Technical Discussion    │ • F2F or Teams Video Panel   │ view    │
+│         │ • Problem solving, system arch│ • Problem solving, system arch│        │
+├─────────┼───────────────────────────────┼──────────────────────────────┼─────────┤
+│ Round 4 │ Director Final & Offer        │ Director Final & Offer       │ Direct- │
+│         │ • Executive governance        │ • Executive governance       │ or      │
+│         │ • 4-Digit Director PIN Auth   │ • 4-Digit Director PIN Auth  │         │
+│         │ • Offer rollout authorization │ • Offer rollout authorization│         │
+└─────────┴───────────────────────────────┴──────────────────────────────┴─────────┘
+```
+
+### 10.2 Walk-in vs. Direct Functional Differences
+
+1. **The "Extra Test" Clarification**:
+   - Walk-in candidates take **3 live evaluations + Director** (Aptitude $\rightarrow$ Technical $\rightarrow$ Tech Interview $\rightarrow$ Director).
+   - Direct Sourced candidates take **2 live evaluations + Director** (Technical $\rightarrow$ Tech Interview $\rightarrow$ Director) because Round 1 is **Auto-Passed** by HR.
+   - In both cases, **Director is ALWAYS Round 4**.
+2. **Sequential Progression & Unlocking Invariant**:
+   - A stage is unlocked if and only if the immediately prior stage ($N-1$) is **Passed** and no earlier stage has failed.
+   - If prior stage is pending, Stage $N$ displays `Round Pending (Complete Round N-1 First)` rather than a false failure message.
+   - Submitting a passing evaluation on Round 2 immediately unlocks Round 3 in client state (`isLocked: false`, `status: "Pending"`) and triggers `refetchCandidate()`.
+3. **Role & Action Button Permissions for Round 3**:
+   - **HR / Admin / Director**: Render `[ 📅 Schedule & Assign Interviewer ]` and enabled `[ 📋 Submit Feedback ]`.
+   - **Interviewers**: If the round is unassigned, render `[ 🙋 Claim & Take Interview ]` so interviewers can self-assign and conduct the interview without being blocked. Once assigned, `[ 📋 Submit Feedback ]` is active.
+
+### 10.3 Offline Database Architecture Notice
+
+- The application core is architected to compile, type-check, and function with robust mock/fallback data when disconnected from an active SQL Server database instance.
+- Frontend fallback data (`CandidateProfilePage.tsx`) matches the canonical 4-round pipeline schema exactly so developer experience remains identical online and offline.
+
+---
+
 _Protocol: Every future modification to STEP must be preceded by reviewing this document and followed by updating its entries._

@@ -112,13 +112,10 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                     IsDefault = true,
                     Rounds = new System.Collections.Generic.List<VacancyPipelineFlowRound>
                     {
-                        new() { RoundOrder = 1, Name = isDirect ? "Round 1: HR Sourcing & Screening" : "Round 1: Proctored Assessment", RoundType = "Assessment" },
-                        new() { RoundOrder = 2, Name = "Round 2: Technical Interview", RoundType = "Technical" },
-                        new() { RoundOrder = 3, Name = "Round 3: Final Director / HR Round", RoundType = "HR" }
-                    }
-                };
-                matchingVacancy.PipelineFlows.Add(defaultFlow);
-                db.Vacancies.Add(matchingVacancy);
+                        new() { RoundOrder = 1, Name = isDirect ? "Round 1: HR Sourcing & Screening (Auto-Passed)" : "Round 1: Aptitude Assessment (Elimination)", RoundType = "Assessment", CutoffPercent = dynamicCutoff },
+                        new() { RoundOrder = 2, Name = "Round 2: Technical Assessment", RoundType = "Assessment", CutoffPercent = dynamicCutoff },
+                        new() { RoundOrder = 3, Name = "Round 3: Technical Interview", RoundType = "Interview", CutoffPercent = dynamicCutoff },
+                        new() { RoundOrder = 4, Name = "Round 4: Director Final & Offer", RoundType = "Director", CutoffPercent = dynamicCutoff }
                 await db.SaveChangesAsync(cancellationToken);
             }
 

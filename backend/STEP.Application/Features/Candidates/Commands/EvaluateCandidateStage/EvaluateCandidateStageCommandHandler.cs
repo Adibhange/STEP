@@ -86,10 +86,9 @@ namespace STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage
                     var defaultRounds = new[]
                     {
                         (1, r1Name, r1Type),
-                        (2, "Coding & Algorithm Challenge", "Assessment"),
-                        (3, "Technical F2F & Live Coding", "Interview"),
-                        (4, "Director Interview", "Interview"),
-                        (5, "Offer Rollout", "Offer"),
+                        (2, "Round 2: Technical Assessment", "Assessment"),
+                        (3, "Round 3: Technical Interview", "Interview"),
+                        (4, "Round 4: Director Final & Offer", "Director"),
                     };
 
                     foreach (var (rNum, rTitle, rType) in defaultRounds)

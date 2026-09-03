@@ -116,11 +116,16 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
                 if (!isDirectCandidate)
                 {
-                    var isR1Cleared = r1 != null && (r1.Status == "Passed" || r1.Status == "Auto-Passed" || (r1.ScoreObtained.HasValue && r1.ScoreObtained.Value >= 70.00m));
+                    var r1RoundCutoff = candidate.Vacancy?.PipelineFlows
+                        .SelectMany(f => f.Rounds)
+                        .FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted && r.CutoffPercent > 0)?
+                        .CutoffPercent ?? 70.00m;
+
+                    var isR1Cleared = r1 != null && (r1.Status == "Passed" || r1.Status == "Auto-Passed" || (r1.ScoreObtained.HasValue && r1.ScoreObtained.Value >= r1RoundCutoff));
                     if (!isR1Cleared)
                     {
                         throw new ValidationException([new FluentValidation.Results.ValidationFailure("StageLock",
-                            "Round 2 Technical Assessment is locked. Candidate must complete and pass Round 1 Aptitude Assessment (score ≥ 70%) before taking the Technical Round.")]);
+                            $"Round 2 Technical Assessment is locked. Candidate must complete and pass Round 1 Aptitude Assessment (score ≥ {r1RoundCutoff:0.##}%) before taking the Technical Round.")]);
                     }
 
                     if (r1 != null && (r1.Status == "Failed" || candidate.Status == "Rejected"))
@@ -251,7 +256,14 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             if (blueprint != null && blueprint.SectionRules.Count > 0)
             {
                 var durationMinutes = blueprint.TotalDurationMinutes > 0 ? blueprint.TotalDurationMinutes : 60;
-                var passingPercentage = blueprint.DefaultPassingPercentage > 0 ? blueprint.DefaultPassingPercentage : 70;
+                var roundCutoff = candidate.Vacancy?.PipelineFlows
+                    .SelectMany(f => f.Rounds)
+                    .FirstOrDefault(r => (r.Id == progress.VacancyPipelineFlowRoundId || r.RoundOrder == progress.RoundNumber) && !r.IsDeleted && r.CutoffPercent > 0)?
+                    .CutoffPercent;
+
+                var passingPercentage = (roundCutoff.HasValue && roundCutoff.Value > 0)
+                    ? roundCutoff.Value
+                    : (blueprint.DefaultPassingPercentage > 0 ? blueprint.DefaultPassingPercentage : 70.00m);
 
                 var sessionV2 = new CandidateExamSessionV2
                 {
