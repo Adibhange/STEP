@@ -433,6 +433,8 @@ export interface AssessmentBlueprintData {
 	sectionRules: AssessmentSectionRuleItem[];
 }
 
+export type AssessmentBlueprint = AssessmentBlueprintData;
+
 export interface RoleTierMatrixItemData {
 	id: number;
 	roleId: number;

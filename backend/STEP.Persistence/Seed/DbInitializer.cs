@@ -99,6 +99,16 @@ namespace STEP.Persistence.Seed
                     BEGIN
                         ALTER TABLE candidate.CandidatePipelineProgress ADD TestPasscode NVARCHAR(20) NULL;
                     END
+
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'master.MasterExperienceLevels') AND name = N'MinYears')
+                    BEGIN
+                        ALTER TABLE master.MasterExperienceLevels ADD MinYears DECIMAL(4,1) NOT NULL DEFAULT 0.0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'master.MasterExperienceLevels') AND name = N'MaxYears')
+                    BEGIN
+                        ALTER TABLE master.MasterExperienceLevels ADD MaxYears DECIMAL(4,1) NOT NULL DEFAULT 99.0;
+                    END
                 ";
                 await db.Database.ExecuteSqlRawAsync(addMissingColumnsSql);
             }
