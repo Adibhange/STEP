@@ -36,7 +36,10 @@ namespace STEP.Application.Features.Exams.Common
                 session.ActiveQuestionIndex,
                 session.SessionStatus,
                 questions,
-                session.Id);
+                session.Id,
+                false, // RequireCameraAndMic (V1 tests)
+                null,  // RoundNumber
+                "Online"); // TestMode
         }
 
         public static LiveExamWorkspaceDto ToWorkspaceDto(CandidateExamSessionV2 session)
@@ -63,6 +66,17 @@ namespace STEP.Application.Features.Exams.Common
             var vacancyTitle = session.Vacancy?.Title ?? "Assessment";
             var paperTitle = session.AssessmentBlueprint?.Name ?? "Technical Assessment";
 
+            int? roundNumber = session.CandidatePipelineProgress?.RoundNumber;
+            string testMode = session.CandidatePipelineProgress?.AssessmentMode ?? "Online";
+            
+            bool isAptitude = roundNumber == 1 || (session.CandidatePipelineProgress?.RoundTitle?.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) ?? false);
+            bool isOffice = testMode.Contains("Office", StringComparison.OrdinalIgnoreCase) 
+                || testMode.Contains("Walk-in", StringComparison.OrdinalIgnoreCase)
+                || (session.Candidate?.RegistrationChannel == "Walk-in");
+
+            bool requireCameraAndMic = !isAptitude && !isOffice;
+            string effectiveMode = isOffice ? "In Office" : "Online";
+
             return new LiveExamWorkspaceDto(
                 session.SessionToken,
                 candidateName,
@@ -73,7 +87,10 @@ namespace STEP.Application.Features.Exams.Common
                 0,
                 session.SessionStatus,
                 questions,
-                session.Id);
+                session.Id,
+                requireCameraAndMic,
+                roundNumber,
+                effectiveMode);
         }
     }
 }

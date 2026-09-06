@@ -30,7 +30,10 @@ namespace STEP.Application.Features.Exams.Common
         int ActiveQuestionIndex,
         string SessionStatus,
         List<ExamQuestionDto> Questions,
-        int? CandidateExamSessionId = null);
+        int? CandidateExamSessionId = null,
+        bool RequireCameraAndMic = false,
+        int? RoundNumber = null,
+        string? TestMode = null);
 
     public record SubmitExamResultDto(string SessionStatus, decimal TotalScore, decimal TotalMarks, int PendingManualEvaluationCount);
 

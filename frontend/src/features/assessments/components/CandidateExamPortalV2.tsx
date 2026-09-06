@@ -928,7 +928,14 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 	}, [initialCandidateCode, initialPasscode]);
 
 	const handleStartExamNow = () => {
-		setShowHardwarePrecheck(true);
+		if (session?.requireCameraAndMic) {
+			setShowHardwarePrecheck(true);
+		} else {
+			// Skip precheck entirely
+			setExamStep("active");
+			setIsTimerRunning(true);
+			toggleFullscreen();
+		}
 	};
 
 	const handlePrecheckComplete = (stream: MediaStream) => {
@@ -1400,9 +1407,14 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 						className='flex items-start justify-between border-b border-border-soft pb-5 flex-wrap gap-3'>
 						<div>
 							<div className='flex items-center gap-2 mb-1.5'>
-								<span className='px-2.5 py-0.5 rounded-full bg-status-success-bg text-status-success-text border border-status-success-border text-[10.5px] font-mono font-bold'>
-									PROCTORED ASSESSMENT
-								</span>
+								{session?.requireCameraAndMic ?
+									<span className='px-2.5 py-0.5 rounded-full bg-status-success-bg text-status-success-text border border-status-success-border text-[10.5px] font-mono font-bold'>
+										PROCTORED ASSESSMENT
+									</span>
+								:	<span className='px-2.5 py-0.5 rounded-full bg-surface-2 text-text-secondary border border-border-default text-[10.5px] font-mono font-bold'>
+										SECURE ASSESSMENT
+									</span>
+								}
 								<span className='text-[11px] font-mono text-text-tertiary'>
 									{testMode === "In Office" ?
 										"• In Office Test"
@@ -2801,7 +2813,9 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 				)}
 
 			{/* ── PROCTORING PIP ── */}
-			{examStep === "active" && <ProctoringPiP stream={proctoringStream} />}
+			{examStep === "active" && session?.requireCameraAndMic && (
+				<ProctoringPiP stream={proctoringStream} />
+			)}
 
 			{/* ── SUBMIT CONFIRMATION MODAL ── */}
 			<ExamSubmissionModal

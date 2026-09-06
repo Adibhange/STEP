@@ -15,6 +15,7 @@ namespace STEP.Application.Features.Exams.Queries.ResumeExamSession
         {
             var sessionV2 = await db.CandidateExamSessionsV2
                 .Include(s => s.Candidate)
+                .Include(s => s.CandidatePipelineProgress)
                 .Include(s => s.Vacancy)
                 .Include(s => s.AssessmentBlueprint)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)

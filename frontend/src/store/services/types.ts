@@ -75,6 +75,9 @@ export interface LiveExamWorkspaceData {
 	activeQuestionIndex: number;
 	sessionStatus: string;
 	questions: ExamQuestionData[];
+	requireCameraAndMic?: boolean;
+	roundNumber?: number;
+	testMode?: "Online" | "In Office";
 }
 
 export interface SubmitExamResultData {

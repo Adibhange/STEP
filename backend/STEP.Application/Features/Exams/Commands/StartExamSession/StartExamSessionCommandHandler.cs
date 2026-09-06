@@ -270,6 +270,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     AssessmentBlueprintId = blueprint.Id,
                     AssessmentBlueprint = blueprint,
                     CandidatePipelineProgressId = progress.Id,
+                    CandidatePipelineProgress = progress,
                     SessionToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)),
                     CandidateTier = candidate.TotalExperienceYears > 4 ? "Senior" : (candidate.TotalExperienceYears > 1 ? "Mid-Level" : "Fresher"),
                     RolePrimaryLanguage = (candidate.Vacancy?.Title ?? "").Contains("SQL", StringComparison.OrdinalIgnoreCase) ? "SQL" : "C# (.NET)",
