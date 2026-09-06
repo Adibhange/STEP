@@ -11,68 +11,17 @@ import {
 } from "@/design-system";
 import { useGetMasterDataByCategoryQuery } from "@/store/services/api";
 import { useRegisterUniversalCandidateMutation } from "@/store/services/candidatesApi";
-
-// ── Canonical Options ─────────────────────────────────────────────────────────
-const ROLE_OPTIONS: SelectOption[] = [
-	{ value: "dotnet-architect", label: "Senior .NET Core Architect" },
-	{ value: "react-fullstack", label: "Full Stack React / Node Lead" },
-	{ value: "qa-automation", label: "QA Lead & Test Automation Engineer" },
-	{ value: "devops-architect", label: "Cloud & DevOps Architect" },
-	{ value: "ai-ml-engineer", label: "Python & AI/ML Engineer" },
-	{
-		value: "software-engineer",
-		label: "Associate Software Engineer (Fresher)",
-	},
-];
-
-const LOCATION_OPTIONS: SelectOption[] = [
-	{ value: "pune-hinjawadi", label: "Pune Corporate Center (Hinjawadi)" },
-	{ value: "mumbai-bkx", label: "Mumbai HQ (Bandra Kurla Complex)" },
-	{ value: "bengaluru-tech", label: "Bengaluru Tech Park (Whitefield)" },
-];
-
-const QUALIFICATION_OPTIONS: SelectOption[] = [
-	{ value: "B.Tech / B.E.", label: "B.Tech / B.E. (CS / IT / Core)" },
-	{ value: "M.Tech / M.E.", label: "M.Tech / M.E. (Postgraduate)" },
-	{ value: "BCA / MCA", label: "BCA / MCA (Computer Applications)" },
-	{ value: "B.Sc / M.Sc IT", label: "B.Sc / M.Sc (Computer Science)" },
-	{ value: "Diploma", label: "Diploma in Engineering" },
-	{ value: "Other", label: "Other Equivalent Degree" },
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
-
-const PASSING_YEAR_OPTIONS: SelectOption[] = [
-	{ value: String(CURRENT_YEAR), label: `${CURRENT_YEAR} (Final Year)` },
-	{
-		value: String(CURRENT_YEAR - 1),
-		label: `${CURRENT_YEAR - 1} (Fresh Graduate)`,
-	},
-	{ value: String(CURRENT_YEAR - 2), label: String(CURRENT_YEAR - 2) },
-	{ value: String(CURRENT_YEAR - 3), label: String(CURRENT_YEAR - 3) },
-	{ value: String(CURRENT_YEAR - 4), label: String(CURRENT_YEAR - 4) },
-	{ value: String(CURRENT_YEAR - 5), label: `${CURRENT_YEAR - 5} & Earlier` },
-];
-
-const NOTICE_PERIOD_OPTIONS: SelectOption[] = [
-	{ value: "0", label: "Immediate Joiner (0 Days)" },
-	{ value: "15", label: "15 Days" },
-	{ value: "30", label: "30 Days (1 Month)" },
-	{ value: "60", label: "60 Days (2 Months)" },
-	{ value: "90", label: "90 Days (3 Months)" },
-];
-
-const GENDER_OPTIONS: SelectOption[] = [
-	{ value: "Male", label: "Male" },
-	{ value: "Female", label: "Female" },
-	{ value: "Other", label: "Other" },
-];
-
-const REF_TYPE_OPTIONS: SelectOption[] = [
-	{ value: "Direct", label: "Direct (Careers / LinkedIn)" },
-	{ value: "Internal", label: "Internal Employee Referral" },
-	{ value: "External", label: "Placement Agency / Partner" },
-];
+import {
+	QUALIFICATION_OPTIONS,
+	PASSING_YEAR_OPTIONS,
+	NOTICE_PERIOD_OPTIONS,
+	GENDER_OPTIONS,
+	REF_TYPE_OPTIONS,
+} from "@/constants/candidate-options";
+import {
+	VACANCY_ROLE_OPTIONS,
+	LOCATION_OPTIONS,
+} from "@/constants/vacancy-options";
 
 // ── Validation Regex ──────────────────────────────────────────────────────────
 const NAME_REGEX = /^[a-zA-Z\s'-]+$/;
@@ -102,7 +51,7 @@ function UniversalRegistrationContent() {
 				label: r.name || r.title || r.code,
 			}));
 		}
-		return ROLE_OPTIONS;
+		return VACANCY_ROLE_OPTIONS;
 	}, [rolesMasterRes]);
 
 	const dynamicLocations: SelectOption[] = React.useMemo(() => {
@@ -129,7 +78,7 @@ function UniversalRegistrationContent() {
 		initialChannelParam?.toLowerCase().includes("walk") ? "Walk-in" : "Walk-in",
 	);
 	const [selectedRole, setSelectedRole] = useState<string>(
-		ROLE_OPTIONS[0].value,
+		VACANCY_ROLE_OPTIONS[0].value,
 	);
 	const [selectedLocation, setSelectedLocation] = useState<string>(
 		LOCATION_OPTIONS[0].value,
@@ -488,7 +437,7 @@ function UniversalRegistrationContent() {
 				candidateCode:
 					resData.candidateCode ||
 					resData.candidate?.candidateCode ||
-					`CND-${CURRENT_YEAR}-${Math.floor(1000 + Math.random() * 9000)}`,
+					`CND-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
 				candidateName:
 					resData.candidateName || `${firstName.trim()} ${lastName.trim()}`,
 				roleTitle: resData.roleTitle || roleLabel,
@@ -500,7 +449,7 @@ function UniversalRegistrationContent() {
 				examPortalUrl:
 					resData.examPortalUrl ||
 					(applicationChannel === "Walk-in" ?
-						`/exam?code=${resData.candidateCode || `CND-${CURRENT_YEAR}-1001`}&pass=1234`
+						`/exam?code=${resData.candidateCode || `CND-${new Date().getFullYear()}-1001`}&pass=1234`
 					:	undefined),
 			});
 		} catch (err: any) {
@@ -1257,13 +1206,14 @@ function UniversalRegistrationContent() {
 												)}
 											</label>
 											<input
-												type='text'
+												type='number'
+												step='any'
 												value={cgpaOrPercentage}
 												onChange={(e) => setCgpaOrPercentage(e.target.value)}
 												onBlur={() =>
 													handleBlur("cgpaOrPercentage", cgpaOrPercentage)
 												}
-												placeholder='e.g. 8.4 CGPA or 80%'
+												placeholder='e.g. 8.4 or 80'
 												className='w-full h-10 px-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border border-border-default outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15'
 											/>
 										</div>

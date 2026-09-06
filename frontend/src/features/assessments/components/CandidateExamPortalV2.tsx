@@ -11,6 +11,8 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Icon, questionCardSliderVariant } from "@/design-system";
 import { CodeEditorIDE } from "./CodeEditorIDE";
 import { ExamSubmissionModal } from "./ExamSubmissionModal";
+import { HardwarePrecheckModal } from "./HardwarePrecheckModal";
+import { useProctoringEngine } from "../hooks/useProctoringEngine";
 import {
 	useStartExamSessionMutation,
 	useSaveExamAnswerBatchV2Mutation,
@@ -79,6 +81,35 @@ const SECTION_TYPE_MAP: Record<
 		icon: "layers",
 		sectionType: "SubjectiveTheory",
 	},
+};
+
+const ProctoringPiP: React.FC<{ stream: MediaStream | null }> = ({
+	stream,
+}) => {
+	const videoRef = useRef<HTMLVideoElement>(null);
+	useEffect(() => {
+		if (videoRef.current && stream) {
+			videoRef.current.srcObject = stream;
+		}
+	}, [stream]);
+
+	if (!stream) return null;
+
+	return (
+		<div className='fixed bottom-4 right-4 z-50 w-48 aspect-video bg-black rounded-lg overflow-hidden shadow-2xl border border-slate-700/50 pointer-events-none'>
+			<video
+				ref={videoRef}
+				autoPlay
+				muted
+				playsInline
+				className='w-full h-full object-cover transform -scale-x-100'
+			/>
+			<div className='absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] text-white font-mono'>
+				<span className='w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse' />{" "}
+				REC
+			</div>
+		</div>
+	);
 };
 
 export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
@@ -165,6 +196,12 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 	>(null);
 	const [isMultiTabLocked, setIsMultiTabLocked] = useState<boolean>(false);
 	const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+
+	const [showHardwarePrecheck, setShowHardwarePrecheck] =
+		useState<boolean>(false);
+	const [proctoringStream, setProctoringStream] = useState<MediaStream | null>(
+		null,
+	);
 
 	// ── Offline & Network Sync ──────────────────────────────────────────────────
 	const [isOnline, setIsOnline] = useState<boolean>(true);
@@ -559,6 +596,8 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 		[activeSessionToken, reportViolationApi, handleFinalSubmit],
 	);
 
+	useProctoringEngine(examStep === "active", proctoringStream, reportViolation);
+
 	useEffect(() => {
 		if (examStep !== "active") return;
 
@@ -889,6 +928,12 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 	}, [initialCandidateCode, initialPasscode]);
 
 	const handleStartExamNow = () => {
+		setShowHardwarePrecheck(true);
+	};
+
+	const handlePrecheckComplete = (stream: MediaStream) => {
+		setProctoringStream(stream);
+		setShowHardwarePrecheck(false);
 		setExamStep("active");
 		setIsTimerRunning(true);
 		toggleFullscreen();
@@ -1336,6 +1381,10 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 			<div
 				className='min-h-screen bg-canvas text-text-primary flex items-center justify-center p-4 sm:p-6 font-sans select-none relative overflow-hidden'
 				data-theme='dark'>
+				<HardwarePrecheckModal
+					isOpen={showHardwarePrecheck}
+					onComplete={handlePrecheckComplete}
+				/>
 				<div className='absolute top-0 right-0 w-[500px] h-[500px] bg-accent-indigo-dim rounded-full blur-[140px] pointer-events-none' />
 
 				<motion.div
@@ -2750,6 +2799,9 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 						</div>
 					</div>
 				)}
+
+			{/* ── PROCTORING PIP ── */}
+			{examStep === "active" && <ProctoringPiP stream={proctoringStream} />}
 
 			{/* ── SUBMIT CONFIRMATION MODAL ── */}
 			<ExamSubmissionModal

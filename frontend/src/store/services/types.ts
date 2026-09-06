@@ -128,6 +128,13 @@ export interface ExamEvaluationViewData {
 	tabSwitchWarnings: number;
 	assessmentIntegrityScore: number;
 	answers: ExamAnswerEvaluationData[];
+	proctoringLogs?: Array<{
+		id: number;
+		eventType: string;
+		penaltyApplied: number;
+		metadataJson: string | null;
+		loggedAt: string;
+	}>;
 }
 
 export interface PublishResultData {

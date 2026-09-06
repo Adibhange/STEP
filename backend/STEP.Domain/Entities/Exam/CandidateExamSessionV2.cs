@@ -138,7 +138,7 @@ namespace STEP.Domain.Entities.Exam
         public int CandidateExamSessionId { get; set; }
         public CandidateExamSessionV2 CandidateExamSession { get; set; } = null!;
 
-        public string EventType { get; set; } = "TabSwitch";
+        public string EventType { get; set; } = string.Empty;
         public string? ClientIp { get; set; }
         public string? UserAgent { get; set; }
         public string? Metadata { get; set; }

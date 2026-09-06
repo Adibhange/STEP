@@ -46,6 +46,14 @@ namespace STEP.Domain.Entities.Candidate
         public int? NoticePeriodDays { get; set; }
         public string? CurrentLocation { get; set; }
         public string? HighestQualification { get; set; }
+        
+        public string? Gender { get; set; }
+        public string? Dob { get; set; }
+        public string? CurrentCompany { get; set; }
+        public string? CurrentDesignation { get; set; }
+        public string? InstitutionName { get; set; }
+        public int? YearOfPassing { get; set; }
+        public decimal? MarksPercentage { get; set; }
 
         /// <summary>
         /// BCrypt hash of the candidate's self-service exam login passcode. Generated (and handed

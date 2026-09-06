@@ -21,6 +21,7 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                 .Include(s => s.AssessmentBlueprint)
                 .Include(s => s.Answers).ThenInclude(a => a.CandidateExamSessionQuestion).ThenInclude(q => q.Options)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
+                .Include(s => s.ProctoringLogs)
                 .AsSplitQuery()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == request.CandidateExamSessionId, cancellationToken);
@@ -48,6 +49,17 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                         a.CandidateExamSessionQuestion.SectionName,
                         a.CandidateExamSessionQuestionId))
                     .ToList();
+                
+                var logsV2 = sessionV2.ProctoringLogs?
+                    .OrderByDescending(l => l.LoggedAt)
+                    .Select(l => new ExamProctoringLogDto(
+                        l.Id,
+                        l.EventType,
+                        10.00m, // Hardcoded integrity penalty per violation as per backend logic
+                        l.Metadata,
+                        l.LoggedAt
+                    ))
+                    .ToList();
 
                 var candName = $"{sessionV2.Candidate.FirstName} {sessionV2.Candidate.LastName}".Trim();
                 var vacTitle = sessionV2.Vacancy?.Title ?? "Engineering Role";
@@ -67,7 +79,8 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                     sessionV2.SubmittedAt?.UtcDateTime,
                     sessionV2.TabSwitchWarningCount,
                     sessionV2.AssessmentIntegrityScore,
-                    answersV2);
+                    answersV2,
+                    logsV2);
             }
 
             // 2. Fallback to V1 Session

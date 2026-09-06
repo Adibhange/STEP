@@ -55,6 +55,13 @@ namespace STEP.Application.Features.Exams.Common
         string? SectionName = null,
         int CandidateExamSessionQuestionId = 0);
 
+    public record ExamProctoringLogDto(
+        int Id,
+        string EventType,
+        decimal PenaltyApplied,
+        string? MetadataJson,
+        DateTimeOffset LoggedAt);
+
     public record ExamEvaluationViewDto(
         int CandidateExamSessionId,
         string CandidateName,
@@ -69,7 +76,8 @@ namespace STEP.Application.Features.Exams.Common
         DateTime? SubmittedAt,
         int TabSwitchWarnings,
         decimal AssessmentIntegrityScore,
-        List<ExamAnswerEvaluationDto> Answers);
+        List<ExamAnswerEvaluationDto> Answers,
+        List<ExamProctoringLogDto>? ProctoringLogs = null);
 
     public record PublishResultDto(
         int CandidateExamSessionId,

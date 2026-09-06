@@ -115,6 +115,13 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 NoticePeriodDays = request.NoticePeriodDays,
                 CurrentLocation = request.CurrentLocation,
                 HighestQualification = request.HighestQualification,
+                Gender = request.Gender,
+                Dob = request.Dob,
+                CurrentCompany = request.CurrentCompany,
+                CurrentDesignation = request.CurrentDesignation,
+                InstitutionName = request.InstitutionName,
+                YearOfPassing = request.YearOfPassing,
+                MarksPercentage = request.MarksPercentage,
                 ReferralEmployeeName = !string.IsNullOrWhiteSpace(request.RefName) ? $"{request.RefName} ({request.RefType ?? "Direct"})" : null,
             };
 

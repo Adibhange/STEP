@@ -1,6 +1,15 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import {
+	QUALIFICATION_OPTIONS,
+	NOTICE_PERIOD_OPTIONS,
+	GENDER_OPTIONS,
+	SOURCE_OPTIONS,
+	REF_TYPE_OPTIONS,
+	MEETING_MODE_OPTIONS,
+} from "@/constants/candidate-options";
+import { LOCATION_OPTIONS } from "@/constants/vacancy-options";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Icon, Skeleton, CustomCalendarPicker } from "@/design-system";
@@ -172,56 +181,6 @@ const FormSelect: React.FC<FormSelectProps> = ({
 		</div>
 	);
 };
-
-const GENDER_OPTIONS: SelectOption[] = [
-	{ value: "Male", label: "Male" },
-	{ value: "Female", label: "Female" },
-	{ value: "Other", label: "Other" },
-	{ value: "Prefer not to say", label: "Prefer not to say" },
-];
-
-const HIRING_LOCATION_OPTIONS: SelectOption[] = [
-	{ value: "Mumbai, Maharashtra", label: "Mumbai, Maharashtra" },
-	{ value: "Pune, Maharashtra", label: "Pune, Maharashtra" },
-	{ value: "Bengaluru, Karnataka", label: "Bengaluru, Karnataka" },
-	{ value: "Hyderabad, Telangana", label: "Hyderabad, Telangana" },
-	{ value: "Delhi NCR", label: "Delhi NCR" },
-	{ value: "Remote India", label: "Remote India" },
-];
-
-const SOURCE_OPTIONS: SelectOption[] = [
-	{ value: "Walk-in", label: "Walk-in / Walk-in Scan" },
-	{ value: "Direct Sourced", label: "Direct Sourced" },
-	{ value: "Internal", label: "Internal Employee Referral" },
-	{ value: "External", label: "External Referral / Agency" },
-	{ value: "LinkedIn Jobs", label: "LinkedIn Jobs" },
-	{ value: "Naukri / Indeed", label: "Naukri / Indeed" },
-];
-
-const NOTICE_PERIOD_OPTIONS: SelectOption[] = [
-	{ value: "Immediate", label: "Immediate / Serving Notice" },
-	{ value: "15 Days", label: "15 Days" },
-	{ value: "30 Days", label: "30 Days" },
-	{ value: "45 Days", label: "45 Days" },
-	{ value: "60 Days", label: "60 Days" },
-	{ value: "90 Days", label: "90 Days" },
-];
-
-const QUALIFICATION_OPTIONS: SelectOption[] = [
-	{ value: "B.Tech in Computer Science", label: "B.Tech in Computer Science" },
-	{ value: "B.Tech / B.E.", label: "B.Tech / B.E. (Engineering)" },
-	{ value: "M.Tech / M.E.", label: "M.Tech / M.E." },
-	{ value: "BCA / MCA", label: "BCA / MCA (Computer Applications)" },
-	{ value: "B.Sc / M.Sc", label: "B.Sc / M.Sc Computer Science" },
-	{ value: "Diploma in Engineering", label: "Diploma in Engineering" },
-	{ value: "Other Degree", label: "Other Degree" },
-];
-
-const REFERENCE_TYPE_OPTIONS: SelectOption[] = [
-	{ value: "Direct", label: "Direct Application (No Referral)" },
-	{ value: "Internal", label: "Internal Employee Referral" },
-	{ value: "External", label: "External Referral / Agency" },
-];
 
 /**
  * High-fidelity Skeleton Placeholder loader for Candidate Profile Page
@@ -1187,11 +1146,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 				})),
 		[usersRes],
 	);
-
-	const meetingModeOptions = [
-		{ value: "In Office", label: "Face-to-Face (In Office)" },
-		{ value: "Online", label: "Online Video Interview" },
-	];
 
 	// Auto pre-select interviewer option when Assign modal opens
 	useEffect(() => {
@@ -3883,7 +3837,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 													<FormSelect
 														value={assignMode}
 														onChange={setAssignMode}
-														options={meetingModeOptions}
+														options={MEETING_MODE_OPTIONS}
 													/>
 												</div>
 
@@ -4434,7 +4388,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 										onChange={(val) =>
 											setEditProfileForm((p) => ({ ...p, location: val }))
 										}
-										options={HIRING_LOCATION_OPTIONS}
+										options={LOCATION_OPTIONS}
 									/>
 								</div>
 
@@ -4662,7 +4616,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 										onChange={(val) =>
 											setEditProfileForm((p) => ({ ...p, refType: val }))
 										}
-										options={REFERENCE_TYPE_OPTIONS}
+										options={REF_TYPE_OPTIONS}
 									/>
 								</div>
 
