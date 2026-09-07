@@ -23,6 +23,8 @@ node_modules/
 out/
 build/
 dist/
+publish/
+DEPLOY_PACKAGES/
 /.pnp
 .pnp.*
 .yarn/*

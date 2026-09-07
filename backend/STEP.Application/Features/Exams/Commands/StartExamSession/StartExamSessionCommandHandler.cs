@@ -239,6 +239,10 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     {
                         blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-DATA-SQL" || b.Name.Contains("Database", StringComparison.OrdinalIgnoreCase));
                     }
+                    else if (vacTitle.Contains("survey") || masterRole.Contains("survey"))
+                    {
+                        blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-MCQ-ONLY");
+                    }
                     else
                     {
                         blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-TECH-ENG" || b.Name.Contains("Software Engineering", StringComparison.OrdinalIgnoreCase));
@@ -304,14 +308,24 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 {
                     var query = allQuestions.AsEnumerable();
 
+                    var isSurveyRole = (candidate.Vacancy?.Title ?? "").Contains("Survey", StringComparison.OrdinalIgnoreCase) ||
+                                       (candidate.Vacancy?.MasterRole?.Name ?? "").Contains("Survey", StringComparison.OrdinalIgnoreCase);
+
                     if (isAptitudeRound)
                     {
                         // Round 1 (Walk-in Drive): Strictly Aptitude & Logical Reasoning questions
-                        query = query.Where(q =>
-                            q.SectionType == "Aptitude" ||
-                            q.Language == "General Aptitude" ||
-                            (q.Language?.Contains("Aptitude") ?? false) ||
-                            (q.Language?.Contains("Logic") ?? false));
+                        if (isSurveyRole)
+                        {
+                            query = query.Where(q => (q.Language?.Contains("Survey") ?? false) || q.SectionType == "Aptitude" || q.Language == "General Aptitude");
+                        }
+                        else
+                        {
+                            query = query.Where(q =>
+                                q.SectionType == "Aptitude" ||
+                                q.Language == "General Aptitude" ||
+                                (q.Language?.Contains("Aptitude") ?? false) ||
+                                (q.Language?.Contains("Logic") ?? false));
+                        }
                     }
                     else
                     {
@@ -321,13 +335,20 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                             var isSqlRole = (candidate.Vacancy?.Title ?? "").Contains("SQL", StringComparison.OrdinalIgnoreCase) ||
                                             (candidate.Vacancy?.MasterRole?.Name ?? "").Contains("SQL", StringComparison.OrdinalIgnoreCase);
 
-                            query = query.Where(q =>
-                                (q.SectionType == "TechnicalMCQ" || q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE") &&
-                                q.SectionType != "Aptitude" && q.Language != "General Aptitude");
-
-                            if (isSqlRole)
+                            if (isSurveyRole)
                             {
-                                query = query.Where(q => (q.Language?.Contains("SQL") ?? false) || (q.Language?.Contains("Database") ?? false) || q.SectionType == "TechnicalMCQ");
+                                query = query.Where(q => (q.Language?.Contains("Survey") ?? false) || q.SectionType == "TechnicalMCQ");
+                            }
+                            else
+                            {
+                                query = query.Where(q =>
+                                    (q.SectionType == "TechnicalMCQ" || q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE") &&
+                                    q.SectionType != "Aptitude" && q.Language != "General Aptitude");
+
+                                if (isSqlRole)
+                                {
+                                    query = query.Where(q => (q.Language?.Contains("SQL") ?? false) || (q.Language?.Contains("Database") ?? false) || q.SectionType == "TechnicalMCQ");
+                                }
                             }
                         }
                         else if (rule.SectionType == "SQLQuery")

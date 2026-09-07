@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build"
+    "dev": "next dev -p 7001",
+    "build": "next build",
+    "start": "next start -p 7001"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.8",
