@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
+using STEP.Application.Common.Services;
 using STEP.Application.Features.Candidates.Common;
 using STEP.Domain.Entities.Candidate;
 using STEP.Domain.Entities.Master;

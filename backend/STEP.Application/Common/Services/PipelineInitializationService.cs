@@ -35,7 +35,7 @@ namespace STEP.Application.Common.Services
                 defaultFlow = new VacancyPipelineFlow
                 {
                     VacancyId = vacancy.Id,
-                    Name = "Standard Template",
+                    VersionName = "Standard Template",
                     Description = "Auto-provisioned standard pipeline",
                     IsDefault = true,
                     Rounds = new List<VacancyPipelineFlowRound>
