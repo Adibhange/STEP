@@ -423,7 +423,43 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 	// Dynamic Candidate Profile Details State
 	const [isTechAuthorized, setIsTechAuthorized] = useState(false);
 
-	const [candidate, setCandidate] = useState({
+	type CandidateProfileState = {
+		id: string;
+		code: string;
+		name: string;
+		avatar: string;
+		status: string;
+		designation: string;
+		appliedFor: string;
+		email: string;
+		phone: string;
+		gender: string;
+		dob: string;
+		location: string;
+		currentStage: string;
+		appliedDate: string;
+		experience: string;
+		candidateType: string;
+		employmentType: string;
+		currentCompany: string;
+		currentDesignation: string;
+		currentCtc: string;
+		expectedCtc: string;
+		noticePeriod: string | null;
+		education: string | null;
+		educationDetails: string | null;
+		college: string | null;
+		passingYear: string | null;
+		percentage: string | null;
+		source: string;
+		refType: string;
+		refName: string;
+		refEmployeeId: string;
+		refMobile: string;
+		refVerifiedBy: string;
+	};
+
+	const [candidate, setCandidate] = useState<CandidateProfileState>({
 		id: candidateId,
 		code: "",
 		name: "Candidate Profile",
@@ -4555,7 +4591,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 									</label>
 									<input
 										type='text'
-										value={editProfileForm.college}
+										value={editProfileForm.college ?? ''}
 										onChange={(e) =>
 											setEditProfileForm((p) => ({
 												...p,
@@ -4573,7 +4609,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 									</label>
 									<input
 										type='text'
-										value={editProfileForm.passingYear}
+										value={editProfileForm.passingYear ?? ''}
 										onChange={(e) =>
 											setEditProfileForm((p) => ({
 												...p,
@@ -4591,7 +4627,7 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 									</label>
 									<input
 										type='text'
-										value={editProfileForm.percentage}
+										value={editProfileForm.percentage ?? ''}
 										onChange={(e) =>
 											setEditProfileForm((p) => ({
 												...p,
