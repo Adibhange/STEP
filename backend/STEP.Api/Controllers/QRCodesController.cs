@@ -14,7 +14,6 @@ namespace STEP.Api.Controllers
     public class QRCodesController(ISender mediator) : BaseApiController
     {
         [HttpPost]
-        [HttpPost("generate")]
         public async Task<IActionResult> Generate([FromBody] GenerateQRCodeCommand command)
         {
             var qrCode = await mediator.Send(command);

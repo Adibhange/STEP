@@ -19,7 +19,7 @@ using STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch;
 namespace STEP.Api.Controllers
 {
     /// <summary>
-    /// Unified Exam & Assessment Controller mapped to /api/v2/exams, /api/v1/exams, and /api/exams.
+    /// Exam & Assessment Controller mapped to /api/exams.
     /// </summary>
     public class ExamsController(ISender mediator) : BaseApiController
     {
@@ -39,7 +39,6 @@ namespace STEP.Api.Controllers
         }
 
         [HttpGet("resume/{sessionToken}")]
-        [HttpGet("{sessionToken}/resume")]
         [AllowAnonymous]
         public async Task<IActionResult> Resume(string sessionToken)
         {
@@ -48,38 +47,24 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("answers")]
-        [HttpPost("save-answer")]
-        [HttpPost("{sessionToken}/save-answer")]
         [AllowAnonymous]
-        public async Task<IActionResult> SaveAnswer([FromRoute] string? sessionToken, [FromBody] SaveExamAnswerCommand command)
+        public async Task<IActionResult> SaveAnswer([FromBody] SaveExamAnswerCommand command)
         {
-            var effectiveCommand = !string.IsNullOrWhiteSpace(sessionToken) && string.IsNullOrWhiteSpace(command.SessionToken)
-                ? command with { SessionToken = sessionToken }
-                : command;
-            await mediator.Send(effectiveCommand);
+            await mediator.Send(command);
             return Ok(ApiResponse<object>.Ok(new { }, "Answer saved"));
         }
 
         [HttpPost("batch-answers")]
-        [HttpPost("answers/batch")]
-        [HttpPost("{sessionToken}/batch-answers")]
         [AllowAnonymous]
-        public async Task<IActionResult> SaveAnswerBatch(
-            [FromRoute] string? sessionToken,
-            [FromBody] SaveExamAnswerBatchCommand command)
+        public async Task<IActionResult> SaveAnswerBatch([FromBody] SaveExamAnswerBatchCommand command)
         {
-            if (!string.IsNullOrWhiteSpace(sessionToken) && string.IsNullOrWhiteSpace(command.SessionToken))
-            {
-                command.SessionToken = sessionToken;
-            }
             var result = await mediator.Send(command);
             return Ok(ApiResponse<object>.Ok(result, "Offline answers synced and saved successfully"));
         }
 
-        [HttpPost("submit")]
         [HttpPost("{sessionToken}/submit")]
         [AllowAnonymous]
-        public async Task<IActionResult> Submit([FromRoute] string? sessionToken, [FromBody] SubmitExamRequestBody? body)
+        public async Task<IActionResult> Submit(string sessionToken, [FromBody] SubmitExamRequestBody? body)
         {
             var token = !string.IsNullOrWhiteSpace(sessionToken) ? sessionToken : body?.SessionToken;
             if (string.IsNullOrWhiteSpace(token))
@@ -91,14 +76,10 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("violations")]
-        [HttpPost("violation")]
-        [HttpPost("{sessionToken}/violation")]
-        [HttpPost("{sessionToken}/violations")]
         [AllowAnonymous]
-        public async Task<IActionResult> ReportViolation([FromRoute] string? sessionToken, [FromBody] ReportExamViolationRequestBody body)
+        public async Task<IActionResult> ReportViolation([FromBody] ReportExamViolationRequestBody body)
         {
-            var token = !string.IsNullOrWhiteSpace(sessionToken) ? sessionToken : body.SessionToken;
-            var result = await mediator.Send(new ReportExamViolationCommand(token, body.ViolationType));
+            var result = await mediator.Send(new ReportExamViolationCommand(body.SessionToken, body.ViolationType));
             return Ok(ApiResponse<object>.Ok(result, "Violation recorded"));
         }
 
@@ -110,16 +91,14 @@ namespace STEP.Api.Controllers
             return Ok(ApiResponse<object>.Ok(result, "Evaluation view retrieved"));
         }
 
-        [HttpPost("evaluate")]
-        [HttpPost("{sessionId:int}/evaluate-answer")]
         [HttpPost("{sessionId:int}/evaluation/answers/{answerId:int}")]
         [Authorize(Policy = "Exam.Manage")]
         public async Task<IActionResult> EvaluateAnswer(
-            [FromRoute] int? sessionId,
-            [FromRoute] int? answerId,
+            int sessionId,
+            int answerId,
             [FromBody] EvaluateAnswerRequestBody body)
         {
-            var targetAnswerId = answerId ?? body.CandidateExamAnswerId;
+            var targetAnswerId = answerId > 0 ? answerId : body.CandidateExamAnswerId;
             var evaluatedBy = CurrentUserId ?? throw new System.UnauthorizedAccessException("Unable to resolve the current user.");
             await mediator.Send(new EvaluateCandidateAnswerCommand(targetAnswerId, body.MarksObtained, body.EvaluatorRemarks, evaluatedBy));
             return Ok(ApiResponse<object>.Ok(new { }, "Answer evaluated"));

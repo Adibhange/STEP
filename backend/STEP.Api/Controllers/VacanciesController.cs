@@ -55,7 +55,6 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("{vacancyId:int}/pipeline-flows")]
-        [HttpPost("pipeline-flows")]
         [Authorize(Policy = "Vacancy.Create")]
         public async Task<IActionResult> CreatePipelineFlow(int vacancyId, [FromBody] CreatePipelineFlowRequestBody body)
         {
@@ -65,7 +64,6 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPut("{vacancyId:int}/pipeline-flows/{flowId:int}")]
-        [HttpPut("pipeline-flows/{flowId:int}")]
         [Authorize(Policy = "Vacancy.Create")]
         public async Task<IActionResult> UpdatePipelineFlow(int vacancyId, int flowId, [FromBody] UpdatePipelineFlowRequestBody body)
         {
@@ -75,7 +73,6 @@ namespace STEP.Api.Controllers
         }
 
         [HttpDelete("{vacancyId:int}/pipeline-flows/{flowId:int}")]
-        [HttpDelete("pipeline-flows/{flowId:int}")]
         [Authorize(Policy = "Vacancy.Create")]
         public async Task<IActionResult> DeletePipelineFlow(int vacancyId, int flowId)
         {
@@ -84,7 +81,6 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("pipeline-rounds/{roundId:int}/question-paper")]
-        [HttpPost("rounds/{roundId:int}/assign-question-paper")]
         [Authorize(Policy = "Exam.Manage")]
         public async Task<IActionResult> AssignQuestionPaperToRound(int roundId, [FromBody] AssignQuestionPaperRequestBody body)
         {

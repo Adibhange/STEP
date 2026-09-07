@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using MediatR;
@@ -9,8 +9,6 @@ using STEP.Application.Features.V2.QuestionBank;
 
 namespace STEP.Api.Controllers
 {
-    [Route("api/v2/question-bank")]
-    [Route("api/v1/question-bank")]
     [Route("api/question-bank")]
     [Authorize]
     public class QuestionBankController(ISender mediator) : BaseApiController

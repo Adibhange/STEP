@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -8,8 +8,6 @@ using STEP.Application.Features.V2.Blueprints;
 
 namespace STEP.Api.Controllers
 {
-    [Route("api/v2/hiring-blueprints")]
-    [Route("api/v1/hiring-blueprints")]
     [Route("api/hiring-blueprints")]
     [Authorize]
     public class HiringBlueprintsController(ISender mediator) : BaseApiController

@@ -13,11 +13,7 @@ namespace STEP.Api.Controllers
     /// Entirely anonymous public candidate application gateway for QR walk-ins and direct links.
     /// </summary>
     [AllowAnonymous]
-    [Route("api/v2/publicregistration")]
-    [Route("api/v1/publicregistration")]
     [Route("api/publicregistration")]
-    [Route("api/v2/apply")]
-    [Route("api/v1/apply")]
     [Route("api/apply")]
     public class PublicRegistrationController(ISender mediator) : BaseApiController
     {
@@ -36,7 +32,6 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost]
-        [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterCandidateViaQRCommand command)
         {
             var candidate = await mediator.Send(command);
@@ -44,7 +39,6 @@ namespace STEP.Api.Controllers
         }
 
         [HttpPost("universal")]
-        [HttpPost("register-universal")]
         public async Task<IActionResult> RegisterUniversal([FromBody] STEP.Application.Features.QR.Commands.RegisterUniversalCandidate.RegisterUniversalCandidateCommand command)
         {
             var result = await mediator.Send(command);

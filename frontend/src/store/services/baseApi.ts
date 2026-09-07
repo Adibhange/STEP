@@ -9,7 +9,7 @@ import type { ApiEnvelope, AuthResultData } from "./types";
 
 export const getApiBaseUrl = (): string => {
 	const envUrl =
-		process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5125/api/v2";
+		process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5125/api";
 	return envUrl.replace(/\/+$/, "");
 };
 
@@ -30,18 +30,21 @@ const executeRawQuery = (
 	api: any,
 	extraOptions: any,
 ) => {
-	const base = getApiBaseUrl(); // e.g. http://localhost:5125/api/v2
+	const base = getApiBaseUrl(); // e.g. http://localhost:5125/api
 
 	if (typeof args === "string") {
-		// If route already starts with /v2/ and baseUrl ends with /api/v2, strip redundant /v2 prefix
 		let cleanUrl = args;
-		if (cleanUrl.startsWith("/v2/") && base.endsWith("/v2")) {
+		if (cleanUrl.startsWith("/api/") && base.endsWith("/api")) {
+			cleanUrl = cleanUrl.replace(/^\/api/, "");
+		} else if (cleanUrl.startsWith("/v2/") && base.endsWith("/api")) {
 			cleanUrl = cleanUrl.replace(/^\/v2/, "");
 		}
 		return rawBaseQuery(cleanUrl, api, extraOptions);
 	} else if (typeof args === "object" && args.url) {
 		let cleanUrl = args.url;
-		if (cleanUrl.startsWith("/v2/") && base.endsWith("/v2")) {
+		if (cleanUrl.startsWith("/api/") && base.endsWith("/api")) {
+			cleanUrl = cleanUrl.replace(/^\/api/, "");
+		} else if (cleanUrl.startsWith("/v2/") && base.endsWith("/api")) {
 			cleanUrl = cleanUrl.replace(/^\/v2/, "");
 		}
 		return rawBaseQuery({ ...args, url: cleanUrl }, api, extraOptions);

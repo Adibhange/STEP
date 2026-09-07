@@ -41,16 +41,7 @@ namespace STEP.Api.Controllers
             return Ok(ApiResponse<object>.Ok(candidate, "Candidate registered successfully"));
         }
 
-        [HttpPost("register-universal")]
-        [AllowAnonymous]
-        public async Task<IActionResult> RegisterUniversal([FromBody] STEP.Application.Features.QR.Commands.RegisterUniversalCandidate.RegisterUniversalCandidateCommand command)
-        {
-            var result = await mediator.Send(command);
-            return Ok(ApiResponse<object>.Ok(result, "Candidate registered successfully"));
-        }
-
         [HttpPost("{id:int}/assign-pipeline-flow")]
-        [HttpPost("{id:int}/assign-flow")]
         [Authorize(Policy = "Candidate.Approve")]
         public async Task<IActionResult> AssignPipelineFlow(int id, [FromBody] AssignPipelineFlowRequestBody body)
         {
@@ -117,7 +108,6 @@ namespace STEP.Api.Controllers
         }
 
         [HttpGet("{id:int}/documents/{docId:int}/file")]
-        [HttpGet("{id:int}/documents/{docId:int}/view")]
         [AllowAnonymous]
         public async Task<IActionResult> ViewDocument(int id, int docId)
         {

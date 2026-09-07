@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +21,7 @@ namespace STEP.Api.Controllers
     [Authorize]
     public class MasterDataController(ISender mediator) : BaseApiController
     {
+        [AllowAnonymous]
         [HttpGet("{category}")]
         public async Task<IActionResult> GetByCategory(string category)
         {

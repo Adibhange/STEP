@@ -124,6 +124,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                     }
                 };
                 matchingVacancy.PipelineFlows.Add(defaultFlow);
+                db.Vacancies.Add(matchingVacancy);
                 await db.SaveChangesAsync(cancellationToken);
             }
 

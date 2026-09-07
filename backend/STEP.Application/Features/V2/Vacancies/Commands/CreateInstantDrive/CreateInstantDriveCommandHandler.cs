@@ -208,7 +208,7 @@ namespace STEP.Application.Features.V2.Vacancies.Commands.CreateInstantDrive
                 qrCode.Id,
                 qrCode.Code,
                 qrCode.RegistrationUrl,
-                $"/api/v2/qrcodes/vacancy/{vacancy.Id}"
+                $"/api/qrcodes/vacancy/{vacancy.Id}"
             );
         }
     }
