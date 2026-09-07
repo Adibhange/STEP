@@ -102,12 +102,9 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
                             ? $"Assessment Score: {sessionV2.TotalScore}/{sessionV2.TotalMarks} ({sessionV2.Percentage}% — {sessionV2.ResultStatus})"
                             : $"MCQ Auto-Graded: {mcqScoreObtained}/{mcqMarksTotal} ({mcqPercentage}% - {(mcqPassed ? "Passed" : "Failed")}) • {pendingManualCount} Practical challenges awaiting evaluator review";
 
-                        var isDirect = sessionV2.Candidate?.RegistrationChannel?.Contains("Direct", StringComparison.OrdinalIgnoreCase) == true ||
-                                       sessionV2.Candidate?.Vacancy?.DriveType?.Contains("Direct", StringComparison.OrdinalIgnoreCase) == true;
-                        
-                        if (pendingManualCount == 0 && isDirect)
+                        if (pendingManualCount == 0)
                         {
-                            // Automatically advance Direct Hire candidates if fully auto-graded
+                            // Automatically advance candidates if fully auto-graded
                             await advancementService.AdvanceOrResolveAsync(sessionV2.Candidate!, progress, sessionV2.ResultStatus == "Pass", cancellationToken);
                         }
                     }
@@ -180,10 +177,7 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
                         ? (session.Percentage >= session.FrozenPassingPercentage ? "Passed" : "Failed")
                         : "Evaluated";
 
-                    var isDirect = session.Candidate?.RegistrationChannel?.Contains("Direct", StringComparison.OrdinalIgnoreCase) == true ||
-                                   session.Candidate?.Vacancy?.DriveType?.Contains("Direct", StringComparison.OrdinalIgnoreCase) == true;
-                    
-                    if (v1PendingManualCount == 0 && isDirect)
+                    if (v1PendingManualCount == 0)
                     {
                         await advancementService.AdvanceOrResolveAsync(session.Candidate!, prog, session.Percentage >= session.FrozenPassingPercentage, cancellationToken);
                     }

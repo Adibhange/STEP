@@ -57,9 +57,7 @@ namespace STEP.Infrastructure.BackgroundServices
 
             var now = DateTime.UtcNow;
 
-            // FrozenTotalDurationMinutes varies per session, so the deadline isn't a single
-            // SQL-translatable comparison — pull the (small) set of InProgress sessions and
-            // filter in memory instead.
+            // 1. V1 Sessions
             var inProgress = await db.CandidateExamSessions
                 .Where(s => s.SessionStatus == "InProgress" && s.StartedAt != null)
                 .Select(s => new { s.SessionToken, s.StartedAt, s.FrozenTotalDurationMinutes })
@@ -69,6 +67,19 @@ namespace STEP.Infrastructure.BackgroundServices
                 .Where(s => s.StartedAt!.Value.AddMinutes(s.FrozenTotalDurationMinutes).AddSeconds(GracePeriodSeconds) < now)
                 .Select(s => s.SessionToken)
                 .ToList();
+
+            // 2. V2 Sessions (Dynamic Exam Engine)
+            var inProgressV2 = await db.CandidateExamSessionsV2
+                .Where(s => s.SessionStatus == "InProgress" && s.StartedAt != null)
+                .Select(s => new { s.SessionToken, s.StartedAt, s.TotalDurationMinutes })
+                .ToListAsync(cancellationToken);
+
+            var expiredTokensV2 = inProgressV2
+                .Where(s => s.StartedAt!.Value.UtcDateTime.AddMinutes(s.TotalDurationMinutes).AddSeconds(GracePeriodSeconds) < now)
+                .Select(s => s.SessionToken)
+                .ToList();
+
+            expiredTokens.AddRange(expiredTokensV2);
 
             foreach (var token in expiredTokens)
             {

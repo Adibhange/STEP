@@ -173,7 +173,9 @@ export const CandidateAssessmentEvaluationView: React.FC<
 		evaluation?.sessionStatus === "Evaluated";
 	const canPublish =
 		(evaluation?.sessionStatus === "Submitted" ||
-			evaluation?.evaluationStatus === "PartiallyEvaluated") &&
+			evaluation?.sessionStatus === "InProgress" ||
+			evaluation?.evaluationStatus === "PartiallyEvaluated" ||
+			evaluation?.evaluationStatus === "Pending") &&
 		allNonMcqEvaluated &&
 		!isPublished;
 

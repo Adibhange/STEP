@@ -22,6 +22,12 @@ namespace STEP.Application.Features.QR.Commands.RecordQRScan
                 var vacancy = await db.Vacancies
                     .FirstOrDefaultAsync(v => v.VacancyCode == request.Code, cancellationToken);
 
+                if (vacancy == null && int.TryParse(request.Code, out int numericId))
+                {
+                    vacancy = await db.Vacancies
+                        .FirstOrDefaultAsync(v => v.Id == numericId, cancellationToken);
+                }
+
                 if (vacancy != null)
                 {
                     qrCode = await db.QRCodes

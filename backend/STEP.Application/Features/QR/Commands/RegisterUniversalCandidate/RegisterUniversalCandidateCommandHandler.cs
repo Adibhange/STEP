@@ -19,7 +19,8 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
     public class RegisterUniversalCandidateCommandHandler(
         IApplicationDbContext db,
         IFileStorageService fileStorage,
-        IPasswordHasher hasher)
+        IPasswordHasher hasher,
+        IPipelineInitializationService pipelineService)
         : IRequestHandler<RegisterUniversalCandidateCommand, UniversalCandidateRegistrationResultDto>
     {
         public async Task<UniversalCandidateRegistrationResultDto> Handle(RegisterUniversalCandidateCommand request, CancellationToken cancellationToken)
@@ -70,7 +71,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                 .OrderByDescending(v => v.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            // If no exact match, fallback to matching the Role & active status
+            // If no exact match, fallback to matching the Role & Location & active status (ignore Drive Type)
             if (matchingVacancy == null && masterRole != null)
             {
                 matchingVacancy = await db.Vacancies
@@ -80,6 +81,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                     .Include(v => v.HiringLocation)
                     .AsSplitQuery()
                     .Where(v => !v.IsDeleted && v.Status == "Active" && v.MasterRoleId == masterRole.Id)
+                    .Where(v => (location == null || v.HiringLocationId == location.Id))
                     .OrderByDescending(v => v.CreatedAt)
                     .FirstOrDefaultAsync(cancellationToken);
             }
@@ -163,12 +165,6 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
             }
 
             // ── 6. Create Candidate Entity ─────────────────────────────────────────
-            var defaultFlowResolved = matchingVacancy.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
-                ?? matchingVacancy.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
-            var round1 = defaultFlowResolved?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
-
-            var initialStage = round1?.Name ?? (isDirect ? "Round 1: HR Sourcing & Screening" : "Round 1: Proctored Assessment");
-
             var candidate = new CandidateEntity
             {
                 CandidateCode = $"TMP-{Guid.NewGuid().ToString("N")[..16]}",
@@ -177,7 +173,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                 Email = emailLower,
                 Phone = phone,
                 VacancyId = matchingVacancy.Id,
-                CurrentStage = initialStage,
+                CurrentStage = isDirect ? "Round 1: HR Sourcing & Screening" : "Round 1: Proctored Assessment",
                 Status = "Applied",
                 RegistrationChannel = isDirect ? "Direct Sourced" : "Walk-in",
                 QRCodeId = qrCode.Id,
@@ -198,35 +194,18 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                 CreatedAt = DateTime.UtcNow,
             };
 
-            // If Walk-in applicant, set default proctored assessment passcode "1234"
-            if (!isDirect)
-            {
-                candidate.ExamPasscodeHash = hasher.Hash("1234");
-            }
-
             db.Candidates.Add(candidate);
             await db.SaveChangesAsync(cancellationToken);
 
             // Assign clean sequential candidate code based on auto-incrementing DB Id (e.g. CND-2026-0001)
             candidate.CandidateCode = $"CND-{DateTime.UtcNow:yyyy}-{candidate.Id:D4}";
 
-            // Initialize Round 1 Candidate Pipeline Progress
-            if (round1 != null)
-            {
-                var r1Progress = new CandidatePipelineProgress
-                {
-                    CandidateId = candidate.Id,
-                    VacancyPipelineFlowRoundId = round1.Id,
-                    RoundNumber = 1,
-                    RoundTitle = round1.Name,
-                    RoundType = round1.RoundType ?? "Assessment",
-                    Status = isDirect ? "Pending" : "Ready",
-                    StartedAt = DateTime.UtcNow,
-                };
-                db.CandidatePipelineProgresses.Add(r1Progress);
-                candidate.CurrentPipelineProgress = r1Progress;
-                await db.SaveChangesAsync(cancellationToken);
-            }
+            // Initialize Pipeline using shared service
+            var pipelineProgressDtos = await pipelineService.InitializeCandidatePipelineAsync(
+                candidate, 
+                matchingVacancy, 
+                isDirect, 
+                cancellationToken);
 
             // ── 7. Save Document Uploads (Photo & Resume) ──────────────────────────
             var photoPayload = request.PhotoBase64 ?? request.AvatarUrl;
@@ -311,7 +290,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                 candidate.CurrentLocation,
                 candidate.HighestQualification,
                 candidate.CreatedAt,
-                [],
+                pipelineProgressDtos,
                 docDtos
             );
 

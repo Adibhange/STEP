@@ -56,7 +56,7 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
   const activeVacancy = vacancy || lastVacancyRef.current;
 
   const origin = getAppOrigin();
-  const applyUrl = `${origin}/apply/${activeVacancy?.code || activeVacancy?.id || ''}`;
+  const applyUrl = `${origin}/apply/${(activeVacancy as any)?.vacancyCode || activeVacancy?.code || activeVacancy?.id || ''}`;
   const dynamicQrUrl = qrCode
     ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrCode.registrationUrl)}`
     : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(applyUrl)}`;

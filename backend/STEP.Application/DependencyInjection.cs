@@ -18,6 +18,7 @@ namespace STEP.Application
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
             services.AddScoped<ICandidateAdvancementService, CandidateAdvancementService>();
             services.AddScoped<IDynamicQuestionSampler, DynamicQuestionSampler>();
+            services.AddScoped<IPipelineInitializationService, PipelineInitializationService>();
 
             return services;
         }

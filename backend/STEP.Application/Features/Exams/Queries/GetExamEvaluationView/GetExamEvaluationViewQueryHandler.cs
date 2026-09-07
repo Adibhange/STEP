@@ -30,24 +30,40 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
             {
                 var answersV2 = sessionV2.Answers
                     .OrderBy(a => a.CandidateExamSessionQuestion.DisplayOrder)
-                    .Select(a => new ExamAnswerEvaluationDto(
-                        a.Id,
-                        a.CandidateExamSessionQuestion.DisplayOrder,
-                        a.CandidateExamSessionQuestion.QuestionType,
-                        a.CandidateExamSessionQuestion.QuestionText,
-                        a.SubmittedAnswerText,
-                        a.CandidateExamSessionQuestion.Marks,
-                        a.MarksObtained,
-                        a.EvaluationStatus,
-                        a.EvaluationLocked,
-                        a.EvaluatorRemarks,
-                        a.CandidateExamSessionQuestion.Options
-                            .OrderBy(o => o.DisplayOrder)
-                            .Select(o => new EvaluationOptionDto(o.Id, o.DisplayOptionLabel, o.OptionText, o.IsCorrect))
-                            .ToList(),
-                        a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList(),
-                        a.CandidateExamSessionQuestion.SectionName,
-                        a.CandidateExamSessionQuestionId))
+                    .Select(a => {
+                        var q = a.CandidateExamSessionQuestion;
+                        var isMcq = q.QuestionType is "SINGLE_CHOICE" or "MULTI_CHOICE" or "Single Choice" or "Multi Choice";
+                        decimal marksObtained = a.MarksObtained;
+
+                        if (isMcq && a.MarksObtained == 0 && a.EvaluationStatus != "Evaluated" && a.EvaluationStatus != "Published")
+                        {
+                            var selectedOptionIds = a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToHashSet();
+                            var correctOptionIds = q.Options.Where(o => o.IsCorrect).Select(o => o.Id).ToHashSet();
+                            if (correctOptionIds.Count > 0 && correctOptionIds.SetEquals(selectedOptionIds))
+                            {
+                                marksObtained = q.Marks;
+                            }
+                        }
+
+                        return new ExamAnswerEvaluationDto(
+                            a.Id,
+                            q.DisplayOrder,
+                            q.QuestionType,
+                            q.QuestionText,
+                            a.SubmittedAnswerText,
+                            q.Marks,
+                            marksObtained,
+                            a.EvaluationStatus,
+                            a.EvaluationLocked,
+                            a.EvaluatorRemarks,
+                            q.Options
+                                .OrderBy(o => o.DisplayOrder)
+                                .Select(o => new EvaluationOptionDto(o.Id, o.DisplayOptionLabel, o.OptionText, o.IsCorrect))
+                                .ToList(),
+                            a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList(),
+                            q.SectionName,
+                            a.CandidateExamSessionQuestionId);
+                    })
                     .ToList();
                 
                 var logsV2 = sessionV2.ProctoringLogs?
@@ -65,6 +81,8 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                 var vacTitle = sessionV2.Vacancy?.Title ?? "Engineering Role";
                 var paperTitle = sessionV2.AssessmentBlueprint?.Name ?? "Assessment";
 
+                var effectiveTotalScore = sessionV2.TotalScore > 0 ? sessionV2.TotalScore : answersV2.Sum(a => a.MarksObtained);
+
                 return new ExamEvaluationViewDto(
                     sessionV2.Id,
                     candName,
@@ -73,7 +91,7 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                     sessionV2.SessionStatus,
                     sessionV2.EvaluationStatus,
                     sessionV2.TotalMarks,
-                    sessionV2.TotalScore,
+                    effectiveTotalScore,
                     sessionV2.TotalDurationMinutes,
                     sessionV2.StartedAt?.UtcDateTime,
                     sessionV2.SubmittedAt?.UtcDateTime,

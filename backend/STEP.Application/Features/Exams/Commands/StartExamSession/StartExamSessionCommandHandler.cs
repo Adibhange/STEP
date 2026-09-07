@@ -86,9 +86,53 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             }
             else
             {
-                progress = candidate.CurrentPipelineProgress
-                    ?? candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundType == "Assessment")
-                    ?? candidate.PipelineProgressHistory.FirstOrDefault();
+                // Prefer an Assessment round that is NOT yet Passed or Completed
+                progress = candidate.PipelineProgressHistory
+                    .Where(p => p.RoundType == "Assessment" && p.Status != "Passed" && p.Status != "Auto-Passed")
+                    .OrderBy(p => p.RoundNumber)
+                    .FirstOrDefault();
+
+                if (progress == null && candidate.CurrentPipelineProgress != null && candidate.CurrentPipelineProgress.Status != "Passed" && candidate.CurrentPipelineProgress.Status != "Auto-Passed")
+                {
+                    progress = candidate.CurrentPipelineProgress;
+                }
+
+                if (progress == null)
+                {
+                    // If candidate has completed/auto-passed earlier rounds, pick the next round from vacancy flow!
+                    var completedRoundNumbers = candidate.PipelineProgressHistory
+                        .Where(p => p.Status == "Passed" || p.Status == "Auto-Passed")
+                        .Select(p => p.RoundNumber)
+                        .ToList();
+
+                    var targetRoundOrder = completedRoundNumbers.Count > 0 ? completedRoundNumbers.Max() + 1 : 1;
+                    var defaultFlow = candidate.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
+                        ?? candidate.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
+                    var flowRound = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == targetRoundOrder && !r.IsDeleted);
+
+                    if (flowRound != null)
+                    {
+                        var roundTitle = flowRound.Name;
+                        var roundType = PipelineRoundClassification.Classify(flowRound.RoundType);
+                        var fallbackRoundId = await db.VacancyPipelineFlowRounds.Select(r => r.Id).FirstOrDefaultAsync(cancellationToken);
+
+                        progress = new STEP.Domain.Entities.Candidate.CandidatePipelineProgress
+                        {
+                            CandidateId = candidate.Id,
+                            VacancyPipelineFlowRoundId = flowRound.Id,
+                            RoundNumber = targetRoundOrder,
+                            RoundTitle = roundTitle,
+                            RoundType = roundType,
+                            Status = "InProgress",
+                            StartedAt = DateTime.UtcNow,
+                        };
+                        db.CandidatePipelineProgresses.Add(progress);
+                        candidate.PipelineProgressHistory.Add(progress);
+                        candidate.CurrentPipelineProgress = progress;
+                        candidate.CurrentStage = roundTitle;
+                        await db.SaveChangesAsync(cancellationToken);
+                    }
+                }
             }
 
             if (progress == null)

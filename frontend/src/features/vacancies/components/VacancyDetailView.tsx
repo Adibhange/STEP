@@ -28,7 +28,7 @@ export const VacancyDetailView: React.FC<VacancyDetailViewProps> = ({ vacancy })
   const [walkInEnabled, setWalkInEnabled] = useState(vacancy.walkInDrive?.enabled ?? true);
 
   const origin = getAppOrigin();
-  const applyUrl = `${origin}/apply/${vacancy.code || vacancy.id}`;
+  const applyUrl = `${origin}/apply/${(vacancy as any).vacancyCode || vacancy.code || vacancy.id}`;
   const dynamicQrUrl = vacancy.qrAnalytics?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(applyUrl)}`;
 
   const handleCopyQrUrl = () => {

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using STEP.Application.Common;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
 using STEP.Application.Features.Candidates.Common;
@@ -16,7 +17,7 @@ using CandidateEntity = STEP.Domain.Entities.Candidate.Candidate;
 
 namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
 {
-    public class RegisterCandidateViaQRCommandHandler(IApplicationDbContext db, IFileStorageService fileStorage)
+    public class RegisterCandidateViaQRCommandHandler(IApplicationDbContext db, IFileStorageService fileStorage, IPipelineInitializationService pipelineService)
         : IRequestHandler<RegisterCandidateViaQRCommand, CandidateDto>
     {
         public async Task<CandidateDto> Handle(RegisterCandidateViaQRCommand request, CancellationToken cancellationToken)
@@ -35,6 +36,15 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                         .ThenInclude(f => f.Rounds)
                     .AsSplitQuery()
                     .FirstOrDefaultAsync(v => v.VacancyCode == request.Code, cancellationToken);
+
+                if (vacancy == null && int.TryParse(request.Code, out int numericId))
+                {
+                    vacancy = await db.Vacancies
+                        .Include(v => v.PipelineFlows)
+                            .ThenInclude(f => f.Rounds)
+                        .AsSplitQuery()
+                        .FirstOrDefaultAsync(v => v.Id == numericId, cancellationToken);
+                }
 
                 if (vacancy != null)
                 {
@@ -92,11 +102,6 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
             var isDirectHiring = qrCode.Vacancy?.DriveType == "Direct" || qrCode.Vacancy?.DriveType == "Direct / Sourced Hiring" || qrCode.Vacancy?.DriveType == "Direct Hiring";
             var channel = isDirectHiring ? "Direct Sourced" : "Walk-in";
 
-            var defaultFlow = qrCode.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
-                ?? qrCode.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
-
-            var round1 = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == 1 && !r.IsDeleted);
-
             var candidate = new CandidateEntity
             {
                 CandidateCode = $"TMP-{Guid.NewGuid().ToString("N")[..16]}",
@@ -105,7 +110,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 Email = request.Email.Trim(),
                 Phone = request.Phone.Trim(),
                 VacancyId = qrCode.VacancyId,
-                CurrentStage = round1 != null ? round1.Name : (isDirectHiring ? "Round 1: HR Sourcing & Screening (Auto-Passed)" : "Registered"),
+                CurrentStage = "Registered",
                 Status = "Applied",
                 RegistrationChannel = channel,
                 QRCodeId = qrCode.Id,
@@ -131,35 +136,12 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
             // Assign clean sequential candidate code based on auto-incrementing DB Id (e.g. CND-2026-0001)
             candidate.CandidateCode = $"CND-{DateTime.UtcNow:yyyy}-{candidate.Id:D4}";
 
-            // Initialize Direct Hiring Round 1 if it is Auto-Passed
-            if (round1 != null && (round1.Name.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) || isDirectHiring))
-            {
-                var hrId = qrCode.Vacancy?.CreatedBy;
-                if (hrId == null)
-                {
-                    var hrUser = await db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Role.Name == "HR" && u.IsActive, cancellationToken);
-                    hrId = hrUser?.Id;
-                }
-
-                var r1Progress = new CandidatePipelineProgress
-                {
-                    CandidateId = candidate.Id,
-                    VacancyPipelineFlowRoundId = round1.Id,
-                    RoundNumber = 1,
-                    RoundTitle = round1.Name,
-                    RoundType = "Assessment",
-                    Status = "Passed",
-                    ScoreObtained = 100.00m,
-                    StartedAt = DateTime.UtcNow,
-                    CompletedAt = DateTime.UtcNow,
-                    EvaluatorId = hrId,
-                    Remarks = "HR Sourced & Pre-Qualified Direct Applicant",
-                };
-                db.CandidatePipelineProgresses.Add(r1Progress);
-                candidate.CurrentPipelineProgress = r1Progress;
-                candidate.CurrentStage = round1.Name;
-                await db.SaveChangesAsync(cancellationToken);
-            }
+            // Initialize Pipeline using shared service
+            var pipelineProgressDtos = await pipelineService.InitializeCandidatePipelineAsync(
+                candidate, 
+                qrCode.Vacancy ?? await db.Vacancies.FindAsync(qrCode.VacancyId), 
+                isDirectHiring, 
+                cancellationToken);
 
             // Save Candidate Profile Photo / Avatar if provided
             var photoPayload = request.PhotoBase64 ?? request.AvatarUrl;
@@ -243,7 +225,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 candidate.VacancyId, qrCode.Vacancy?.Title ?? "Position", candidate.CurrentStage, candidate.Status, candidate.RegistrationChannel,
                 candidate.ReferralEmployeeName, candidate.TotalExperienceYears, candidate.CurrentCTC, candidate.ExpectedCTC,
                 candidate.NoticePeriodDays, candidate.CurrentLocation, candidate.HighestQualification, candidate.CreatedAt,
-                [], docDtos);
+                pipelineProgressDtos, docDtos);
         }
 
         private static (byte[] Bytes, string ContentType) ParseBase64(string dataUrlOrBase64, string fallbackContentType)

@@ -25,16 +25,17 @@ namespace STEP.Application.Common.Services
                 return new CandidateAdvancementResult(false, null, null, candidate.Status);
             }
 
+            STEP.Domain.Entities.Vacancy.VacancyPipelineFlow? defaultFlow = null;
             if (nextRound == null)
             {
-                var defaultFlow = await db.VacancyPipelineFlows
+                defaultFlow = await db.VacancyPipelineFlows
                     .Include(f => f.Rounds)
                     .FirstOrDefaultAsync(f => f.VacancyId == candidate.VacancyId && f.IsDefault && !f.IsDeleted, cancellationToken)
                     ?? await db.VacancyPipelineFlows
                     .Include(f => f.Rounds)
                     .FirstOrDefaultAsync(f => f.VacancyId == candidate.VacancyId && !f.IsDeleted, cancellationToken);
 
-                var targetRoundDef = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == completedProgress.RoundNumber + 1);
+                var targetRoundDef = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == completedProgress.RoundNumber + 1 && !r.IsDeleted);
 
                 if (targetRoundDef != null)
                 {
@@ -43,7 +44,7 @@ namespace STEP.Application.Common.Services
                         CandidateId = candidate.Id,
                         RoundNumber = targetRoundDef.RoundOrder,
                         RoundTitle = targetRoundDef.Name,
-                        RoundType = targetRoundDef.RoundType ?? "Assessment",
+                        RoundType = PipelineRoundClassification.Classify(targetRoundDef.RoundType ?? "Assessment"),
                         Status = "Pending",
                         VacancyPipelineFlowRoundId = targetRoundDef.Id
                     };
@@ -55,7 +56,20 @@ namespace STEP.Application.Common.Services
 
             if (nextRound == null)
             {
-                candidate.Status = "Hired";
+                defaultFlow ??= await db.VacancyPipelineFlows
+                    .Include(f => f.Rounds)
+                    .FirstOrDefaultAsync(f => f.VacancyId == candidate.VacancyId && !f.IsDeleted, cancellationToken);
+
+                var maxRoundOrder = defaultFlow?.Rounds?.Where(r => !r.IsDeleted).Max(r => (int?)r.RoundOrder) ?? completedProgress.RoundNumber;
+
+                if (completedProgress.RoundNumber >= maxRoundOrder)
+                {
+                    candidate.Status = "Hired";
+                }
+                else
+                {
+                    candidate.Status = "In-Progress";
+                }
                 return new CandidateAdvancementResult(false, null, null, candidate.Status);
             }
 
