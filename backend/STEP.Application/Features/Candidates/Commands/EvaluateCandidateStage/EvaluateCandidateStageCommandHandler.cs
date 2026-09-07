@@ -24,7 +24,11 @@ namespace STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage
         bool IsRetake = false
     ) : IRequest<CandidateDto>;
 
-    public class EvaluateCandidateStageCommandHandler(IApplicationDbContext db, ICandidateAdvancementService advancement, IPasswordHasher hasher)
+    public class EvaluateCandidateStageCommandHandler(
+        IApplicationDbContext db, 
+        ICandidateAdvancementService advancement, 
+        IPasswordHasher hasher,
+        ICurrentUserService? currentUser = null)
         : IRequestHandler<EvaluateCandidateStageCommand, CandidateDto>
     {
         public async Task<CandidateDto> Handle(EvaluateCandidateStageCommand request, CancellationToken cancellationToken)
@@ -134,6 +138,17 @@ namespace STEP.Application.Features.Candidates.Commands.EvaluateCandidateStage
                 };
                 candidate.PipelineProgressHistory.Add(progress);
                 await db.SaveChangesAsync(cancellationToken);
+            }
+
+            if (currentUser != null && currentUser.Role == "Interviewer" && currentUser.UserId.HasValue)
+            {
+                var isAssigned = progress.EvaluatorId == currentUser.UserId.Value
+                    || await db.Interviews.AnyAsync(i => i.CandidatePipelineProgressId == progress.Id && i.InterviewerUserId == currentUser.UserId.Value && !i.IsDeleted, cancellationToken);
+
+                if (!isAssigned)
+                {
+                    throw new System.UnauthorizedAccessException($"You are not assigned to evaluate Round {request.RoundNumber}.");
+                }
             }
 
             if (request.IsRetake)

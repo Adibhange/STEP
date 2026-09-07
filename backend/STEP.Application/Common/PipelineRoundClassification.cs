@@ -12,6 +12,7 @@ namespace STEP.Application.Common
         {
             "Aptitude" => "Assessment",
             "Technical" => "Assessment",
+            "Assessment" => "Assessment",
             _ => "Interview", // F2F, HR, Group Discussion
         };
     }

@@ -84,9 +84,12 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                     });
 
             var evaluatorUserIds = candidate.PipelineProgressHistory.Where(p => p.EvaluatorId != null).Select(p => p.EvaluatorId!.Value).Distinct().ToList();
-            if (candidate.Vacancy?.CreatedBy != null && !evaluatorUserIds.Contains(candidate.Vacancy.CreatedBy.Value))
+            // Include the HR user who registered this candidate (candidate.CreatedBy) so we can
+            // show their name on Round 1 (HR Screening Auto-Passed) without defaulting to the
+            // vacancy creator (who may be a Director, not the HR screener).
+            if (candidate.CreatedBy != null && !evaluatorUserIds.Contains(candidate.CreatedBy.Value))
             {
-                evaluatorUserIds.Add(candidate.Vacancy.CreatedBy.Value);
+                evaluatorUserIds.Add(candidate.CreatedBy.Value);
             }
 
             var evaluatorNames = evaluatorUserIds.Count > 0
@@ -95,22 +98,14 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                     .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), cancellationToken)
                 : new Dictionary<int, string>();
 
+            // For direct-hire Round 1 (auto-passed), the "screener" is whoever registered
+            // the candidate in the system (candidate.CreatedBy = the HR user who onboarded them).
+            // If CreatedBy is not set, leave it null — do NOT fall back to the vacancy creator
+            // (director) or a random HR user from the DB.
             string? defaultHrRecruiterName = null;
-            if (candidate.Vacancy?.CreatedBy != null && evaluatorNames.TryGetValue(candidate.Vacancy.CreatedBy.Value, out var hrCreator))
+            if (candidate.CreatedBy != null && evaluatorNames.TryGetValue(candidate.CreatedBy.Value, out var registeredByHr))
             {
-                defaultHrRecruiterName = hrCreator;
-            }
-            if (string.IsNullOrWhiteSpace(defaultHrRecruiterName))
-            {
-                var firstHr = await db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Role.Name == "HR" && u.IsActive, cancellationToken);
-                if (firstHr != null)
-                {
-                    defaultHrRecruiterName = $"{firstHr.FirstName} {firstHr.LastName}".Trim();
-                }
-            }
-            if (string.IsNullOrWhiteSpace(defaultHrRecruiterName))
-            {
-                defaultHrRecruiterName = "Prerana Nehere";
+                defaultHrRecruiterName = registeredByHr;
             }
 
             // Offer isn't a pipeline round — it's a separate entity keyed only by CandidateId — so

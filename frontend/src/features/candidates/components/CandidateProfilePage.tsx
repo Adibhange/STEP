@@ -582,16 +582,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 				currentCtc: apiData.currentCTC ? `₹ ${apiData.currentCTC} LPA` : "",
 				expectedCtc: apiData.expectedCTC ? `₹ ${apiData.expectedCTC} LPA` : "",
 				noticePeriod:
-					apiData.noticePeriodDays ?
-						`${apiData.noticePeriodDays} Days`
-					:	"30 Days",
-				education: apiData.highestQualification || "B.Tech / B.E.",
-				educationDetails: apiData.highestQualification || "B.Tech / B.E.",
-				college: apiData.institutionName || "COEP Technological University",
+					apiData.noticePeriodDays ? `${apiData.noticePeriodDays} Days` : null,
+				education: apiData.highestQualification || null,
+				educationDetails: apiData.highestQualification || null,
+				college: apiData.institutionName || null,
 				passingYear:
-					apiData.yearOfPassing ? String(apiData.yearOfPassing) : "2026",
+					apiData.yearOfPassing ? String(apiData.yearOfPassing) : null,
 				percentage:
-					apiData.marksPercentage ? `${apiData.marksPercentage}%` : "85%",
+					apiData.marksPercentage ? `${apiData.marksPercentage}%` : null,
 				source:
 					(
 						(apiData.registrationChannel || "")
@@ -763,8 +761,11 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 										p.roundNumber === 1 &&
 										(isAutoPassedRound || p.interviewerName)
 									) {
-										const hrName = p.interviewerName || "HR Talent Acquisition";
-										return `Screened & pre-qualified for technical round by ${hrName}.`;
+										if (p.interviewerName) {
+											return `Screened & pre-qualified for technical round by ${p.interviewerName}.`;
+										}
+										// No specific screener recorded — show generic message
+										return `Screened & pre-qualified for technical round by HR.`;
 									}
 									const hasScore =
 										p.scoreObtained !== null && p.scoreObtained !== undefined;

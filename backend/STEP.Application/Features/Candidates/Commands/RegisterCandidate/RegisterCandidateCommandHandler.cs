@@ -31,6 +31,7 @@ namespace STEP.Application.Features.Candidates.Commands.RegisterCandidate
                 CandidateCode = $"TMP-{Guid.NewGuid().ToString("N")[..16]}",
                 FirstName = request.FirstName.Trim(),
                 LastName = request.LastName.Trim(),
+                Email = request.Email?.Trim() ?? string.Empty,
                 Phone = request.Phone.Trim(),
                 VacancyId = request.VacancyId,
                 CurrentStage = isDirectHiring ? "Round 1: HR Sourcing & Screening (Auto-Passed)" : "Registered",
