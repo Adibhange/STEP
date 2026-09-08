@@ -795,7 +795,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 							:	(() => {
 									if (
 										p.roundNumber === 1 &&
-										(isAutoPassedRound || p.interviewerName)
+										(isAutoPassedRound || p.interviewerName) &&
+										!isCurrentRoundFailed
 									) {
 										if (p.interviewerName) {
 											return `Screened & pre-qualified for technical round by ${p.interviewerName}.`;
@@ -2950,13 +2951,28 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 													<div className='flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:ml-auto'>
 														{stage.name.toLowerCase().includes("screening") ?
 															/* HR Screening Round (Direct Sourced) */
-															<span className='px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1'>
-																<Icon
-																	name='check'
-																	size='xs'
-																/>
-																<span>HR Screening Cleared</span>
-															</span>
+															isRejected || stage.statusType === "rejected" || stage.status === "Failed" || stage.status === "Rejected" ?
+																<span className='px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1'>
+																	<Icon
+																		name='x'
+																		size='xs'
+																	/>
+																	<span>HR Screening Failed</span>
+																</span>
+															: isPassed || stage.statusType === "passed" || stage.status === "Passed" ?
+																<span className='px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)] flex items-center gap-1'>
+																	<Icon
+																		name='check'
+																		size='xs'
+																	/>
+																	<span>HR Screening Cleared</span>
+																</span>
+															: (
+																<span className='px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border border-[var(--status-warning-border)] flex items-center gap-1'>
+																	<span className='w-2 h-2 rounded-full bg-[var(--status-warning)] animate-ping' />
+																	<span>HR Screening In-Progress</span>
+																</span>
+															)
 														: (
 															stage.roundType === "Assessment" ||
 															stage.name.toLowerCase().includes("aptitude") ||

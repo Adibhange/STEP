@@ -86,13 +86,25 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             }
             else
             {
-                // Prefer an Assessment round that is NOT yet Passed or Completed
+                var r1 = candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 1);
+                var isR1AutoPassed = r1?.Status == "Auto-Passed" || (r1?.RoundTitle?.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) ?? false) || (r1?.RoundTitle?.Contains("Screening", StringComparison.OrdinalIgnoreCase) ?? false);
+                var isDirectSourced = candidate.RegistrationChannel == "Direct Sourced" || isR1AutoPassed;
+
+                // Prefer an Assessment round that is NOT yet Passed or Completed and NOT an auto-passed/screening round
                 progress = candidate.PipelineProgressHistory
-                    .Where(p => p.RoundType == "Assessment" && p.Status != "Passed" && p.Status != "Auto-Passed")
+                    .Where(p => p.RoundType == "Assessment"
+                        && p.Status != "Passed"
+                        && p.Status != "Auto-Passed"
+                        && !(p.RoundNumber == 1 && isDirectSourced)
+                        && !(p.RoundTitle != null && (p.RoundTitle.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) || p.RoundTitle.Contains("Screening", StringComparison.OrdinalIgnoreCase))))
                     .OrderBy(p => p.RoundNumber)
                     .FirstOrDefault();
 
-                if (progress == null && candidate.CurrentPipelineProgress != null && candidate.CurrentPipelineProgress.Status != "Passed" && candidate.CurrentPipelineProgress.Status != "Auto-Passed")
+                if (progress == null && candidate.CurrentPipelineProgress != null
+                    && candidate.CurrentPipelineProgress.Status != "Passed"
+                    && candidate.CurrentPipelineProgress.Status != "Auto-Passed"
+                    && !(candidate.CurrentPipelineProgress.RoundNumber == 1 && isDirectSourced)
+                    && !(candidate.CurrentPipelineProgress.RoundTitle != null && (candidate.CurrentPipelineProgress.RoundTitle.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) || candidate.CurrentPipelineProgress.RoundTitle.Contains("Screening", StringComparison.OrdinalIgnoreCase))))
                 {
                     progress = candidate.CurrentPipelineProgress;
                 }
@@ -101,11 +113,13 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 {
                     // If candidate has completed/auto-passed earlier rounds, pick the next round from vacancy flow!
                     var completedRoundNumbers = candidate.PipelineProgressHistory
-                        .Where(p => p.Status == "Passed" || p.Status == "Auto-Passed")
+                        .Where(p => p.Status == "Passed" || p.Status == "Auto-Passed"
+                            || (p.RoundNumber == 1 && isDirectSourced)
+                            || (p.RoundTitle != null && (p.RoundTitle.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase) || p.RoundTitle.Contains("Screening", StringComparison.OrdinalIgnoreCase))))
                         .Select(p => p.RoundNumber)
                         .ToList();
 
-                    var targetRoundOrder = completedRoundNumbers.Count > 0 ? completedRoundNumbers.Max() + 1 : 1;
+                    var targetRoundOrder = completedRoundNumbers.Count > 0 ? completedRoundNumbers.Max() + 1 : (isDirectSourced ? 2 : 1);
                     var defaultFlow = candidate.Vacancy?.PipelineFlows?.FirstOrDefault(f => f.IsDefault && !f.IsDeleted)
                         ?? candidate.Vacancy?.PipelineFlows?.FirstOrDefault(f => !f.IsDeleted);
                     var flowRound = defaultFlow?.Rounds?.FirstOrDefault(r => r.RoundOrder == targetRoundOrder && !r.IsDeleted);
@@ -114,7 +128,6 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     {
                         var roundTitle = flowRound.Name;
                         var roundType = PipelineRoundClassification.Classify(flowRound.RoundType);
-                        var fallbackRoundId = await db.VacancyPipelineFlowRounds.Select(r => r.Id).FirstOrDefaultAsync(cancellationToken);
 
                         progress = new STEP.Domain.Entities.Candidate.CandidatePipelineProgress
                         {
@@ -137,13 +150,15 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
             if (progress == null)
             {
+                var isDirectCandidateFallback = candidate.RegistrationChannel == "Direct Sourced";
+                var targetRoundNum = isDirectCandidateFallback ? 2 : 1;
                 var fallbackRoundId = await db.VacancyPipelineFlowRounds.Select(r => r.Id).FirstOrDefaultAsync(cancellationToken);
                 progress = new STEP.Domain.Entities.Candidate.CandidatePipelineProgress
                 {
                     CandidateId = candidate.Id,
                     VacancyPipelineFlowRoundId = fallbackRoundId,
-                    RoundNumber = 1,
-                    RoundTitle = "General Aptitude & Logical Test",
+                    RoundNumber = targetRoundNum,
+                    RoundTitle = targetRoundNum == 2 ? "Coding & Algorithm Challenge" : "General Aptitude & Logical Test",
                     RoundType = "Assessment",
                     Status = "InProgress",
                 };
