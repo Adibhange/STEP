@@ -1313,7 +1313,10 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 				loginError.toLowerCase().includes("eliminated in round 1") ||
 				loginError.toLowerCase().includes("prerequisite"));
 
-		const isLockedError = isAlreadyCompletedError || isMissingPrereqError || loginError.toLowerCase().includes("locked");
+		const isLockedError =
+			isAlreadyCompletedError ||
+			isMissingPrereqError ||
+			loginError.toLowerCase().includes("locked");
 
 		return (
 			<div
@@ -1334,7 +1337,12 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 							:	"bg-status-danger-bg text-status-danger-text border-status-danger-border"
 						}`}>
 						<Icon
-							name={isAlreadyCompletedError ? "check-circle" : isLockedError ? "lock" : "alert-triangle"}
+							name={
+								isAlreadyCompletedError ? "check-circle"
+								: isLockedError ?
+									"lock"
+								:	"alert-triangle"
+							}
 							size='md'
 						/>
 					</div>
