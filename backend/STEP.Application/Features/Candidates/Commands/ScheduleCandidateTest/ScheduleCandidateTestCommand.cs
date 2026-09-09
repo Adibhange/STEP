@@ -32,8 +32,13 @@ namespace STEP.Application.Features.Candidates.Commands.ScheduleCandidateTest
                 .FirstOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
                 ?? throw new NotFoundException(nameof(CandidateEntity), request.CandidateId);
 
+            var isDirectSourced = candidate.RegistrationChannel == "Direct Sourced"
+                || candidate.PipelineProgressHistory.Any(p => p.RoundNumber == 1 && (p.Status == "Passed" || p.Status == "Auto-Passed" || (p.RoundTitle != null && p.RoundTitle.Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase))));
+
             var round = candidate.PipelineProgressHistory
-                .FirstOrDefault(p => p.RoundType == "Assessment")
+                .Where(p => p.RoundType == "Assessment" && !(isDirectSourced && p.RoundNumber == 1))
+                .OrderBy(p => p.RoundNumber)
+                .FirstOrDefault()
                 ?? candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 2)
                 ?? candidate.PipelineProgressHistory.FirstOrDefault();
 

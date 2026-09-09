@@ -1300,12 +1300,20 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 	}
 
 	if (examStep === "instructions" && !session && loginError) {
-		const isLockedError =
-			loginError.toLowerCase().includes("lock") ||
-			loginError.toLowerCase().includes("round") ||
-			loginError.toLowerCase().includes("aptitude") ||
-			loginError.toLowerCase().includes("prerequisite") ||
-			loginError.toLowerCase().includes("pass");
+		const isAlreadyCompletedError =
+			loginError.toLowerCase().includes("already been completed") ||
+			loginError.toLowerCase().includes("already completed") ||
+			loginError.toLowerCase().includes("re-attempt is locked") ||
+			loginError.toLowerCase().includes("retakes are exhausted") ||
+			loginError.toLowerCase().includes("maximum limit of 2");
+
+		const isMissingPrereqError =
+			!isAlreadyCompletedError &&
+			(loginError.toLowerCase().includes("complete and pass round 1") ||
+				loginError.toLowerCase().includes("eliminated in round 1") ||
+				loginError.toLowerCase().includes("prerequisite"));
+
+		const isLockedError = isAlreadyCompletedError || isMissingPrereqError || loginError.toLowerCase().includes("locked");
 
 		return (
 			<div
@@ -1319,24 +1327,30 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 					className='max-w-md w-full bg-surface-1 border border-border-default rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center relative z-10'>
 					<div
 						className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto border ${
-							isLockedError ?
+							isAlreadyCompletedError ?
+								"bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+							: isLockedError ?
 								"bg-amber-500/10 text-amber-400 border-amber-500/25"
 							:	"bg-status-danger-bg text-status-danger-text border-status-danger-border"
 						}`}>
 						<Icon
-							name={isLockedError ? "lock" : "alert-triangle"}
+							name={isAlreadyCompletedError ? "check-circle" : isLockedError ? "lock" : "alert-triangle"}
 							size='md'
 						/>
 					</div>
 
 					<div className='space-y-1.5'>
 						<h2 className='text-xl font-bold text-text-primary font-heading tracking-tight'>
-							{isLockedError ?
+							{isAlreadyCompletedError ?
+								"Assessment Already Completed"
+							: isLockedError ?
 								"Assessment Stage Locked"
 							:	"Assessment Access Restricted"}
 						</h2>
 						<p className='text-xs text-text-tertiary'>
-							{isLockedError ?
+							{isAlreadyCompletedError ?
+								"Your test submission has already been recorded"
+							: isLockedError ?
 								"Prerequisite evaluation required"
 							:	"Unable to initialize examination environment"}
 						</p>
@@ -1344,7 +1358,9 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 
 					<div
 						className={`p-4 rounded-2xl border text-xs font-medium leading-relaxed text-left space-y-2 ${
-							isLockedError ?
+							isAlreadyCompletedError ?
+								"bg-emerald-500/5 border-emerald-500/20 text-emerald-300/90"
+							: isLockedError ?
 								"bg-amber-500/5 border-amber-500/20 text-amber-300/90"
 							:	"bg-status-danger-bg/50 border-status-danger-border text-status-danger-text"
 						}`}>
@@ -1359,7 +1375,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 					</div>
 
 					<div className='space-y-2.5 pt-1'>
-						{initialRoundNumber === 2 && isLockedError && (
+						{initialRoundNumber === 2 && isMissingPrereqError && (
 							<a
 								href={`/exam?code=${encodeURIComponent(candidateCode)}&pass=${encodeURIComponent(passcode)}&round=1`}
 								className='w-full h-11 rounded-xl bg-accent-indigo hover:bg-accent-indigo-hover text-text-on-accent font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer'>
