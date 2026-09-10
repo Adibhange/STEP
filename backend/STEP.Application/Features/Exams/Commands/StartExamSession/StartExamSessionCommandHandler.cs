@@ -300,7 +300,8 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     }
                     else if (vacTitle.Contains("survey") || masterRole.Contains("survey"))
                     {
-                        blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-MCQ-ONLY");
+                        blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-SURV-ASST" && (vacTitle.Contains("assistant") || masterRole.Contains("assistant")))
+                                 ?? allBlueprints.FirstOrDefault(b => b.Code == "RULE-MCQ-ONLY");
                     }
                     else
                     {
@@ -336,7 +337,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     CandidatePipelineProgress = progress,
                     SessionToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)),
                     CandidateTier = candidate.TotalExperienceYears > 4 ? "Senior" : (candidate.TotalExperienceYears > 1 ? "Mid-Level" : "Fresher"),
-                    RolePrimaryLanguage = (candidate.Vacancy?.Title ?? "").Contains("SQL", StringComparison.OrdinalIgnoreCase) ? "SQL" : "C# (.NET)",
+                    RolePrimaryLanguage = (candidate.Vacancy?.Title ?? "").Contains("SQL", StringComparison.OrdinalIgnoreCase) ? "SQL" : ((candidate.Vacancy?.Title ?? "").Contains("Survey", StringComparison.OrdinalIgnoreCase) ? "Civil / Survey" : "C# (.NET)"),
                     SessionStatus = "InProgress",
                     EvaluationStatus = "Pending",
                     TotalDurationMinutes = durationMinutes,
@@ -367,6 +368,9 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 {
                     var query = allQuestions.AsEnumerable();
 
+                    var isSurveyAssistant = (candidate.Vacancy?.Title ?? "").Contains("Assistant", StringComparison.OrdinalIgnoreCase) ||
+                                            (candidate.Vacancy?.MasterRole?.Name ?? "").Contains("Assistant", StringComparison.OrdinalIgnoreCase);
+
                     var isSurveyRole = (candidate.Vacancy?.Title ?? "").Contains("Survey", StringComparison.OrdinalIgnoreCase) ||
                                        (candidate.Vacancy?.MasterRole?.Name ?? "").Contains("Survey", StringComparison.OrdinalIgnoreCase);
 
@@ -375,7 +379,14 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                         // Round 1 (Walk-in Drive): Strictly Aptitude & Logical Reasoning questions
                         if (isSurveyRole)
                         {
-                            query = query.Where(q => (q.Language?.Contains("Survey") ?? false) || q.SectionType == "Aptitude" || q.Language == "General Aptitude");
+                            if (isSurveyAssistant)
+                            {
+                                query = query.Where(q => (q.Language?.Contains("Survey Assistant") ?? false) || q.SectionType == "Aptitude");
+                            }
+                            else
+                            {
+                                query = query.Where(q => (q.Language?.Contains("Survey Engineering") ?? false) || (q.Language?.Contains("Survey") ?? false) || q.SectionType == "Aptitude" || q.Language == "General Aptitude");
+                            }
                         }
                         else
                         {
@@ -396,7 +407,14 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
                             if (isSurveyRole)
                             {
-                                query = query.Where(q => (q.Language?.Contains("Survey") ?? false) || q.SectionType == "TechnicalMCQ");
+                                if (isSurveyAssistant)
+                                {
+                                    query = query.Where(q => (q.Language?.Contains("Survey Assistant") ?? false) || q.SectionType == "TechnicalMCQ");
+                                }
+                                else
+                                {
+                                    query = query.Where(q => (q.Language?.Contains("Survey Engineering") ?? false) || (q.Language?.Contains("Survey") ?? false) || q.SectionType == "TechnicalMCQ");
+                                }
                             }
                             else
                             {
@@ -420,7 +438,14 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                         }
                         else if (rule.SectionType == "SubjectiveTheory")
                         {
-                            query = query.Where(q => q.SectionType == "SubjectiveTheory" || q.QuestionType == "SUBJECTIVE");
+                            if (isSurveyAssistant)
+                            {
+                                query = query.Where(q => (q.Language?.Contains("Survey Assistant") ?? false) && (q.SectionType == "SubjectiveTheory" || q.QuestionType == "SUBJECTIVE"));
+                            }
+                            else
+                            {
+                                query = query.Where(q => q.SectionType == "SubjectiveTheory" || q.QuestionType == "SUBJECTIVE");
+                            }
                         }
                         else
                         {
