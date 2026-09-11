@@ -43,7 +43,20 @@ namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
                     if (question == null) continue;
 
                     var answer = sessionV2.Answers.FirstOrDefault(a => a.CandidateExamSessionQuestionId == question.Id);
-                    if (answer == null || answer.EvaluationLocked) continue;
+                    if (answer == null)
+                    {
+                        answer = new CandidateExamAnswerV2
+                        {
+                            CandidateExamSessionId = sessionV2.Id,
+                            CandidateExamSessionQuestionId = question.Id,
+                            MarksObtained = 0,
+                            EvaluationStatus = "Pending",
+                            EvaluationLocked = false
+                        };
+                        sessionV2.Answers.Add(answer);
+                    }
+
+                    if (answer.EvaluationLocked) continue;
 
                     answer.SubmittedAnswerText = item.SubmittedAnswerText;
                     answer.AnsweredAt = item.ClientTimestamp.HasValue ? new DateTimeOffset(item.ClientTimestamp.Value) : DateTimeOffset.UtcNow;
@@ -100,7 +113,21 @@ namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
                 if (question == null) continue;
 
                 var answer = session.Answers.FirstOrDefault(a => a.CandidateExamSessionQuestionId == question.Id);
-                if (answer == null || answer.EvaluationLocked) continue;
+                if (answer == null)
+                {
+                    answer = new CandidateExamAnswer
+                    {
+                        CandidateExamSessionId = session.Id,
+                        CandidateExamSessionQuestionId = question.Id,
+                        Marks = question.Marks,
+                        MarksObtained = 0,
+                        EvaluationStatus = "Pending",
+                        EvaluationLocked = false
+                    };
+                    session.Answers.Add(answer);
+                }
+
+                if (answer.EvaluationLocked) continue;
 
                 answer.SubmittedAnswerText = item.SubmittedAnswerText;
                 answer.AnsweredAt = item.ClientTimestamp ?? DateTime.UtcNow;

@@ -137,11 +137,11 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                     if (progressByRoundOrder.TryGetValue(r.RoundOrder, out var p))
                     {
                         var isPendingStage = p.Status == "Pending" || string.IsNullOrWhiteSpace(p.Status);
-                        var hasSess = latestSessionByProgress.TryGetValue(p.Id, out var sessInfo) && !isPendingStage;
+                        var hasSess = latestSessionByProgress.TryGetValue(p.Id, out var sessInfo);
                         var interviewInfo = latestInterviewByProgress.GetValueOrDefault(p.Id);
                         var isAutoPassed = (p.RoundTitle ?? r.Name).Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase);
                         var effectiveStatus = isAutoPassed && isPendingStage ? "Passed" : p.Status;
-                        var effectiveScore = isPendingStage ? null : (p.ScoreObtained ?? (isAutoPassed ? 100.00m : (hasSess ? sessInfo.Score : null)));
+                        var effectiveScore = p.ScoreObtained ?? (isAutoPassed ? 100.00m : (hasSess ? sessInfo.Score : null));
                         var isR1OrAutoPassed = isAutoPassed || r.RoundOrder == 1;
                         var interviewerName = interviewInfo?.InterviewerName ?? (p.EvaluatorId != null ? evaluatorNames.GetValueOrDefault(p.EvaluatorId.Value) : (isR1OrAutoPassed ? defaultHrRecruiterName : null));
                         var interviewerUserId = interviewInfo?.InterviewerUserId ?? p.EvaluatorId;
@@ -195,9 +195,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                     .ToList();
             }
 
-            var isDirectCandidate = (candidate.Vacancy != null && candidate.Vacancy.DriveType == "Direct")
-                || candidate.PipelineProgressHistory.Any(p => (p.RoundTitle ?? "").Contains("Auto-Passed", StringComparison.OrdinalIgnoreCase))
-                || (!string.IsNullOrWhiteSpace(candidate.RegistrationChannel) && candidate.RegistrationChannel.Contains("Direct", StringComparison.OrdinalIgnoreCase));
+            var isDirectCandidate = CandidatePipelineHelper.IsDirectCandidate(candidate);
             var effectiveChannel = isDirectCandidate ? "Direct Sourced" : (!string.IsNullOrWhiteSpace(candidate.RegistrationChannel) ? candidate.RegistrationChannel : "Walk-in");
 
             return new CandidateDto(

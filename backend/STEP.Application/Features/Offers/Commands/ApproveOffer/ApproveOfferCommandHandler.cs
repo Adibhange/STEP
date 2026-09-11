@@ -41,6 +41,25 @@ namespace STEP.Application.Features.Offers.Commands.ApproveOffer
             offer.ApprovedById = director.Id;
             offer.ApprovedAt = DateTime.UtcNow;
 
+            var candidate = await db.Candidates
+                .Include(c => c.PipelineProgressHistory)
+                .Include(c => c.CurrentPipelineProgress)
+                .FirstOrDefaultAsync(c => c.Id == offer.CandidateId, cancellationToken);
+
+            if (candidate != null)
+            {
+                candidate.Status = "Hired";
+                candidate.CurrentStage = "Hired";
+
+                var r4 = candidate.PipelineProgressHistory.FirstOrDefault(p => p.RoundNumber == 4 || p.RoundType == "Director" || (p.RoundTitle != null && p.RoundTitle.Contains("Offer", StringComparison.OrdinalIgnoreCase)));
+                if (r4 != null)
+                {
+                    r4.Status = "Passed";
+                    r4.CompletedAt = DateTime.UtcNow;
+                    r4.EvaluatorId = director.Id;
+                }
+            }
+
             db.AuditLogs.Add(new AuditLog
             {
                 CorrelationId = Guid.NewGuid(),

@@ -19,7 +19,7 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                 .Include(s => s.Candidate)
                 .Include(s => s.Vacancy)
                 .Include(s => s.AssessmentBlueprint)
-                .Include(s => s.Answers).ThenInclude(a => a.CandidateExamSessionQuestion).ThenInclude(q => q.Options)
+                .Include(s => s.Questions).ThenInclude(q => q.Options)
                 .Include(s => s.Answers).ThenInclude(a => a.SelectedOptions)
                 .Include(s => s.ProctoringLogs)
                 .AsSplitQuery()
@@ -28,14 +28,16 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
 
             if (sessionV2 != null)
             {
-                var answersV2 = sessionV2.Answers
-                    .OrderBy(a => a.CandidateExamSessionQuestion.DisplayOrder)
-                    .Select(a => {
-                        var q = a.CandidateExamSessionQuestion;
-                        var isMcq = q.QuestionType is "SINGLE_CHOICE" or "MULTI_CHOICE" or "Single Choice" or "Multi Choice";
-                        decimal marksObtained = a.MarksObtained;
+                var answersMap = sessionV2.Answers.ToDictionary(a => a.CandidateExamSessionQuestionId);
 
-                        if (isMcq && a.MarksObtained == 0 && a.EvaluationStatus != "Evaluated" && a.EvaluationStatus != "Published")
+                var answersV2 = sessionV2.Questions
+                    .OrderBy(q => q.DisplayOrder)
+                    .Select(q => {
+                        var a = answersMap.GetValueOrDefault(q.Id);
+                        var isMcq = q.QuestionType is "SINGLE_CHOICE" or "MULTI_CHOICE" or "Single Choice" or "Multi Choice";
+                        decimal marksObtained = a?.MarksObtained ?? 0;
+
+                        if (isMcq && marksObtained == 0 && a != null && a.EvaluationStatus != "Evaluated" && a.EvaluationStatus != "Published")
                         {
                             var selectedOptionIds = a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToHashSet();
                             var correctOptionIds = q.Options.Where(o => o.IsCorrect).Select(o => o.Id).ToHashSet();
@@ -46,23 +48,23 @@ namespace STEP.Application.Features.Exams.Queries.GetExamEvaluationView
                         }
 
                         return new ExamAnswerEvaluationDto(
-                            a.Id,
+                            a?.Id ?? 0,
                             q.DisplayOrder,
                             q.QuestionType,
                             q.QuestionText,
-                            a.SubmittedAnswerText,
+                            a?.SubmittedAnswerText ?? string.Empty,
                             q.Marks,
                             marksObtained,
-                            a.EvaluationStatus,
-                            a.EvaluationLocked,
-                            a.EvaluatorRemarks,
+                            a?.EvaluationStatus ?? "Pending",
+                            a?.EvaluationLocked ?? false,
+                            a?.EvaluatorRemarks,
                             q.Options
                                 .OrderBy(o => o.DisplayOrder)
                                 .Select(o => new EvaluationOptionDto(o.Id, o.DisplayOptionLabel, o.OptionText, o.IsCorrect))
                                 .ToList(),
-                            a.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList(),
+                            a?.SelectedOptions.Select(so => so.CandidateExamSessionQuestionOptionId).ToList() ?? new List<int>(),
                             q.SectionName,
-                            a.CandidateExamSessionQuestionId);
+                            q.Id);
                     })
                     .ToList();
                 

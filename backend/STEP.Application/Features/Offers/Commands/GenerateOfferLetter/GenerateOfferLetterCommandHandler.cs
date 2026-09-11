@@ -24,11 +24,13 @@ namespace STEP.Application.Features.Offers.Commands.GenerateOfferLetter
                 .FirstOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
                 ?? throw new NotFoundException(nameof(CandidateEntity), request.CandidateId);
 
-            if (candidate.Status != "Offered" && candidate.Status != "Hired")
+            if (candidate.Status == "Rejected" || candidate.Status == "Withdrawn")
             {
                 throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(candidate.Status),
-                    $"An offer letter can only be generated for a candidate whose status is 'Offered' or 'Hired' (current: '{candidate.Status}').")]);
+                    $"An offer letter cannot be generated for a candidate with status '{candidate.Status}'.")]);
             }
+
+            candidate.Status = "Offered";
 
             var hasActiveOffer = await db.OfferLetters.AnyAsync(
                 o => o.CandidateId == candidate.Id && o.Status != "Declined" && o.Status != "Withdrawn", cancellationToken);
