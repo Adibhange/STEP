@@ -27,6 +27,7 @@ import { CandidateAssessmentEvaluationView } from "@/features/assessments/compon
 import { TempExamLinkModalV2 } from "@/features/assessments/components/TempExamLinkModalV2";
 import { CandidateExamPassModal } from "./CandidateExamPassModal";
 import { DirectorAccessShareModal } from "./DirectorAccessShareModal";
+import { CustomSelect } from "@/features/shared/select/CustomSelect";
 import {
 	getApiBaseUrl,
 	useApproveOfferMutation,
@@ -41,6 +42,7 @@ import {
 	usePublishInterviewResultMutation,
 	useEvaluateCandidateStageMutation,
 	useAssignEvaluatorMutation,
+	useUpdateRoundInterviewerFeedbackMutation,
 	useUploadCandidateDocumentMutation,
 	useUpdateCandidateMutation,
 	useDeleteCandidateDocumentMutation,
@@ -399,16 +401,93 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 		useGetCandidatesQuery();
 	const [evaluateStage] = useEvaluateCandidateStageMutation();
 	const [assignEvaluator] = useAssignEvaluatorMutation();
+	const [updateRoundInterviewerFeedback, { isLoading: isUpdatingRound1 }] =
+		useUpdateRoundInterviewerFeedbackMutation();
 	const [uploadCandidateDocument] = useUploadCandidateDocumentMutation();
+	const { data: usersRes } = useGetUsersQuery();
 
-	// Current logged in user & role-based permissions
+	// Current logged in user & role/department-based permissions
 	const currentUser = useAppSelector(selectCurrentUser);
-	const userRole = (currentUser?.role || "").toLowerCase();
+	const currentFullUser = useMemo(
+		() => (usersRes?.data || []).find((u) => u.id === currentUser?.id),
+		[usersRes, currentUser?.id],
+	);
+
+	const userRole = (currentUser?.role || currentFullUser?.role || "").toLowerCase();
+	const userDept = (currentFullUser?.department || "").toLowerCase();
+
 	const isDirector = userRole === "director";
-	const isHr = userRole === "hr";
+	const isHr =
+		userRole === "hr" ||
+		userDept === "hr" ||
+		userDept.includes("human resources") ||
+		userDept.includes("talent acquisition");
 	const isAdmin = userRole === "administrator" || userRole === "admin";
 	const isHrOrDirectorOrAdmin = isHr || isDirector || isAdmin;
 	const isInterviewer = userRole === "interviewer";
+
+	// Dynamic round permissions: Round 1 interviewer editable for HR department and Director; Feedback editable on all UNLOCKED rounds
+	const canEditRound1 = isDirector || isHr || isAdmin;
+	const isRoundInterviewerEditable = (roundNumber: number) =>
+		roundNumber === 1 && canEditRound1;
+	const isRoundFeedbackEditable = (stageOrId: StageItem | number) => {
+		if (!canEditRound1) return false;
+		const stage =
+			typeof stageOrId === "number"
+				? stagesData.find((s) => s.id === stageOrId)
+				: stageOrId;
+		if (!stage) return false;
+		// Only allow editing feedback/remarks when the round is unlocked
+		if (
+			stage.isLocked ||
+			stage.status === "Locked" ||
+			stage.statusType === "locked"
+		) {
+			return false;
+		}
+		return true;
+	};
+
+	// Round 1 Interviewer & Feedback inline editing states
+	const [editingInterviewerStageId, setEditingInterviewerStageId] =
+		useState<number | null>(null);
+	const [selectedInterviewerId, setSelectedInterviewerId] = useState<string>("");
+	const [editingFeedbackStageId, setEditingFeedbackStageId] =
+		useState<number | null>(null);
+	const [editedFeedbackText, setEditedFeedbackText] = useState<string>("");
+
+	// Round 1 interviewer options: strictly restricted to staff of HR department
+	const eligibleInterviewerOptions = useMemo(
+		() =>
+			(usersRes?.data || [])
+				.filter((u) => {
+					if (u.status === "Inactive") return false;
+					const dept = (u.department || "").trim().toLowerCase();
+					const role = (u.role || "").trim().toLowerCase();
+					const isHrStaff =
+						dept === "hr" ||
+						dept.includes("human resources") ||
+						dept.includes("talent acquisition") ||
+						role === "hr";
+					const isCurrentlyAssigned =
+						selectedInterviewerId && String(u.id) === selectedInterviewerId;
+					return isHrStaff || isCurrentlyAssigned;
+				})
+				.map((u) => ({
+					id: u.id,
+					name: `${u.firstName || ""} ${u.lastName || ""}`.trim(),
+					role: u.role || "HR",
+					department: u.department || "HR",
+					label:
+						`${u.firstName || ""} ${u.lastName || ""}`.trim() +
+						(u.department
+							? ` (${u.department}${u.role ? ` • ${u.role}` : ""})`
+							: u.role
+							? ` (${u.role})`
+							: ""),
+				})),
+		[usersRes, selectedInterviewerId],
+	);
 
 	// Dialog & Toast States
 	const [showImageModal, setShowImageModal] = useState(false);
@@ -734,6 +813,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 						return raw;
 					})();
 
+					const assignedUserItem = p.interviewerUserId
+						? (usersRes?.data || []).find((u) => u.id === p.interviewerUserId)
+						: null;
+					const assignedInterviewerName = assignedUserItem
+						? `${assignedUserItem.firstName || ""} ${assignedUserItem.lastName || ""}`.trim()
+						: p.interviewerName;
+
 					return {
 						id: p.roundNumber,
 						name: cleanRoundName,
@@ -763,13 +849,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 							: p.roundNumber === 1 ? candDate
 							: "—",
 						interviewer:
-							p.interviewerName ||
+							assignedInterviewerName ||
 							(isDirectorRound ? "Director of Engineering"
 							: p.roundNumber === 1 ? "Talent Acquisition"
 							: "Unassigned"),
 						interviewerInitials:
-							p.interviewerName ?
-								p.interviewerName
+							assignedInterviewerName ?
+								assignedInterviewerName
 									.split(" ")
 									.filter(Boolean)
 									.map((n: string) => n[0].toUpperCase())
@@ -779,10 +865,13 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 							: p.roundNumber === 1 ? "HR"
 							: "UA",
 						interviewerRole:
-							p.roundNumber === 1 ?
+							assignedUserItem ?
+								`${assignedUserItem.department ? `${assignedUserItem.department} • ` : ""}${assignedUserItem.role || (p.roundNumber === 1 ? "Talent Acquisition" : "Evaluator")}`
+							: p.roundNumber === 1 ?
 								"HR Talent Acquisition"
 							:	p.roundType ||
 								(isDirectorRound ? "Director of Engineering" : "Evaluator"),
+						interviewerUserId: p.interviewerUserId || (assignedUserItem ? assignedUserItem.id : null),
 						mode:
 							p.roundNumber === 1 ? "Offline / Direct Screening"
 							: p.roundType === "Assessment" ? "Online Proctored"
@@ -793,13 +882,16 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 									`Round locked — candidate failed Round ${failedPriorRound?.roundNumber || 1}.`
 								:	`Round pending — complete Round ${p.roundNumber - 1} first.`
 							:	(() => {
+									if (p.remarks && p.remarks.trim()) {
+										return p.remarks.trim();
+									}
 									if (
 										p.roundNumber === 1 &&
-										(isAutoPassedRound || p.interviewerName) &&
+										(isAutoPassedRound || assignedInterviewerName) &&
 										!isCurrentRoundFailed
 									) {
-										if (p.interviewerName) {
-											return `Screened & pre-qualified for technical round by ${p.interviewerName}.`;
+										if (assignedInterviewerName) {
+											return `Screened & pre-qualified for technical round by ${assignedInterviewerName}.`;
 										}
 										// No specific screener recorded — show generic message
 										return `Screened & pre-qualified for technical round by HR.`;
@@ -1154,7 +1246,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
 	// Options for Dropdowns — real accounts from the Users table, filtered by role. No more
 	// fictional names: whoever the org has actually created under Users is who shows up here.
-	const { data: usersRes } = useGetUsersQuery();
 	const [scheduleInterview, { isLoading: isScheduling }] =
 		useScheduleInterviewMutation();
 
@@ -3375,72 +3466,285 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 
 											{!stage.isOfferRound && (
 												<div className='flex flex-col gap-0.5'>
-													<span className='text-[var(--text-tertiary)] font-medium'>
-														Interviewer / Role
-													</span>
-													<div className='flex items-center justify-between gap-2'>
-														<div className='flex items-center gap-2'>
-															<span
-																className={`w-6.5 h-6.5 rounded-full font-bold text-[11px] flex items-center justify-center shrink-0 border ${
-																	(
-																		stage.interviewerInitials === "UA" ||
-																		stage.interviewer
-																			.toLowerCase()
-																			.includes("unassigned")
-																	) ?
-																		"bg-[var(--surface-3)] text-[var(--text-tertiary)] border-[var(--border-default)]"
-																	:	"bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30"
-																}`}>
-																{stage.interviewerInitials}
-															</span>
-															<div className='flex flex-col'>
-																<span className='font-semibold text-[var(--text-primary)] leading-tight'>
-																	{stage.interviewer}
-																</span>
-																<span className='text-[10.5px] text-[var(--text-tertiary)] font-medium'>
-																	{stage.interviewerRole}
-																</span>
-															</div>
-														</div>
-														{stage.interviewerUserId &&
-															!stage.interviewer
-																.toLowerCase()
-																.includes("unassigned") && (
+													<div className='flex items-center justify-between gap-1'>
+														<span className='text-[var(--text-tertiary)] font-medium'>
+															Interviewer / Role
+														</span>
+														{isRoundInterviewerEditable(stage.id) &&
+															editingInterviewerStageId !== stage.id && (
 																<button
 																	type='button'
 																	onClick={() => {
-																		const users = usersRes?.data || [];
-																		const assignedUser = users.find(
-																			(u) => u.id === stage.interviewerUserId,
+																		setEditingInterviewerStageId(stage.id);
+																		setSelectedInterviewerId(
+																			stage.interviewerUserId ?
+																				String(stage.interviewerUserId)
+																			:	"",
 																		);
-																		const email =
-																			assignedUser?.email ||
-																			`${stage.interviewer.toLowerCase().replace(/\s+/g, ".")}@sthapatya.in`;
-																		const msg = `👋 Hi ${stage.interviewer.split(" ")[0]},\n\nCandidate ${candidate.name} (${candidate.code || `CND-${new Date().getFullYear()}-${numericId}`}) has been assigned to you for a ${stage.mode || "Face-to-Face"} ${stage.name}.\n\n💼 Role: ${candidate.appliedFor || "Position"}\n⏱️ Experience: ${candidate.experience || "0 Yrs"}\n\n🔗 Candidate Profile & Evaluation Scorecard:\n${window.location.origin}/dashboard/candidates/${numericId}\n\nPlease review their profile and conduct the evaluation in STEP.`;
-																		const teamsUrl = `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}&message=${encodeURIComponent(msg)}`;
-																		window.open(teamsUrl, "_blank");
 																	}}
-																	title='Message on Microsoft Teams'
-																	className='px-2 py-0.5 rounded-md bg-[var(--surface-2)] hover:bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)]/40 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs'>
+																	className='text-[10px] font-semibold px-1.5 py-0.5 rounded text-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 inline-flex items-center gap-1 cursor-pointer transition-colors'
+																	title='Edit assigned interviewer'>
 																	<Icon
-																		name='send'
+																		name='pencil'
 																		size='xs'
 																	/>
-																	<span>Teams</span>
+																	<span>Edit</span>
 																</button>
 															)}
 													</div>
+
+													{editingInterviewerStageId === stage.id ?
+														<div className='flex flex-col gap-2 pt-1'>
+															<CustomSelect
+																label='Select Interviewer'
+																placeholder='Select Interviewer...'
+																value={selectedInterviewerId}
+																options={eligibleInterviewerOptions.map((opt) => ({
+																	value: String(opt.id),
+																	label: opt.label,
+																}))}
+																onChange={(val) => setSelectedInterviewerId(val)}
+																size='sm'
+																widthClass='w-full'
+															/>
+															<div className='flex items-center gap-1.5'>
+																<button
+																	type='button'
+																	disabled={
+																		isUpdatingRound1 || !selectedInterviewerId
+																	}
+																	onClick={async () => {
+																		if (!selectedInterviewerId) return;
+																		const userId = Number(selectedInterviewerId);
+																		const targetUser = eligibleInterviewerOptions.find(
+																			(u) => u.id === userId,
+																		);
+																		try {
+																			await updateRoundInterviewerFeedback({
+																				candidateId: numericId,
+																				roundNumber: stage.id,
+																				interviewerUserId: userId,
+																			}).unwrap();
+
+																			setStagesData((prev) =>
+																				prev.map((s) =>
+																					s.id === stage.id ?
+																						{
+																							...s,
+																							interviewer:
+																								targetUser?.name ||
+																								s.interviewer,
+																							interviewerUserId: userId,
+																							interviewerRole:
+																								targetUser?.department ?
+																									`${targetUser.department} • ${targetUser.role}`
+																								:	targetUser?.role ||
+																									"Talent Acquisition",
+																							interviewerInitials: (
+																								targetUser?.name || "HR"
+																							)
+																								.split(" ")
+																								.filter(Boolean)
+																								.map((n) =>
+																									n[0].toUpperCase(),
+																								)
+																								.slice(0, 2)
+																								.join(""),
+																						}
+																					:	s,
+																				),
+																			);
+																			toast.success("Interviewer Updated", {
+																				description: `Assigned Round ${stage.id} interviewer to ${targetUser?.name || "selected user"}.`,
+																			});
+																			setEditingInterviewerStageId(null);
+																		} catch (err: any) {
+																			toast.error(
+																				"Failed to update interviewer",
+																				{
+																					description:
+																						err?.data?.message ||
+																						err?.message ||
+																						"An error occurred while updating interviewer.",
+																				},
+																			);
+																		}
+																	}}
+																	className='px-2.5 py-1 text-[11px] font-bold rounded-lg bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs disabled:opacity-50'>
+																	<Icon
+																		name='check'
+																		size='xs'
+																	/>
+																	<span>Save</span>
+																</button>
+																<button
+																	type='button'
+																	disabled={isUpdatingRound1}
+																	onClick={() =>
+																		setEditingInterviewerStageId(null)
+																	}
+																	className='px-2.5 py-1 text-[11px] font-medium rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer'>
+																	Cancel
+																</button>
+															</div>
+														</div>
+													:	<div className='flex items-center justify-between gap-2'>
+															<div className='flex items-center gap-2'>
+																<span
+																	className={`w-6.5 h-6.5 rounded-full font-bold text-[11px] flex items-center justify-center shrink-0 border ${
+																		(
+																			stage.interviewerInitials === "UA" ||
+																			stage.interviewer
+																				.toLowerCase()
+																				.includes("unassigned")
+																		) ?
+																			"bg-[var(--surface-3)] text-[var(--text-tertiary)] border-[var(--border-default)]"
+																		:	"bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border-[var(--accent-indigo)]/30"
+																	}`}>
+																	{stage.interviewerInitials}
+																</span>
+																<div className='flex flex-col'>
+																	<span className='font-semibold text-[var(--text-primary)] leading-tight'>
+																		{stage.interviewer}
+																	</span>
+																	<span className='text-[10.5px] text-[var(--text-tertiary)] font-medium'>
+																		{stage.interviewerRole}
+																	</span>
+																</div>
+															</div>
+															{stage.id !== 1 &&
+																stage.interviewerUserId &&
+																!stage.interviewer
+																	.toLowerCase()
+																	.includes("unassigned") && (
+																	<button
+																		type='button'
+																		onClick={() => {
+																			const users = usersRes?.data || [];
+																			const assignedUser = users.find(
+																				(u) => u.id === stage.interviewerUserId,
+																			);
+																			const email =
+																				assignedUser?.email ||
+																				`${stage.interviewer.toLowerCase().replace(/\s+/g, ".")}@sthapatya.in`;
+																			const msg = `👋 Hi ${stage.interviewer.split(" ")[0]},\n\nCandidate ${candidate.name} (${candidate.code || `CND-${new Date().getFullYear()}-${numericId}`}) has been assigned to you for a ${stage.mode || "Face-to-Face"} ${stage.name}.\n\n💼 Role: ${candidate.appliedFor || "Position"}\n⏱️ Experience: ${candidate.experience || "0 Yrs"}\n\n🔗 Candidate Profile & Evaluation Scorecard:\n${window.location.origin}/dashboard/candidates/${numericId}\n\nPlease review their profile and conduct the evaluation in STEP.`;
+																			const teamsUrl = `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(email)}&message=${encodeURIComponent(msg)}`;
+																			window.open(teamsUrl, "_blank");
+																		}}
+																		title='Message on Microsoft Teams'
+																		className='px-2 py-0.5 rounded-md bg-[var(--surface-2)] hover:bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] border border-[var(--border-default)] hover:border-[var(--accent-indigo)]/40 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-2xs'>
+																		<Icon
+																			name='send'
+																			size='xs'
+																		/>
+																		<span>Teams</span>
+																	</button>
+																)}
+														</div>
+													}
 												</div>
 											)}
 
 											<div
 												className={`flex flex-col gap-0.5 ${stage.isOfferRound ? "sm:col-span-2" : "sm:col-span-1"}`}>
-												<span className='text-[var(--text-tertiary)] font-medium'>
-													Feedback / Remarks
-												</span>
-												<p className='text-[var(--text-secondary)] font-normal leading-relaxed'>
-													{stage.feedback}
-												</p>
+												<div className='flex items-center justify-between gap-1'>
+													<span className='text-[var(--text-tertiary)] font-medium'>
+														Feedback / Remarks
+													</span>
+													{isRoundFeedbackEditable(stage.id) &&
+														editingFeedbackStageId !== stage.id && (
+															<button
+																type='button'
+																onClick={() => {
+																	setEditingFeedbackStageId(stage.id);
+																	setEditedFeedbackText(stage.feedback || "");
+																}}
+																className='text-[10px] font-semibold px-1.5 py-0.5 rounded text-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-dim)] border border-[var(--accent-indigo)]/30 inline-flex items-center gap-1 cursor-pointer transition-colors'
+																title='Edit feedback remarks'>
+																<Icon
+																	name='pencil'
+																	size='xs'
+																/>
+																<span>Edit</span>
+															</button>
+														)}
+												</div>
+
+												{editingFeedbackStageId === stage.id && isRoundFeedbackEditable(stage) ?
+													<div className='flex flex-col gap-2 pt-1'>
+														<textarea
+															rows={3}
+															value={editedFeedbackText}
+															onChange={(e) =>
+																setEditedFeedbackText(e.target.value)
+															}
+															placeholder='Enter feedback / remarks...'
+															maxLength={4000}
+															className='w-full text-xs rounded-lg p-2.5 bg-[var(--surface-2)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-indigo)] focus:ring-1 focus:ring-[var(--accent-indigo)]/30 leading-relaxed resize-y shadow-2xs font-sans transition-all'
+														/>
+														<div className='flex items-center justify-between gap-2'>
+															<span className='text-[10px] text-[var(--text-tertiary)] font-mono'>
+																{editedFeedbackText.length}/4000
+															</span>
+															<div className='flex items-center gap-1.5'>
+																<button
+																	type='button'
+																	disabled={isUpdatingRound1}
+																	onClick={async () => {
+																		const text = editedFeedbackText.trim();
+																		try {
+																			await updateRoundInterviewerFeedback({
+																				candidateId: numericId,
+																				roundNumber: stage.id,
+																				feedback: text,
+																			}).unwrap();
+
+																			setStagesData((prev) =>
+																				prev.map((s) =>
+																					s.id === stage.id ?
+																						{
+																							...s,
+																							feedback: text,
+																						}
+																					:	s,
+																				),
+																			);
+																			toast.success("Feedback Saved", {
+																				description: `Round ${stage.id} feedback remarks saved successfully.`,
+																			});
+																			setEditingFeedbackStageId(null);
+																		} catch (err: any) {
+																			toast.error("Failed to save feedback", {
+																				description:
+																					err?.data?.message ||
+																					err?.message ||
+																					"An error occurred while saving feedback.",
+																			});
+																		}
+																	}}
+																	className='px-2.5 py-1 text-[11px] font-bold rounded-lg bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs disabled:opacity-50'>
+																	<Icon
+																		name='check'
+																		size='xs'
+																	/>
+																	<span>Save</span>
+																</button>
+																<button
+																	type='button'
+																	disabled={isUpdatingRound1}
+																	onClick={() =>
+																		setEditingFeedbackStageId(null)
+																	}
+																	className='px-2.5 py-1 text-[11px] font-medium rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer'>
+																	Cancel
+																</button>
+															</div>
+														</div>
+													</div>
+												:	<p className='text-[var(--text-secondary)] font-normal leading-relaxed'>
+														{stage.feedback}
+													</p>
+												}
 
 												{stage.attempts && stage.attempts.length > 0 && (
 													<div className='mt-1 flex flex-col gap-1 text-[10.5px]'>

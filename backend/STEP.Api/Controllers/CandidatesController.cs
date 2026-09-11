@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.Candidates.Commands.AssignPipelineFlow;
 using STEP.Application.Features.Candidates.Commands.RegisterCandidate;
+using STEP.Application.Features.Candidates.Commands.UpdateRoundInterviewerFeedback;
 using STEP.Application.Features.Candidates.Commands.UploadCandidateDocument;
 using STEP.Application.Features.Candidates.Queries.GetCandidateById;
 using STEP.Application.Features.Candidates.Queries.GetCandidates;
@@ -83,6 +84,16 @@ namespace STEP.Api.Controllers
             return Ok(ApiResponse<object>.Ok(candidate, "Evaluator assigned successfully"));
         }
 
+        [HttpPut("{id:int}/rounds/{roundNumber:int}/interviewer-feedback")]
+        [Authorize]
+        public async Task<IActionResult> UpdateRoundInterviewerFeedback(
+            int id, int roundNumber, [FromBody] UpdateRoundInterviewerFeedbackRequestBody body)
+        {
+            var candidate = await mediator.Send(new UpdateRoundInterviewerFeedbackCommand(
+                id, roundNumber, body.InterviewerUserId, body.Feedback));
+            return Ok(ApiResponse<object>.Ok(candidate, "Round interviewer and feedback updated successfully"));
+        }
+
         [HttpPut("{id:int}")]
         [Authorize(Policy = "Candidate.Approve")]
         public async Task<IActionResult> UpdateCandidate(int id, [FromBody] UpdateCandidateRequestBody body)
@@ -144,6 +155,7 @@ namespace STEP.Api.Controllers
     public record AssignPipelineFlowRequestBody(int VacancyPipelineFlowId);
     public record EvaluateStageRequestBody(int RoundNumber, bool Passed, string? Remarks, string? DirectorPin = null, bool IsRetake = false);
     public record AssignEvaluatorRequestBody(int RoundNumber, int EvaluatorUserId);
+    public record UpdateRoundInterviewerFeedbackRequestBody(int? InterviewerUserId, string? Feedback);
     public record ScheduleTestRequestBody(string TestMode, string ScheduledDate, string StartTime, string EndTime, string? Passcode);
     public record GenerateDirectorAccessLinkRequestBody(bool Regenerate);
     public record UpdateCandidateRequestBody(

@@ -29,6 +29,14 @@ namespace STEP.Api.Middleware
             {
                 await WriteResponse(context, HttpStatusCode.Unauthorized, ApiResponse<object>.Fail(ex.Message, statusCode: 401));
             }
+            catch (ForbiddenAccessException ex)
+            {
+                await WriteResponse(context, HttpStatusCode.Forbidden, ApiResponse<object>.Fail(ex.Message, statusCode: 403));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                await WriteResponse(context, HttpStatusCode.Forbidden, ApiResponse<object>.Fail(ex.Message, statusCode: 403));
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Unhandled exception processing {Path}", context.Request.Path);
