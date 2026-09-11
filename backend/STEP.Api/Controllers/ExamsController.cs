@@ -107,10 +107,10 @@ namespace STEP.Api.Controllers
 
         [HttpPost("{sessionId:int}/publish")]
         [Authorize(Policy = "Exam.Manage")]
-        public async Task<IActionResult> Publish(int sessionId, [FromBody] PublishRequestBody body)
+        public async Task<IActionResult> Publish(int sessionId, [FromBody] PublishRequestBody? body)
         {
             var publishedBy = CurrentUserId ?? throw new System.UnauthorizedAccessException("Unable to resolve the current user.");
-            var result = await mediator.Send(new PublishAssessmentResultCommand(sessionId, body.Remarks, publishedBy));
+            var result = await mediator.Send(new PublishAssessmentResultCommand(sessionId, body?.Remarks, publishedBy));
             return Ok(ApiResponse<object>.Ok(result, "Assessment result published and locked"));
         }
 

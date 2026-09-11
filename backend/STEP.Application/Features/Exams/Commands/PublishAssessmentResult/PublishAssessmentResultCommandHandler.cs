@@ -33,10 +33,10 @@ namespace STEP.Application.Features.Exams.Commands.PublishAssessmentResult
             if (sessionV2 != null)
             {
                 // 1. Verify session submission.
-                if (sessionV2.SessionStatus != "Submitted" && sessionV2.EvaluationStatus != "PartiallyEvaluated")
+                if (sessionV2.SessionStatus != "Submitted" && sessionV2.SessionStatus != "Evaluated" && sessionV2.EvaluationStatus != "PartiallyEvaluated")
                 {
                     throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(sessionV2.SessionStatus),
-                        $"Only a Submitted session can be published (current status: '{sessionV2.SessionStatus}').")]);
+                        $"Only a Submitted or Evaluated session can be published (current status: '{sessionV2.SessionStatus}').")]);
                 }
 
                 // 2. Verify full manual evaluation (no answer left Pending).
