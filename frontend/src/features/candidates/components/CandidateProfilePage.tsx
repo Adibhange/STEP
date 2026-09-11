@@ -930,7 +930,6 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 							: p.status || "Pending",
 						interviewId: p.interviewId ?? null,
 						candidateExamSessionId: p.candidateExamSessionId ?? null,
-						interviewerUserId: p.interviewerUserId ?? p.evaluatorId ?? null,
 						roundType: p.roundType,
 						isDirectorRound: isDirectorRound,
 						isOfferRound: isOfferRound,

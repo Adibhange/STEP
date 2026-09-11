@@ -271,6 +271,7 @@ export interface QRScanResultData {
 	isOpenForRegistration: boolean;
 	message: string | null;
 	departmentName?: string;
+	locationName?: string;
 	passingPercentage?: number;
 	openingsCount?: number;
 	driveType?: string;

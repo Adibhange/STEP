@@ -33,7 +33,7 @@ namespace STEP.Application.Features.Vacancies.Queries.GetVacancies
             var totalCount = await query.CountAsync(cancellationToken);
 
             var pageIndex = request.PageIndex < 1 ? 1 : request.PageIndex;
-            var pageSize = request.PageSize is < 1 or > 200 ? 20 : request.PageSize;
+            var pageSize = request.PageSize is < 1 or > 500 ? 100 : request.PageSize;
 
             var rawItems = await query
                 .OrderByDescending(v => v.Id)

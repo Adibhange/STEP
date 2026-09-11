@@ -57,14 +57,16 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
 
   const origin = getAppOrigin();
   const applyUrl = `${origin}/apply/${(activeVacancy as any)?.vacancyCode || activeVacancy?.code || activeVacancy?.id || ''}`;
-  const dynamicQrUrl = qrCode
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrCode.registrationUrl)}`
-    : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(applyUrl)}`;
+  const fullQrUrl = qrCode?.registrationUrl?.startsWith('http')
+    ? qrCode.registrationUrl
+    : qrCode?.registrationUrl
+      ? `${origin}${qrCode.registrationUrl.startsWith('/') ? '' : '/'}${qrCode.registrationUrl}`
+      : applyUrl;
+  const dynamicQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(fullQrUrl)}`;
 
   const handleCopyQrUrl = () => {
-    const copyTarget = qrCode?.registrationUrl || applyUrl;
     if (typeof window !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(copyTarget);
+      navigator.clipboard.writeText(fullQrUrl);
       setQrCopied(true);
       setTimeout(() => setQrCopied(false), 2000);
       toast.success('Link Copied', { description: 'Registration URL copied to clipboard.' });
@@ -235,14 +237,23 @@ export const VacancyDetailDialog: React.FC<VacancyDetailDialogProps> = ({
                         <button
                           type="button"
                           onClick={handleCopyQrUrl}
-                          className="h-7 px-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                          className="h-7 px-2.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-xs font-semibold transition-all cursor-pointer shadow-2xs"
                         >
                           {qrCopied ? 'Copied ✓' : 'Copy Link'}
                         </button>
                         <button
                           type="button"
+                          onClick={() => window.open(fullQrUrl, '_blank')}
+                          className="h-7 px-2.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-xs font-semibold transition-all cursor-pointer shadow-2xs flex items-center gap-1"
+                          title="Open application page in new tab"
+                        >
+                          <Icon name="external-link" size="xs" />
+                          <span>Open</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => window.open(dynamicQrUrl, '_blank')}
-                          className="h-7 px-3 rounded-lg bg-[var(--accent-indigo)] text-white text-xs font-semibold hover:bg-[var(--accent-indigo-hover)] transition-all cursor-pointer shadow-2xs flex items-center gap-1"
+                          className="h-7 px-2.5 rounded-lg bg-[var(--accent-indigo)] text-white text-xs font-semibold hover:bg-[var(--accent-indigo-hover)] transition-all cursor-pointer shadow-2xs flex items-center gap-1"
                         >
                           <Icon name="download" size="xs" />
                           <span>Poster</span>

@@ -6,6 +6,8 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Icon, cardVariants, CustomSelect } from "@/design-system";
 import { VacancyDetailDialog } from "./VacancyDetailDialog";
+import { ApplyQrModal } from "./ApplyQrModal";
+import { UniversalApplyQrModal } from "./UniversalApplyQrModal";
 import { InstantDriveModalV2 } from "./InstantDriveModalV2";
 import type { VacancyItem } from "../types/vacancy.types";
 import {
@@ -26,7 +28,7 @@ export const VacanciesListView: React.FC = () => {
 		data: apiVacanciesResponse,
 		isLoading,
 		isError,
-	} = useGetVacanciesQuery();
+	} = useGetVacanciesQuery({ pageSize: 100 });
 	const { data: candidatesRes } = useGetCandidatesQuery();
 	const { data: locationsMasterRes } =
 		useGetMasterDataByCategoryQuery("hiringlocations");
@@ -39,6 +41,10 @@ export const VacanciesListView: React.FC = () => {
 	const [selectedVacancy, setSelectedVacancy] = useState<VacancyItem | null>(
 		null,
 	);
+	const [qrModalVacancy, setQrModalVacancy] = useState<VacancyItem | null>(
+		null,
+	);
+	const [isUniversalQrOpen, setIsUniversalQrOpen] = useState(false);
 
 	// Pagination State
 	const [currentPage, setCurrentPage] = useState(1);
@@ -115,7 +121,7 @@ export const VacanciesListView: React.FC = () => {
 				workMode: (v.workMode || "On-site") as any,
 				openPositions: totalPositions,
 				positionsCount: totalPositions,
-				status: (v.status || "Active") as any,
+				status: (v.status === "Active" ? "Open" : v.status || "Open") as any,
 				driveType: v.driveType || "Walk-in Drive",
 				createdAt:
 					v.createdAt ? new Date(v.createdAt).toISOString().split("T")[0] : "",
@@ -175,9 +181,9 @@ export const VacanciesListView: React.FC = () => {
 			const matchDrive =
 				driveFilter === "All" ||
 				(driveFilter === "Walk-in Drive" &&
-					(v.driveType === "Walk-in Drive" || !v.driveType)) ||
+					(v.driveType?.toLowerCase().includes("walk") || !v.driveType)) ||
 				(driveFilter === "Direct Hiring" &&
-					v.driveType === "Direct / Sourced Hiring");
+					v.driveType?.toLowerCase().includes("direct"));
 
 			const matchLocation =
 				locationFilter === "All" ||
@@ -234,6 +240,22 @@ export const VacanciesListView: React.FC = () => {
 				</div>
 
 				<div className='flex items-center gap-2.5'>
+					<motion.button
+						whileHover={{ scale: 1.02, y: -1 }}
+						whileTap={{ scale: 0.98 }}
+						type='button'
+						onClick={() => setIsUniversalQrOpen(true)}
+						className='h-9 px-3.5 flex items-center gap-2 rounded-xl bg-[var(--surface-1)] hover:bg-[var(--surface-hover)] text-[var(--text-primary)] text-xs font-semibold border border-[var(--border-default)] hover:border-[var(--accent-indigo)] transition-all cursor-pointer shadow-2xs'
+						title='View Universal /apply QR code and general candidate registration link'>
+						<Icon
+							name='qr-code'
+							size='xs'
+							className='text-[var(--accent-indigo)]'
+						/>
+						<span className='hidden sm:inline'>Universal /apply QR</span>
+						<span className='sm:hidden'>/apply QR</span>
+					</motion.button>
+
 					<motion.button
 						whileHover={{ scale: 1.02, y: -1 }}
 						whileTap={{ scale: 0.98 }}
@@ -492,7 +514,23 @@ export const VacanciesListView: React.FC = () => {
 											</div>
 										</div>
 
-										<div className='flex items-center gap-3 shrink-0'>
+										<div className='flex items-center gap-2.5 shrink-0'>
+											<button
+												type='button'
+												onClick={(e) => {
+													e.stopPropagation();
+													setQrModalVacancy(v);
+												}}
+												className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] hover:border-[var(--accent-indigo)] text-[var(--text-primary)] text-xs font-semibold transition-all cursor-pointer shadow-2xs group/qr'
+												title='View Apply QR Code and Share Link'>
+												<Icon
+													name='qr-code'
+													size='xs'
+													className='text-[var(--accent-indigo)] group-hover/qr:scale-110 transition-transform'
+												/>
+												<span className='hidden sm:inline'>Apply QR & Link</span>
+												<span className='sm:hidden'>QR</span>
+											</button>
 											<span
 												className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border font-mono uppercase ${statusVariantMap[v.status] || statusVariantMap.Open}`}>
 												{v.status}
@@ -581,6 +619,19 @@ export const VacanciesListView: React.FC = () => {
 				vacancy={selectedVacancy}
 				isOpen={!!selectedVacancy}
 				onClose={() => setSelectedVacancy(null)}
+			/>
+
+			{/* Dedicated Apply QR & Link Modal */}
+			<ApplyQrModal
+				vacancy={qrModalVacancy}
+				isOpen={!!qrModalVacancy}
+				onClose={() => setQrModalVacancy(null)}
+			/>
+
+			{/* Universal /apply Portal QR Modal */}
+			<UniversalApplyQrModal
+				isOpen={isUniversalQrOpen}
+				onClose={() => setIsUniversalQrOpen(false)}
 			/>
 		</div>
 	);

@@ -32,7 +32,12 @@ export default function CandidateRegistrationPortalPage() {
 	const router = useRouter();
 	const code = (params?.code as string) || "";
 
-	const { data: qrRes } = useRecordQRScanQuery(code, { skip: !code });
+	const {
+		data: qrRes,
+		isLoading: isQrLoading,
+		isError: isQrError,
+		refetch: refetchQr,
+	} = useRecordQRScanQuery(code, { skip: !code });
 	const qrData = qrRes?.data;
 
 	// ── Form State ──────────────────────────────────────────────────────────────
@@ -370,6 +375,117 @@ export default function CandidateRegistrationPortalPage() {
 		}
 	};
 
+	// ── 1. Loading State ────────────────────────────────────────────────────────
+	if (isQrLoading) {
+		return (
+			<div className='min-h-screen bg-[var(--canvas)] flex items-center justify-center p-4 font-sans'>
+				<motion.div
+					initial={{ opacity: 0, scale: 0.95 }}
+					animate={{ opacity: 1, scale: 1 }}
+					className='w-full max-w-md bg-[var(--surface-1)] border border-[var(--border-default)] rounded-3xl p-8 shadow-2xl text-center flex flex-col items-center gap-4'>
+					<div className='w-14 h-14 rounded-2xl bg-[var(--accent-indigo-dim)] text-[var(--accent-indigo)] flex items-center justify-center'>
+						<Icon name='spinner' size='lg' className='animate-spin' />
+					</div>
+					<div>
+						<h2 className='text-lg font-bold text-[var(--text-primary)]'>
+							Loading Vacancy Portal...
+						</h2>
+						<p className='text-xs text-[var(--text-secondary)] mt-1'>
+							Verifying registration code: <span className='font-mono font-bold'>{code}</span>
+						</p>
+					</div>
+				</motion.div>
+			</div>
+		);
+	}
+
+	// ── 2. Error / Not Found State ──────────────────────────────────────────────
+	if (isQrError || (!isQrLoading && !qrData)) {
+		return (
+			<div className='min-h-screen bg-[var(--canvas)] flex items-center justify-center p-4 font-sans'>
+				<motion.div
+					initial={{ opacity: 0, scale: 0.95, y: 16 }}
+					animate={{ opacity: 1, scale: 1, y: 0 }}
+					className='w-full max-w-lg bg-[var(--surface-1)] border border-[var(--border-default)] rounded-3xl p-7 sm:p-9 shadow-2xl text-center flex flex-col items-center gap-5'>
+					<div className='w-16 h-16 rounded-2xl bg-[var(--status-danger-bg)] border border-[var(--status-danger)]/30 text-[var(--status-danger)] flex items-center justify-center shadow-xs'>
+						<Icon name='alert-triangle' size='lg' />
+					</div>
+					<div className='space-y-2'>
+						<span className='px-3 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border-default)] text-[11px] font-mono font-bold text-[var(--text-tertiary)]'>
+							CODE: {code || "INVALID"}
+						</span>
+						<h2 className='text-xl sm:text-2xl font-black text-[var(--text-primary)] font-heading tracking-tight'>
+							Vacancy Not Found or Inactive
+						</h2>
+						<p className='text-xs sm:text-[13px] text-[var(--text-secondary)] leading-relaxed max-w-md mx-auto'>
+							We couldn&apos;t find an active drive or vacancy matching this code. The drive may have concluded, reached candidate capacity, or the link may be incorrect.
+						</p>
+					</div>
+
+					<div className='w-full p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-default)] text-left text-xs space-y-2'>
+						<div className='font-bold text-[var(--text-primary)] flex items-center gap-2'>
+							<Icon name='info' size='xs' className='text-[var(--accent-indigo)]' />
+							<span>What you can do:</span>
+						</div>
+						<ul className='list-disc list-inside text-[var(--text-secondary)] space-y-1 pl-1 text-[11.5px]'>
+							<li>Verify you typed or scanned the exact link provided.</li>
+							<li>Submit an application via our Universal Portal to be considered for all matching openings.</li>
+						</ul>
+					</div>
+
+					<div className='flex flex-col sm:flex-row items-center gap-3 w-full pt-1'>
+						<button
+							type='button'
+							onClick={() => router.push('/apply')}
+							className='w-full flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-xs font-bold transition-all cursor-pointer shadow-md'>
+							<Icon name='briefcase' size='xs' />
+							<span>Browse All Vacancies & Apply</span>
+						</button>
+						<button
+							type='button'
+							onClick={() => refetchQr()}
+							className='w-full sm:w-auto px-4 py-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] text-xs font-semibold text-[var(--text-primary)] transition-all cursor-pointer'>
+							Retry
+						</button>
+					</div>
+				</motion.div>
+			</div>
+		);
+	}
+
+	// ── 3. Drive Closed / Reached Capacity State ────────────────────────────────
+	if (qrData && qrData.isOpenForRegistration === false) {
+		return (
+			<div className='min-h-screen bg-[var(--canvas)] flex items-center justify-center p-4 font-sans'>
+				<motion.div
+					initial={{ opacity: 0, scale: 0.95, y: 16 }}
+					animate={{ opacity: 1, scale: 1, y: 0 }}
+					className='w-full max-w-lg bg-[var(--surface-1)] border border-[var(--border-default)] rounded-3xl p-7 sm:p-9 shadow-2xl text-center flex flex-col items-center gap-5'>
+					<div className='w-16 h-16 rounded-2xl bg-[var(--status-warning-bg)] border border-[var(--status-warning)]/30 text-[var(--status-warning)] flex items-center justify-center shadow-xs'>
+						<Icon name='pause-circle' size='lg' />
+					</div>
+					<div className='space-y-2'>
+						<h2 className='text-xl sm:text-2xl font-black text-[var(--text-primary)] font-heading tracking-tight'>
+							{qrData.vacancyTitle || "Registration Closed"}
+						</h2>
+						<p className='text-xs sm:text-[13px] text-[var(--text-secondary)] leading-relaxed max-w-md mx-auto'>
+							{qrData.message || "Registration for this vacancy or drive is currently closed or has reached capacity."}
+						</p>
+					</div>
+					<div className='w-full pt-1'>
+						<button
+							type='button'
+							onClick={() => router.push('/apply')}
+							className='w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--accent-indigo)] hover:bg-[var(--accent-indigo-hover)] text-white text-xs font-bold transition-all cursor-pointer shadow-md'>
+							<Icon name='briefcase' size='xs' />
+							<span>Apply Universally for Other Roles</span>
+						</button>
+					</div>
+				</motion.div>
+			</div>
+		);
+	}
+
 	return (
 		<div className='min-h-screen bg-[var(--canvas)] flex items-center justify-center p-3 sm:p-6 md:p-8 font-sans'>
 			{/* ── Main Portal Card with Tactile Spring Entrance ───────────────────── */}
@@ -432,10 +548,12 @@ export default function CandidateRegistrationPortalPage() {
 						</div>
 						<p className='text-xs text-[var(--text-secondary)] font-medium mt-1 flex items-center justify-center gap-2 flex-wrap'>
 							{qrData?.departmentName && <span>{qrData.departmentName}</span>}
-							{qrData?.departmentName && qrData?.venueName && (
+							{qrData?.departmentName && (qrData?.venueName || qrData?.locationName) && (
 								<span className='text-[var(--text-tertiary)]'>•</span>
 							)}
-							{qrData?.venueName && <span>📍 {qrData.venueName}</span>}
+							{(qrData?.venueName || qrData?.locationName) && (
+								<span>📍 {qrData?.venueName || qrData?.locationName}</span>
+							)}
 							{qrData?.openingsCount && (
 								<span className='text-[var(--text-tertiary)]'>•</span>
 							)}
@@ -443,6 +561,23 @@ export default function CandidateRegistrationPortalPage() {
 								<span>{qrData.openingsCount} Open Positions</span>
 							)}
 						</p>
+
+						{/* Track Guidance Banner */}
+						<div className='mt-2.5 pt-2 border-t border-[var(--border-default)] flex items-center justify-between gap-3 text-[11px] text-[var(--text-tertiary)] flex-wrap text-left'>
+							<span className='flex items-center gap-1.5'>
+								<span className='w-1.5 h-1.5 rounded-full bg-[var(--accent-indigo)] shrink-0' />
+								{qrData?.driveType?.toLowerCase().includes("direct")
+									? "Direct Sourced Application — Profile will be forwarded for HR Screening (Round 1)."
+									: "Walk-in Spot Registration — Generates instant QR Exam Pass for on-site assessment."}
+							</span>
+							<button
+								type='button'
+								onClick={() => router.push("/apply")}
+								className='text-[var(--accent-indigo)] font-bold hover:underline cursor-pointer flex items-center gap-1 ml-auto'>
+								<span>Universal Apply</span>
+								<Icon name='arrow-right' size='xs' />
+							</button>
+						</div>
 					</div>
 				</motion.div>
 

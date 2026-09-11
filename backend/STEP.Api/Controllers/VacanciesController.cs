@@ -22,7 +22,7 @@ namespace STEP.Api.Controllers
     {
         [HttpGet]
         public async Task<IActionResult> GetVacancies(
-            [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20,
+            [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 100,
             [FromQuery] string? search = null, [FromQuery] string? status = null)
         {
             var result = await mediator.Send(new GetVacanciesQuery(pageIndex, pageSize, search, status));

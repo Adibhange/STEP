@@ -23,7 +23,12 @@ namespace STEP.Application.Features.QR.Common
         string VacancyTitle,
         string VenueName,
         bool IsOpenForRegistration,
-        string? Message);
+        string? Message,
+        string? DriveType = null,
+        string? DepartmentName = null,
+        string? LocationName = null,
+        int? OpeningsCount = null,
+        string? VacancyCode = null);
 
     public record QRCodeAnalyticsDto(
         int QRCodeId,

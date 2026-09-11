@@ -15,16 +15,23 @@ namespace STEP.Application.Features.QR.Commands.RecordQRScan
         {
             var qrCode = await db.QRCodes
                 .Include(q => q.Vacancy)
+                    .ThenInclude(v => v.Department)
+                .Include(q => q.Vacancy)
+                    .ThenInclude(v => v.HiringLocation)
                 .FirstOrDefaultAsync(q => q.Code == request.Code, cancellationToken);
 
             if (qrCode == null)
             {
                 var vacancy = await db.Vacancies
+                    .Include(v => v.Department)
+                    .Include(v => v.HiringLocation)
                     .FirstOrDefaultAsync(v => v.VacancyCode == request.Code, cancellationToken);
 
                 if (vacancy == null && int.TryParse(request.Code, out int numericId))
                 {
                     vacancy = await db.Vacancies
+                        .Include(v => v.Department)
+                        .Include(v => v.HiringLocation)
                         .FirstOrDefaultAsync(v => v.Id == numericId, cancellationToken);
                 }
 
@@ -32,6 +39,9 @@ namespace STEP.Application.Features.QR.Commands.RecordQRScan
                 {
                     qrCode = await db.QRCodes
                         .Include(q => q.Vacancy)
+                            .ThenInclude(v => v.Department)
+                        .Include(q => q.Vacancy)
+                            .ThenInclude(v => v.HiringLocation)
                         .FirstOrDefaultAsync(q => q.VacancyId == vacancy.Id, cancellationToken);
 
                     if (qrCode == null)
@@ -72,7 +82,20 @@ namespace STEP.Application.Features.QR.Commands.RecordQRScan
 
             await db.SaveChangesAsync(cancellationToken);
 
-            return new QRScanResultDto(qrCode.Id, qrCode.VacancyId, qrCode.Vacancy.Title, qrCode.VenueName, isOpen, message);
+            var vac = qrCode.Vacancy;
+            return new QRScanResultDto(
+                qrCode.Id,
+                qrCode.VacancyId,
+                vac?.Title ?? "Open Position",
+                qrCode.VenueName ?? vac?.HiringLocation?.Name ?? "Main Office",
+                isOpen,
+                message,
+                vac?.DriveType ?? "Walk-in Drive",
+                vac?.Department?.Name,
+                vac?.HiringLocation?.Name,
+                vac?.TotalOpenings,
+                vac?.VacancyCode
+            );
         }
     }
 }
