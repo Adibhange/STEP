@@ -74,6 +74,22 @@ export const candidatesApi = stepApi.injectEndpoints({
 			}),
 			invalidatesTags: ["Candidates"],
 		}),
+		updateRoundInterviewerFeedback: builder.mutation<
+			ApiEnvelope<any>,
+			{
+				candidateId: number;
+				roundNumber: number;
+				interviewerUserId?: number | null;
+				feedback?: string | null;
+			}
+		>({
+			query: ({ candidateId, roundNumber, ...body }) => ({
+				url: `/candidates/${candidateId}/rounds/${roundNumber}/interviewer-feedback`,
+				method: "PUT",
+				body,
+			}),
+			invalidatesTags: ["Candidates"],
+		}),
 		uploadCandidateDocument: builder.mutation<
 			ApiEnvelope<any>,
 			{ candidateId: number; file: File; documentType?: string }
@@ -223,6 +239,7 @@ export const {
 	useUpdateCandidateMutation,
 	useAssignPipelineFlowMutation,
 	useAssignEvaluatorMutation,
+	useUpdateRoundInterviewerFeedbackMutation,
 	useUploadCandidateDocumentMutation,
 	useDeleteCandidateDocumentMutation,
 	useScheduleCandidateTestMutation,
