@@ -37,7 +37,7 @@ const ROWS_PER_PAGE_DEFAULT = 10;
 export const CandidateWorkspace: React.FC = () => {
 	const router = useRouter();
 	const searchInputRef = useRef<HTMLInputElement>(null);
-	const { data: apiCandidatesResponse, isLoading } = useGetCandidatesQuery();
+	const { data: apiCandidatesResponse, isLoading } = useGetCandidatesQuery({ pageSize: 0 });
 
 	const apiCandidates: DashboardCandidate[] = useMemo(() => {
 		const list = Array.isArray(apiCandidatesResponse?.data)
@@ -257,6 +257,14 @@ export const CandidateWorkspace: React.FC = () => {
 		1,
 		Math.ceil(filteredCandidates.length / rowsPerPage),
 	);
+
+	// Ensure currentPage stays within valid bounds when filtered dataset shrinks
+	useEffect(() => {
+		if (currentPage > totalPages) {
+			setCurrentPage(1);
+		}
+	}, [currentPage, totalPages]);
+
 	const paginatedCandidates = useMemo(
 		() =>
 			filteredCandidates.slice(
@@ -430,7 +438,11 @@ export const CandidateWorkspace: React.FC = () => {
 				totalRecords={filteredCandidates.length}
 				rowsPerPage={rowsPerPage}
 				onPageChange={setCurrentPage}
-				onRowsPerPageChange={(n) => setRowsPerPage(n)}
+				onRowsPerPageChange={(n) => {
+					setRowsPerPage(n);
+					setCurrentPage(1);
+				}}
+				rowsPerPageOptions={[10, 20, 50, 100]}
 			/>
 
 			{/* Modals & Dialogs */}

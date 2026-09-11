@@ -17,11 +17,12 @@ namespace STEP.Api.Controllers
         [HttpGet]
         [Authorize(Policy = "Candidate.View")]
         public async Task<IActionResult> GetCandidates(
-            [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20,
+            [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 0,
             [FromQuery] string? search = null, [FromQuery] string? status = null, [FromQuery] int? vacancyId = null)
         {
             var result = await mediator.Send(new GetCandidatesQuery(pageIndex, pageSize, search, status, vacancyId));
-            var meta = new PaginationMeta { PageIndex = pageIndex, PageSize = pageSize, TotalCount = result.TotalCount };
+            var metaPageSize = pageSize > 0 ? pageSize : (result.TotalCount > 0 ? result.TotalCount : 1);
+            var meta = new PaginationMeta { PageIndex = pageIndex, PageSize = metaPageSize, TotalCount = result.TotalCount };
             return Ok(ApiResponse<object>.Ok(result.Items, "Candidates retrieved successfully", meta));
         }
 

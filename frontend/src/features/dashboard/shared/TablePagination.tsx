@@ -26,8 +26,10 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 	totalRecords,
 	rowsPerPage = 10,
 	onPageChange,
+	onRowsPerPageChange,
+	rowsPerPageOptions = [10, 20, 50, 100],
 }) => {
-	const from = Math.min((currentPage - 1) * rowsPerPage + 1, totalRecords);
+	const from = totalRecords === 0 ? 0 : Math.min((currentPage - 1) * rowsPerPage + 1, totalRecords);
 	const to = Math.min(currentPage * rowsPerPage, totalRecords);
 
 	// Generate page numbers with ellipsis
@@ -52,17 +54,37 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
 	return (
 		<div className='flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-2.5 bg-surface-1 border-t border-border-default'>
-			{/* Record range */}
-			<span className='text-xs sm:text-[12.5px] font-sans font-medium text-text-secondary'>
-				Showing{" "}
-				<strong className='font-bold text-text-primary'>
-					{from.toLocaleString()}–{to.toLocaleString()}
-				</strong>{" "}
-				of{" "}
-				<strong className='font-bold text-text-primary'>
-					{totalRecords.toLocaleString()}
-				</strong>
-			</span>
+			{/* Record range & Rows per page */}
+			<div className='flex items-center gap-3'>
+				<span className='text-xs sm:text-[12.5px] font-sans font-medium text-text-secondary'>
+					Showing{" "}
+					<strong className='font-bold text-text-primary'>
+						{from.toLocaleString()}–{to.toLocaleString()}
+					</strong>{" "}
+					of{" "}
+					<strong className='font-bold text-text-primary'>
+						{totalRecords.toLocaleString()}
+					</strong>
+				</span>
+
+				{onRowsPerPageChange && rowsPerPageOptions && rowsPerPageOptions.length > 0 && (
+					<div className='hidden sm:flex items-center gap-1.5 text-xs text-text-tertiary font-sans font-medium'>
+						<span className='opacity-40'>|</span>
+						<span>Per page:</span>
+						<select
+							value={rowsPerPage}
+							onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
+							aria-label='Rows per page'
+							className='bg-surface-2 border border-border-default rounded-md px-1.5 py-0.5 text-xs font-semibold text-text-primary focus:outline-none focus:border-accent-indigo cursor-pointer'>
+							{rowsPerPageOptions.map((opt) => (
+								<option key={opt} value={opt}>
+									{opt}
+								</option>
+							))}
+						</select>
+					</div>
+				)}
+			</div>
 
 			{/* Page numbers navigation */}
 			<nav

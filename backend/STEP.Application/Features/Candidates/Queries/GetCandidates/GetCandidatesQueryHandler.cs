@@ -46,14 +46,23 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidates
 
             var totalCount = await query.CountAsync(cancellationToken);
 
-            var pageIndex = request.PageIndex < 1 ? 1 : request.PageIndex;
-            var pageSize = request.PageSize is < 1 or > 200 ? 20 : request.PageSize;
-
-            var rawCandidates = await query
-                .OrderByDescending(c => c.Id)
-                .Skip((pageIndex - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
+            List<Domain.Entities.Candidate.Candidate> rawCandidates;
+            if (request.PageSize > 0)
+            {
+                var pageIndex = request.PageIndex < 1 ? 1 : request.PageIndex;
+                var pageSize = request.PageSize;
+                rawCandidates = await query
+                    .OrderByDescending(c => c.Id)
+                    .Skip((pageIndex - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync(cancellationToken);
+            }
+            else
+            {
+                rawCandidates = await query
+                    .OrderByDescending(c => c.Id)
+                    .ToListAsync(cancellationToken);
+            }
 
             var candidateIds = rawCandidates.Select(c => c.Id).ToList();
 
