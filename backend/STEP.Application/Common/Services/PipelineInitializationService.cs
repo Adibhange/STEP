@@ -98,7 +98,8 @@ namespace STEP.Application.Common.Services
                     RoundNumber = roundDef.RoundOrder,
                     RoundTitle = roundDef.Name,
                     RoundType = PipelineRoundClassification.Classify(roundDef.RoundType ?? "Assessment"),
-                    Status = "Pending"
+                    Status = "Pending",
+                    AssessmentMode = "In Office"
                 };
 
                 if (isDirect)

@@ -328,7 +328,7 @@ function UniversalRegistrationContent() {
 		const sizeStr =
 			file.size > 1024 * 1024 ?
 				`${(file.size / (1024 * 1024)).toFixed(1)} MB`
-			:	`${Math.round(file.size / 1024)} KB`;
+				: `${Math.round(file.size / 1024)} KB`;
 
 		setFileErrors((prev) => ({ ...prev, resume: undefined }));
 		const reader = new FileReader();
@@ -450,7 +450,7 @@ function UniversalRegistrationContent() {
 					resData.examPortalUrl ||
 					(applicationChannel === "Walk-in" ?
 						`/exam?code=${resData.candidateCode || `CND-${new Date().getFullYear()}-1001`}&pass=1234`
-					:	undefined),
+						: undefined),
 			});
 		} catch (err: any) {
 			const errorMsg =
@@ -526,7 +526,7 @@ function UniversalRegistrationContent() {
 							<strong className='text-status-success-text font-bold'>
 								{submissionResult.channel === "Walk-in" ?
 									"Round 1: Proctored Assessment"
-								:	"HR Resume Review"}
+									: "HR Resume Review"}
 							</strong>
 						</div>
 					</div>
@@ -541,18 +541,17 @@ function UniversalRegistrationContent() {
 									name='code-2'
 									size='sm'
 								/>
-								<span>Start Proctored Assessment Now</span>
+								<span>Start Assessment Now</span>
 								<Icon
 									name='arrow-right'
 									size='xs'
 								/>
 							</button>
 							<p className='text-[10.5px] text-center text-text-tertiary'>
-								Please ensure webcam & microphone permissions are enabled on the
-								next page.
+								In-office assessment. Proceed directly to your test.
 							</p>
 						</div>
-					:	<div className='text-center space-y-3'>
+						: <div className='text-center space-y-3'>
 							<div className='p-3 bg-status-info-bg border border-status-info-border rounded-xl text-status-info-text text-xs'>
 								Our talent team will review your application and contact you
 								with interview schedules.
@@ -629,41 +628,38 @@ function UniversalRegistrationContent() {
 								style={{
 									width:
 										currentStep === 1 ? "16%"
-										: currentStep === 2 ? "50%"
-										: "100%",
+											: currentStep === 2 ? "50%"
+												: "100%",
 								}}
 							/>
 
 							<button
 								type='button'
 								onClick={() => setCurrentStep(1)}
-								className={`relative z-10 size-7 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
-									currentStep >= 1 ?
+								className={`relative z-10 size-7 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${currentStep >= 1 ?
 										"bg-accent-indigo text-white shadow-sm ring-4 ring-surface-1"
-									:	"bg-surface-3 text-text-tertiary"
-								}`}>
+										: "bg-surface-3 text-text-tertiary"
+									}`}>
 								1
 							</button>
 
 							<button
 								type='button'
 								onClick={() => handleProceedToStep2()}
-								className={`relative z-10 size-7 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
-									currentStep >= 2 ?
+								className={`relative z-10 size-7 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${currentStep >= 2 ?
 										"bg-accent-indigo text-white shadow-sm ring-4 ring-surface-1"
-									:	"bg-surface-3 text-text-tertiary ring-4 ring-surface-1"
-								}`}>
+										: "bg-surface-3 text-text-tertiary ring-4 ring-surface-1"
+									}`}>
 								2
 							</button>
 
 							<button
 								type='button'
 								onClick={() => handleProceedToStep3()}
-								className={`relative z-10 size-7 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
-									currentStep === 3 ?
+								className={`relative z-10 size-7 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${currentStep === 3 ?
 										"bg-accent-indigo text-white shadow-sm ring-4 ring-surface-1"
-									:	"bg-surface-3 text-text-tertiary ring-4 ring-surface-1"
-								}`}>
+										: "bg-surface-3 text-text-tertiary ring-4 ring-surface-1"
+									}`}>
 								3
 							</button>
 						</div>
@@ -673,7 +669,7 @@ function UniversalRegistrationContent() {
 								className={
 									currentStep === 1 ?
 										"text-accent-indigo font-bold"
-									:	"text-text-tertiary"
+										: "text-text-tertiary"
 								}>
 								1. Role & Location
 							</span>
@@ -681,7 +677,7 @@ function UniversalRegistrationContent() {
 								className={
 									currentStep === 2 ?
 										"text-accent-indigo font-bold"
-									:	"text-text-tertiary"
+										: "text-text-tertiary"
 								}>
 								2. Profile & Academics
 							</span>
@@ -689,7 +685,7 @@ function UniversalRegistrationContent() {
 								className={
 									currentStep === 3 ?
 										"text-accent-indigo font-bold"
-									:	"text-text-tertiary"
+										: "text-text-tertiary"
 								}>
 								3. Experience & Documents
 							</span>
@@ -720,7 +716,7 @@ function UniversalRegistrationContent() {
 										errors.global.toLowerCase().includes("already applied")
 									) ?
 										"90-Day Application Cooldown Active"
-									:	"Registration Failed"}
+										: "Registration Failed"}
 								</h4>
 								<p className='text-xs text-text-primary leading-relaxed'>
 									{errors.global}
@@ -766,17 +762,15 @@ function UniversalRegistrationContent() {
 										<button
 											type='button'
 											onClick={() => setApplicationChannel("Walk-in")}
-											className={`h-16 p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
-												applicationChannel === "Walk-in" ?
+											className={`h-16 p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${applicationChannel === "Walk-in" ?
 													"bg-accent-indigo-dim/60 border-accent-indigo text-text-primary shadow-xs ring-1 ring-accent-indigo/60"
-												:	"bg-surface-2/60 border-border-default text-text-secondary hover:border-border-strong hover:bg-surface-2"
-											}`}>
-											<div
-												className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
-													applicationChannel === "Walk-in" ?
-														"bg-accent-indigo text-white"
-													:	"bg-surface-3 text-text-tertiary"
+													: "bg-surface-2/60 border-border-default text-text-secondary hover:border-border-strong hover:bg-surface-2"
 												}`}>
+											<div
+												className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${applicationChannel === "Walk-in" ?
+														"bg-accent-indigo text-white"
+														: "bg-surface-3 text-text-tertiary"
+													}`}>
 												<Icon
 													name='building'
 													size='xs'
@@ -802,17 +796,15 @@ function UniversalRegistrationContent() {
 										<button
 											type='button'
 											onClick={() => setApplicationChannel("Direct")}
-											className={`h-16 p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
-												applicationChannel === "Direct" ?
+											className={`h-16 p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer ${applicationChannel === "Direct" ?
 													"bg-accent-cyan/10 border-accent-cyan text-text-primary shadow-xs ring-1 ring-accent-cyan/60"
-												:	"bg-surface-2/60 border-border-default text-text-secondary hover:border-border-strong hover:bg-surface-2"
-											}`}>
-											<div
-												className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
-													applicationChannel === "Direct" ?
-														"bg-accent-cyan text-white"
-													:	"bg-surface-3 text-text-tertiary"
+													: "bg-surface-2/60 border-border-default text-text-secondary hover:border-border-strong hover:bg-surface-2"
 												}`}>
+											<div
+												className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${applicationChannel === "Direct" ?
+														"bg-accent-cyan text-white"
+														: "bg-surface-3 text-text-tertiary"
+													}`}>
 												<Icon
 													name='send'
 													size='xs'
@@ -878,11 +870,10 @@ function UniversalRegistrationContent() {
 										<button
 											type='button'
 											onClick={() => setCandidateType("Fresher")}
-											className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-												candidateType === "Fresher" ?
+											className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${candidateType === "Fresher" ?
 													"bg-surface-2 border-accent-indigo text-accent-indigo ring-1 ring-accent-indigo shadow-xs"
-												:	"bg-surface-2/60 text-text-secondary border-border-default hover:bg-surface-2"
-											}`}>
+													: "bg-surface-2/60 text-text-secondary border-border-default hover:bg-surface-2"
+												}`}>
 											<Icon
 												name='user'
 												size='xs'
@@ -893,11 +884,10 @@ function UniversalRegistrationContent() {
 										<button
 											type='button'
 											onClick={() => setCandidateType("Experienced")}
-											className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-												candidateType === "Experienced" ?
+											className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${candidateType === "Experienced" ?
 													"bg-surface-2 border-accent-indigo text-accent-indigo ring-1 ring-accent-indigo shadow-xs"
-												:	"bg-surface-2/60 text-text-secondary border-border-default hover:bg-surface-2"
-											}`}>
+													: "bg-surface-2/60 text-text-secondary border-border-default hover:bg-surface-2"
+												}`}>
 											<Icon
 												name='trending-up'
 												size='xs'
@@ -967,11 +957,10 @@ function UniversalRegistrationContent() {
 													onChange={(e) => setFirstName(e.target.value)}
 													onBlur={() => handleBlur("firstName", firstName)}
 													placeholder='e.g. Aarav'
-													className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${
-														touched.firstName && errors.firstName ?
+													className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${touched.firstName && errors.firstName ?
 															"border-status-danger-border bg-status-danger-bg/10"
-														:	"border-border-default"
-													}`}
+															: "border-border-default"
+														}`}
 												/>
 											</div>
 											{touched.firstName && errors.firstName && (
@@ -998,11 +987,10 @@ function UniversalRegistrationContent() {
 													onChange={(e) => setLastName(e.target.value)}
 													onBlur={() => handleBlur("lastName", lastName)}
 													placeholder='e.g. Sharma'
-													className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${
-														touched.lastName && errors.lastName ?
+													className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${touched.lastName && errors.lastName ?
 															"border-status-danger-border bg-status-danger-bg/10"
-														:	"border-border-default"
-													}`}
+															: "border-border-default"
+														}`}
 												/>
 											</div>
 											{touched.lastName && errors.lastName && (
@@ -1032,11 +1020,10 @@ function UniversalRegistrationContent() {
 													onChange={(e) => setEmail(e.target.value)}
 													onBlur={() => handleBlur("email", email)}
 													placeholder='name@example.com'
-													className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${
-														touched.email && errors.email ?
+													className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${touched.email && errors.email ?
 															"border-status-danger-border bg-status-danger-bg/10"
-														:	"border-border-default"
-													}`}
+															: "border-border-default"
+														}`}
 												/>
 											</div>
 											{touched.email && errors.email && (
@@ -1064,11 +1051,10 @@ function UniversalRegistrationContent() {
 													onChange={(e) => setPhone(e.target.value)}
 													onBlur={() => handleBlur("phone", phone)}
 													placeholder='10-digit mobile'
-													className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${
-														touched.phone && errors.phone ?
+													className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${touched.phone && errors.phone ?
 															"border-status-danger-border bg-status-danger-bg/10"
-														:	"border-border-default"
-													}`}
+															: "border-border-default"
+														}`}
 												/>
 											</div>
 											{touched.phone && errors.phone && (
@@ -1123,11 +1109,10 @@ function UniversalRegistrationContent() {
 												onChange={(e) => setCurrentCity(e.target.value)}
 												onBlur={() => handleBlur("currentCity", currentCity)}
 												placeholder='e.g. Pune, Maharashtra'
-												className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${
-													touched.currentCity && errors.currentCity ?
+												className={`w-full h-10 pl-8.5 pr-3 rounded-xl text-xs bg-surface-2/60 text-text-primary border transition-all outline-none focus:border-accent-indigo focus:bg-surface-1 focus:ring-2 focus:ring-accent-indigo/15 ${touched.currentCity && errors.currentCity ?
 														"border-status-danger-border bg-status-danger-bg/10"
-													:	"border-border-default"
-												}`}
+														: "border-border-default"
+													}`}
 											/>
 										</div>
 										{touched.currentCity && errors.currentCity && (
@@ -1481,7 +1466,7 @@ function UniversalRegistrationContent() {
 														/>
 													</button>
 												</div>
-											:	<div
+												: <div
 													onClick={() => photoInputRef.current?.click()}
 													className='h-16 border-2 border-dashed border-border-default hover:border-accent-indigo/60 bg-surface-2/40 hover:bg-surface-2 rounded-2xl px-3.5 flex items-center gap-3 cursor-pointer transition-all'>
 													<div className='size-8 rounded-lg bg-surface-3 text-text-tertiary flex items-center justify-center shrink-0'>
@@ -1547,7 +1532,7 @@ function UniversalRegistrationContent() {
 														/>
 													</button>
 												</div>
-											:	<div
+												: <div
 													onClick={() => resumeInputRef.current?.click()}
 													className='h-16 border-2 border-dashed border-border-default hover:border-accent-indigo/60 bg-surface-2/40 hover:bg-surface-2 rounded-2xl px-3.5 flex items-center gap-3 cursor-pointer transition-all'>
 													<div className='size-8 rounded-lg bg-accent-indigo-dim text-accent-indigo flex items-center justify-center shrink-0'>
@@ -1596,7 +1581,7 @@ function UniversalRegistrationContent() {
 												/>
 												<span>Finalizing...</span>
 											</>
-										:	<>
+											: <>
 												<Icon
 													name='send'
 													size='xs'

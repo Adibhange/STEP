@@ -1432,17 +1432,17 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 						<div>
 							<div className='flex items-center gap-2 mb-1.5'>
 								{session?.requireCameraAndMic ?
-									<span className='px-2.5 py-0.5 rounded-full bg-status-success-bg text-status-success-text border border-status-success-border text-[10.5px] font-mono font-bold'>
-										PROCTORED ASSESSMENT
+									<span className='px-2.5 py-0.5 rounded-full bg-status-warning-bg text-status-warning-text border border-status-warning-border text-[10.5px] font-mono font-bold'>
+										REMOTE PROCTORED (FROM HOME)
 									</span>
 								:	<span className='px-2.5 py-0.5 rounded-full bg-surface-2 text-text-secondary border border-border-default text-[10.5px] font-mono font-bold'>
-										SECURE ASSESSMENT
+										IN-OFFICE ASSESSMENT
 									</span>
 								}
 								<span className='text-[11px] font-mono text-text-tertiary'>
-									{testMode === "In Office" ?
-										"• In Office Test"
-									:	"• Online Test"}
+									{session?.requireCameraAndMic ?
+										"• Remote Proctored Test"
+									:	"• In-Office Test (No Camera / Mic Required)"}
 								</span>
 							</div>
 							<h1 className='text-xl sm:text-2xl font-bold text-text-primary font-heading'>

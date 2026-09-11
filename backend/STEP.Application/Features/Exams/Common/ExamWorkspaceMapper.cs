@@ -67,15 +67,20 @@ namespace STEP.Application.Features.Exams.Common
             var paperTitle = session.AssessmentBlueprint?.Name ?? "Technical Assessment";
 
             int? roundNumber = session.CandidatePipelineProgress?.RoundNumber;
-            string testMode = session.CandidatePipelineProgress?.AssessmentMode ?? "Online";
-            
-            bool isAptitude = roundNumber == 1 || (session.CandidatePipelineProgress?.RoundTitle?.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) ?? false);
-            bool isOffice = testMode.Contains("Office", StringComparison.OrdinalIgnoreCase) 
-                || testMode.Contains("Walk-in", StringComparison.OrdinalIgnoreCase)
-                || (session.Candidate?.RegistrationChannel == "Walk-in");
 
-            bool requireCameraAndMic = !isAptitude && !isOffice;
-            string effectiveMode = isOffice ? "In Office" : "Online";
+            // Video and microphone validation is ONLY for Direct Vacancies AND ONLY with explicit HR permission for tests taken from home.
+            // Walk-in candidates take their exam on-site in the office and NEVER require camera or microphone validation.
+            var isDirectVacancy = (session.Vacancy?.DriveType?.Contains("Direct", StringComparison.OrdinalIgnoreCase) ?? false)
+                || session.Candidate?.RegistrationChannel == "Direct Sourced";
+
+            var assessmentMode = session.CandidatePipelineProgress?.AssessmentMode;
+            var hasHrHomeTestPermission = isDirectVacancy && !string.IsNullOrWhiteSpace(assessmentMode) &&
+                (assessmentMode.Equals("From Home", StringComparison.OrdinalIgnoreCase)
+                 || assessmentMode.Contains("Home", StringComparison.OrdinalIgnoreCase)
+                 || assessmentMode.Contains("Remote", StringComparison.OrdinalIgnoreCase));
+
+            bool requireCameraAndMic = isDirectVacancy && hasHrHomeTestPermission;
+            string effectiveMode = hasHrHomeTestPermission ? "Remote (From Home)" : "In Office";
 
             return new LiveExamWorkspaceDto(
                 session.SessionToken,
