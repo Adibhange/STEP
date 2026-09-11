@@ -29,24 +29,62 @@ namespace STEP.Application.Common.Services
                 .Include(f => f.Rounds)
                 .FirstOrDefaultAsync(f => f.VacancyId == vacancy.Id && !f.IsDeleted, cancellationToken);
 
-            if (defaultFlow == null)
+            if (defaultFlow == null || !defaultFlow.Rounds.Any(r => !r.IsDeleted))
             {
-                // Fallback to auto-provision canonical rounds if no flow defined
-                defaultFlow = new VacancyPipelineFlow
+                var roleName = (vacancy.MasterRole?.Name ?? "").ToLowerInvariant();
+                var vacTitle = (vacancy.Title ?? "").ToLowerInvariant();
+                var isNonIT = roleName.Contains("survey") || roleName.Contains("civil") || roleName.Contains("admin") ||
+                              vacTitle.Contains("survey") || vacTitle.Contains("civil") || vacTitle.Contains("assistant");
+                var isDirectDrive = isDirect || (vacancy.DriveType != null && vacancy.DriveType.Contains("Direct", StringComparison.OrdinalIgnoreCase));
+
+                if (defaultFlow == null)
                 {
-                    VacancyId = vacancy.Id,
-                    VersionName = "Standard Template",
-                    Description = "Auto-provisioned standard pipeline",
-                    IsDefault = true,
-                    Rounds = new List<VacancyPipelineFlowRound>
+                    defaultFlow = new VacancyPipelineFlow
                     {
-                        new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Aptitude & Screening", RoundType = "Assessment" },
-                        new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Technical Assignment", RoundType = "Assessment" },
-                        new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Technical Interview", RoundType = "Interview" },
-                        new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Director / HR Final", RoundType = "Interview" }
+                        VacancyId = vacancy.Id,
+                        VersionName = "Standard Template",
+                        Description = "Auto-provisioned standard pipeline",
+                        IsDefault = true,
+                    };
+                    db.VacancyPipelineFlows.Add(defaultFlow);
+                }
+
+                defaultFlow.Rounds.Clear();
+                if (isNonIT)
+                {
+                    if (isDirectDrive)
+                    {
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "HR Sourcing & Screening", RoundType = "HR Screening", CutoffPercent = 0 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Domain Assessment", RoundType = "Assessment", CutoffPercent = 50 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Technical Interview", RoundType = "Interview", CutoffPercent = 0 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Director Interview", RoundType = "Interview", CutoffPercent = 0 });
                     }
-                };
-                db.VacancyPipelineFlows.Add(defaultFlow);
+                    else
+                    {
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "Domain & Aptitude Assessment", RoundType = "Assessment", CutoffPercent = 50 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Technical Interview", RoundType = "Interview", CutoffPercent = 0 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Director Interview", RoundType = "Interview", CutoffPercent = 0 });
+                    }
+                }
+                else
+                {
+                    if (isDirectDrive)
+                    {
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "HR Screening (Auto-Passed)", RoundType = "HR Screening", CutoffPercent = 0 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Technical Assessment", RoundType = "Assessment", CutoffPercent = 50 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Technical Interview", RoundType = "Interview", CutoffPercent = 0 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Director Interview", RoundType = "Interview", CutoffPercent = 0 });
+                    }
+                    else
+                    {
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 1, Name = "General Aptitude Test", RoundType = "Assessment", CutoffPercent = 50 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 2, Name = "Technical Assessment", RoundType = "Assessment", CutoffPercent = 50 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 3, Name = "Technical Interview", RoundType = "Interview", CutoffPercent = 0 });
+                        defaultFlow.Rounds.Add(new VacancyPipelineFlowRound { RoundOrder = 4, Name = "Director Interview", RoundType = "Interview", CutoffPercent = 0 });
+                    }
+                }
+
+                STEP.Application.Common.PipelineFlowRoundDefaults.EnsureEndsWithDirectorRound(defaultFlow.Rounds);
                 await db.SaveChangesAsync(cancellationToken);
             }
 

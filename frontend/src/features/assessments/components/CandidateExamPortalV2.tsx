@@ -536,14 +536,17 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 			setIsTimerRunning(false);
 
 			// Explicitly pack all answers in memory and sync before submitting
-			if (activeSessionToken && Object.keys(answersMap).length > 0) {
-				const answerList = Object.entries(answersMap).map(([qId, val]) => ({
-					candidateExamSessionQuestionId: Number(qId),
-					submittedAnswerText: val.text || null,
-					selectedOptionIds: val.optionIds || [],
-					clientTimestamp: val.updatedAt || new Date().toISOString(),
-				}));
+			const answerList =
+				activeSessionToken && Object.keys(answersMap).length > 0 ?
+					Object.entries(answersMap).map(([qId, val]) => ({
+						candidateExamSessionQuestionId: Number(qId),
+						submittedAnswerText: val.text || null,
+						selectedOptionIds: val.optionIds || [],
+						clientTimestamp: val.updatedAt || new Date().toISOString(),
+					}))
+				:	[];
 
+			if (activeSessionToken && answerList.length > 0) {
 				try {
 					await saveAnswerBatchApi({
 						sessionToken: activeSessionToken,
@@ -558,6 +561,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 				const res = await submitExamApi({
 					sessionToken: activeSessionToken,
 					reason: customReason || "Candidate completed examination",
+					answers: answerList,
 				}).unwrap();
 				if (res.success) setSubmitResult(res.data);
 			} catch (e) {
@@ -953,19 +957,15 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 		isMulti: boolean,
 	) => {
 		const timeStamp = new Date().toISOString();
+		const currentOptIds = answersMap[questionId]?.optionIds || [];
+		const nextOptIds: number[] =
+			isMulti ?
+				currentOptIds.includes(optionId) ?
+					currentOptIds.filter((id) => id !== optionId)
+				:	[...currentOptIds, optionId]
+			:	[optionId];
+
 		setAnswersMap((prev) => {
-			const currentOptIds = prev[questionId]?.optionIds || [];
-			let nextOptIds: number[];
-
-			if (isMulti) {
-				nextOptIds =
-					currentOptIds.includes(optionId) ?
-						currentOptIds.filter((id) => id !== optionId)
-					:	[...currentOptIds, optionId];
-			} else {
-				nextOptIds = [optionId];
-			}
-
 			const updated = {
 				...prev,
 				[questionId]: {
@@ -986,7 +986,7 @@ export const CandidateExamPortalV2: React.FC<CandidateExamPortalV2Props> = ({
 				answers: [
 					{
 						candidateExamSessionQuestionId: questionId,
-						selectedOptionIds: isMulti ? undefined : [optionId],
+						selectedOptionIds: nextOptIds,
 						clientTimestamp: timeStamp,
 					},
 				],

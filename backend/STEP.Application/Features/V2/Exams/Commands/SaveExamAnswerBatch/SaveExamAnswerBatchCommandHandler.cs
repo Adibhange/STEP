@@ -24,7 +24,7 @@ namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
 
             if (sessionV2 != null)
             {
-                if (sessionV2.SessionStatus != "InProgress" && sessionV2.SessionStatus != "Ready" && sessionV2.SessionStatus != "Created")
+                if (sessionV2.SessionStatus != "InProgress" && sessionV2.SessionStatus != "Ready" && sessionV2.SessionStatus != "Created" && sessionV2.SessionStatus != "Submitted")
                 {
                     throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(sessionV2.SessionStatus),
                         $"Cannot sync answers — session is in status '{sessionV2.SessionStatus}'.")]);
@@ -37,6 +37,8 @@ namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
                 }
 
                 var syncedCount = 0;
+                var mcqTypes = new[] { "SINGLE_CHOICE", "MULTI_CHOICE", "Single Choice", "Multi Choice" };
+
                 foreach (var item in request.Answers)
                 {
                     var question = sessionV2.Questions.FirstOrDefault(q => q.Id == item.CandidateExamSessionQuestionId);
@@ -56,8 +58,6 @@ namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
                         sessionV2.Answers.Add(answer);
                     }
 
-                    if (answer.EvaluationLocked) continue;
-
                     answer.SubmittedAnswerText = item.SubmittedAnswerText;
                     answer.AnsweredAt = item.ClientTimestamp.HasValue ? new DateTimeOffset(item.ClientTimestamp.Value) : DateTimeOffset.UtcNow;
 
@@ -74,7 +74,30 @@ namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
                         }
                     }
 
+                    // If session was already submitted, re-grade MCQ answers immediately
+                    if (sessionV2.SessionStatus == "Submitted" && mcqTypes.Contains(question.QuestionType))
+                    {
+                        var correctOptionIds = question.Options.Where(o => o.IsCorrect).Select(o => o.Id).ToHashSet();
+                        var selectedOptionIds = answer.SelectedOptions.Select(o => o.CandidateExamSessionQuestionOptionId).ToHashSet();
+                        var isCorrect = correctOptionIds.Count > 0 && correctOptionIds.SetEquals(selectedOptionIds);
+                        answer.MarksObtained = isCorrect ? question.Marks : 0;
+                        answer.EvaluationStatus = "Evaluated";
+                        answer.EvaluationLocked = true;
+                        answer.EvaluatorRemarks = isCorrect ? "Auto-graded (Correct)" : "Auto-graded (Incorrect)";
+                    }
+
                     syncedCount++;
+                }
+
+                if (sessionV2.SessionStatus == "Submitted")
+                {
+                    sessionV2.TotalScore = sessionV2.Answers.Sum(a => a.MarksObtained);
+                    var pendingCount = sessionV2.Answers.Count(a => a.EvaluationStatus == "Pending");
+                    if (pendingCount == 0)
+                    {
+                        sessionV2.Percentage = sessionV2.TotalMarks > 0 ? Math.Round(sessionV2.TotalScore / sessionV2.TotalMarks * 100, 2) : 0;
+                        sessionV2.ResultStatus = sessionV2.Percentage >= sessionV2.PassingPercentage ? "Pass" : "Fail";
+                    }
                 }
 
                 sessionV2.UpdatedAt = DateTimeOffset.UtcNow;
@@ -94,7 +117,7 @@ namespace STEP.Application.Features.V2.Exams.Commands.SaveExamAnswerBatch
                 .FirstOrDefaultAsync(s => s.SessionToken == request.SessionToken, cancellationToken)
                 ?? throw new NotFoundException(nameof(CandidateExamSession), request.SessionToken);
 
-            if (session.SessionStatus != "InProgress" && session.SessionStatus != "Ready" && session.SessionStatus != "Created")
+            if (session.SessionStatus != "InProgress" && session.SessionStatus != "Ready" && session.SessionStatus != "Created" && session.SessionStatus != "Submitted")
             {
                 throw new ValidationException([new FluentValidation.Results.ValidationFailure(nameof(session.SessionStatus),
                     $"Cannot sync answers — session is in status '{session.SessionStatus}'.")]);

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -71,7 +72,7 @@ namespace STEP.Api.Controllers
             {
                 throw new ValidationException([new FluentValidation.Results.ValidationFailure("SessionToken", "Session token is required to submit.")]);
             }
-            var result = await mediator.Send(new SubmitExamCommand(token));
+            var result = await mediator.Send(new SubmitExamCommand(token, body?.Reason, body?.Answers));
             return Ok(ApiResponse<object>.Ok(result, "Assessment submitted successfully"));
         }
 
@@ -132,7 +133,7 @@ namespace STEP.Api.Controllers
     }
 
     public record StartExamSessionRequestBody(string CandidateCode, string Passcode, string? TestSource, int? RoundNumber = null);
-    public record SubmitExamRequestBody(string? SessionToken, string? Reason = null);
+    public record SubmitExamRequestBody(string? SessionToken, string? Reason = null, List<AnswerBatchItemInput>? Answers = null);
     public record ReportExamViolationRequestBody(string SessionToken, string ViolationType);
     public record EvaluateAnswerRequestBody(int CandidateExamAnswerId, decimal MarksObtained, string? EvaluatorRemarks);
     public record PublishRequestBody(string? Remarks);

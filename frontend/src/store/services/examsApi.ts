@@ -54,11 +54,11 @@ export const examsApi = stepApi.injectEndpoints({
         body: data,
       }),
     }),
-    submitExam: builder.mutation<ApiEnvelope<SubmitExamResultData>, { sessionToken: string; reason?: string }>({
-      query: ({ sessionToken, reason }) => ({
+    submitExam: builder.mutation<ApiEnvelope<SubmitExamResultData>, { sessionToken: string; reason?: string; answers?: any[] }>({
+      query: ({ sessionToken, reason, answers }) => ({
         url: `/exams/${sessionToken}/submit`,
         method: 'POST',
-        body: { reason, sessionToken },
+        body: { reason, sessionToken, answers },
       }),
       invalidatesTags: ['Exams', 'Candidates'],
     }),

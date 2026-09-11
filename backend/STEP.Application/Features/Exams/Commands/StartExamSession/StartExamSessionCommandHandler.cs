@@ -484,26 +484,37 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     var pool = query.ToList();
                     if (pool.Count == 0)
                     {
-                        // Domain-isolated safe fallback: never cross domains!
+                        // Domain-isolated safe fallback: MUST strictly match the rule's section pattern!
+                        var isCodingRule = rule.SectionType == "Coding" || rule.QuestionType == "CODING";
+                        var isSqlRule = rule.SectionType == "SQLQuery" || rule.QuestionType == "SQL";
+                        var isSubjectiveRule = rule.SectionType == "SubjectiveTheory" || rule.QuestionType == "SUBJECTIVE";
+                        var isMcqRule = !isCodingRule && !isSqlRule && !isSubjectiveRule;
+
+                        bool TypeFilter(STEP.Domain.Entities.Master.MasterQuestion q) =>
+                            isCodingRule ? (q.SectionType == "Coding" || q.QuestionType == "CODING") :
+                            isSqlRule ? (q.SectionType == "SQLQuery" || q.QuestionType == "SQL") :
+                            isSubjectiveRule ? (q.SectionType == "SubjectiveTheory" || q.QuestionType == "SUBJECTIVE") :
+                            (q.SectionType == "TechnicalMCQ" || q.SectionType == "Aptitude" || q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE");
+
                         if (isWalkinAptitudeRound)
                         {
-                            pool = allQuestions.Where(q => q.Language == "General Aptitude").ToList();
+                            pool = allQuestions.Where(q => q.Language == "General Aptitude" && TypeFilter(q)).ToList();
                         }
                         else if (isCandidateNonIT)
                         {
-                            pool = allQuestions.Where(q => (q.Language?.Contains("Survey") ?? false) || q.Language == "General Aptitude").ToList();
+                            pool = allQuestions.Where(q => ((q.Language?.Contains("Survey") ?? false) || q.Language == "General Aptitude") && TypeFilter(q)).ToList();
                         }
                         else if (techDomain == "SQL")
                         {
-                            pool = allQuestions.Where(q => q.Language == "SQL").ToList();
+                            pool = allQuestions.Where(q => q.Language == "SQL" && TypeFilter(q)).ToList();
                         }
                         else if (techDomain == "REACT")
                         {
-                            pool = allQuestions.Where(q => q.Language == "JavaScript / React" || q.Language == "Software Engineering").ToList();
+                            pool = allQuestions.Where(q => (q.Language == "JavaScript / React" || q.Language == "Software Engineering") && TypeFilter(q)).ToList();
                         }
                         else
                         {
-                            pool = allQuestions.Where(q => q.Language == "C# (.NET)" || q.Language == "Software Engineering").ToList();
+                            pool = allQuestions.Where(q => (q.Language == "C# (.NET)" || q.Language == "Software Engineering") && TypeFilter(q)).ToList();
                         }
                     }
 
@@ -559,6 +570,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                         {
                             CandidateExamSession = sessionV2,
                             CandidateExamSessionQuestion = snapshotQuestion,
+                            SubmittedAnswerText = !string.IsNullOrWhiteSpace(masterQ.StarterCode) ? masterQ.StarterCode : null,
                             MarksObtained = 0,
                             EvaluationStatus = "Pending",
                             EvaluationLocked = false
@@ -566,7 +578,37 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     }
                 }
 
-                sessionV2.TotalMarks = calculatedTotalMarks > 0 ? calculatedTotalMarks : blueprint.TotalMarks;
+                // Standardize every paper to exactly 100.00 marks, proportionally weighting questions according to interviewer/DB marks
+                if (sessionV2.Questions.Count > 0)
+                {
+                    var rawTotalMarks = sessionV2.Questions.Sum(q => q.Marks);
+                    if (rawTotalMarks <= 0) rawTotalMarks = sessionV2.Questions.Count;
+
+                    decimal runningSum = 0;
+                    var questionsList = sessionV2.Questions.OrderBy(q => q.DisplayOrder).ToList();
+                    for (int i = 0; i < questionsList.Count; i++)
+                    {
+                        var q = questionsList[i];
+                        if (i == questionsList.Count - 1)
+                        {
+                            // Ensure the total sum is precisely 100.00m without any rounding difference
+                            q.Marks = Math.Max(0.01m, 100.00m - runningSum);
+                        }
+                        else
+                        {
+                            var normalized = Math.Round((q.Marks / rawTotalMarks) * 100.00m, 2);
+                            if (normalized <= 0) normalized = 1.00m;
+                            q.Marks = normalized;
+                            runningSum += normalized;
+                        }
+                    }
+
+                    sessionV2.TotalMarks = 100.00m;
+                }
+                else
+                {
+                    sessionV2.TotalMarks = 100.00m;
+                }
 
                 progress.Status = "InProgress";
                 progress.StartedAt ??= DateTime.UtcNow;
@@ -679,6 +721,39 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                     });
 
                     displayOrder++;
+                }
+
+                if (session.Questions.Count > 0)
+                {
+                    var rawTotalMarks = session.Questions.Sum(q => q.Marks);
+                    if (rawTotalMarks <= 0) rawTotalMarks = session.Questions.Count;
+
+                    decimal runningSum = 0;
+                    var questionsList = session.Questions.OrderBy(q => q.DisplayOrder).ToList();
+                    for (int i = 0; i < questionsList.Count; i++)
+                    {
+                        var q = questionsList[i];
+                        if (i == questionsList.Count - 1)
+                        {
+                            q.Marks = Math.Max(0.01m, 100.00m - runningSum);
+                        }
+                        else
+                        {
+                            var normalized = Math.Round((q.Marks / rawTotalMarks) * 100.00m, 2);
+                            if (normalized <= 0) normalized = 1.00m;
+                            q.Marks = normalized;
+                            runningSum += normalized;
+                        }
+
+                        var ans = session.Answers.FirstOrDefault(a => a.CandidateExamSessionQuestion == q);
+                        if (ans != null) ans.Marks = q.Marks;
+                    }
+
+                    session.TotalMarks = 100.00m;
+                }
+                else
+                {
+                    session.TotalMarks = 100.00m;
                 }
 
                 progress.Status = "InProgress";

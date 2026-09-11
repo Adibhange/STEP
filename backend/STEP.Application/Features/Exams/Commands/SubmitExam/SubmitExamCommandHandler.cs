@@ -32,6 +32,48 @@ namespace STEP.Application.Features.Exams.Commands.SubmitExam
             {
                 var questionsById = sessionV2.Questions.ToDictionary(q => q.Id);
 
+                // Persist any answers included in the submit command atomically
+                if (request.Answers != null && request.Answers.Count > 0)
+                {
+                    foreach (var item in request.Answers)
+                    {
+                        if (!questionsById.TryGetValue(item.CandidateExamSessionQuestionId, out var question))
+                            continue;
+
+                        var answer = sessionV2.Answers.FirstOrDefault(a => a.CandidateExamSessionQuestionId == question.Id);
+                        if (answer == null)
+                        {
+                            answer = new CandidateExamAnswerV2
+                            {
+                                CandidateExamSessionId = sessionV2.Id,
+                                CandidateExamSessionQuestionId = question.Id,
+                                MarksObtained = 0,
+                                EvaluationStatus = "Pending",
+                                EvaluationLocked = false
+                            };
+                            sessionV2.Answers.Add(answer);
+                        }
+
+                        if (answer.EvaluationLocked) continue;
+
+                        answer.SubmittedAnswerText = item.SubmittedAnswerText;
+                        answer.AnsweredAt = item.ClientTimestamp.HasValue ? new DateTimeOffset(item.ClientTimestamp.Value) : DateTimeOffset.UtcNow;
+
+                        answer.SelectedOptions.Clear();
+                        if (item.SelectedOptionIds != null && item.SelectedOptionIds.Count > 0)
+                        {
+                            var validOptionIds = question.Options.Select(o => o.Id).ToHashSet();
+                            foreach (var optionId in item.SelectedOptionIds.Where(validOptionIds.Contains).Distinct())
+                            {
+                                answer.SelectedOptions.Add(new CandidateExamAnswerOptionV2
+                                {
+                                    CandidateExamSessionQuestionOptionId = optionId
+                                });
+                            }
+                        }
+                    }
+                }
+
                 foreach (var answer in sessionV2.Answers)
                 {
                     if (!questionsById.TryGetValue(answer.CandidateExamSessionQuestionId, out var question))
