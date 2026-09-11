@@ -31,11 +31,8 @@ namespace STEP.Application.Common.Services
 
             if (defaultFlow == null || !defaultFlow.Rounds.Any(r => !r.IsDeleted))
             {
-                var roleName = (vacancy.MasterRole?.Name ?? "").ToLowerInvariant();
-                var vacTitle = (vacancy.Title ?? "").ToLowerInvariant();
-                var isNonIT = roleName.Contains("survey") || roleName.Contains("civil") || roleName.Contains("admin") ||
-                              vacTitle.Contains("survey") || vacTitle.Contains("civil") || vacTitle.Contains("assistant");
-                var isDirectDrive = isDirect || (vacancy.DriveType != null && vacancy.DriveType.Contains("Direct", StringComparison.OrdinalIgnoreCase));
+                var isNonIT = CandidatePipelineHelper.IsNonITRole(vacancy);
+                var isDirectDrive = CandidatePipelineHelper.IsDirectDrive(isDirect, vacancy.DriveType);
 
                 if (defaultFlow == null)
                 {

@@ -29,6 +29,8 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             var cleanCode = request.CandidateCode?.Trim();
             var candidate = await db.Candidates
                 .Include(c => c.Vacancy).ThenInclude(v => v.PipelineFlows).ThenInclude(f => f.Rounds)
+                .Include(c => c.Vacancy).ThenInclude(v => v.AssessmentBlueprint)
+                .Include(c => c.Vacancy).ThenInclude(v => v.MasterRole)
                 .Include(c => c.CurrentPipelineProgress)
                 .Include(c => c.PipelineProgressHistory)
                 .FirstOrDefaultAsync(c =>
@@ -230,11 +232,15 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
             var isCandidateNonIT = CandidatePipelineHelper.IsNonITRole(candidate);
             var isCandidateDirect = CandidatePipelineHelper.IsDirectCandidate(candidate);
+            var isCivilOrSurvey = CandidatePipelineHelper.IsCivilOrSurveyRole(candidate);
             var techDomain = CandidatePipelineHelper.ResolveTechDomain(candidate);
 
-            // Is this candidate taking an Aptitude Elimination round?
-            // Only IT Walk-in candidates taking Round 1 take the pure Aptitude Elimination round.
-            var isWalkinAptitudeRound = !isCandidateDirect && !isCandidateNonIT && (progress.RoundNumber == 1 || (request.RoundNumber.HasValue && request.RoundNumber.Value == 1));
+            var isWalkinRound1 = !isCandidateDirect && (progress.RoundNumber == 1 || (request.RoundNumber.HasValue && request.RoundNumber.Value == 1));
+
+            // User requirement:
+            // "if non it track and walk in vacancy then 1st round will get the civil question if the role is for civil if not universal question understand and for other track its ok"
+            var isCivilSurveyExam = isCandidateNonIT && isCivilOrSurvey;
+            var isUniversalAptitudeRound = isWalkinRound1 ? (!isCivilSurveyExam) : (isCandidateNonIT && !isCivilOrSurvey);
 
             // 3. Resume-on-reconnect: an existing not-yet-finished session for this candidate/round is returned as-is
             // Clean up stale session ONLY if an IT candidate taking Technical Round was mistakenly assigned RULE-MCQ-ONLY.
@@ -249,7 +255,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 .OrderByDescending(s => s.Id)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            var isStaleMcqSession = !isWalkinAptitudeRound && !isCandidateNonIT && existingSessionV2 != null &&
+            var isStaleMcqSession = !isUniversalAptitudeRound && !isCandidateNonIT && existingSessionV2 != null &&
                 (existingSessionV2.AssessmentBlueprint?.Code == "RULE-MCQ-ONLY" || existingSessionV2.Questions.All(q => q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE"));
 
             if (existingSessionV2 != null && existingSessionV2.Questions.Count > 0 && !isStaleMcqSession)
@@ -283,12 +289,11 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
             if (isCandidateNonIT)
             {
-                // Non-IT Track: Always RULE-MCQ-ONLY (or RULE-SURV-ASST)
+                // Non-IT Track: Always RULE-MCQ-ONLY (covers Civil/Survey as well as general non-IT)
                 blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-MCQ-ONLY")
-                         ?? allBlueprints.FirstOrDefault(b => b.Code == "RULE-SURV-ASST")
                          ?? allBlueprints.FirstOrDefault(b => b.IsDefault);
             }
-            else if (isWalkinAptitudeRound)
+            else if (isWalkinRound1)
             {
                 // IT Walk-in Round 1 Elimination: RULE-MCQ-ONLY (Pure General Aptitude)
                 blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-MCQ-ONLY")
@@ -297,13 +302,21 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             else
             {
                 // IT Technical Round (Round 2 for Direct or Walk-in after passing R1)
-                if (techDomain == "SQL")
+                if (candidate.Vacancy?.AssessmentBlueprintId.HasValue == true)
                 {
-                    blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-DATA-SQL" || b.Name.Contains("Database", StringComparison.OrdinalIgnoreCase));
+                    blueprint = allBlueprints.FirstOrDefault(b => b.Id == candidate.Vacancy.AssessmentBlueprintId.Value);
                 }
-                else
+
+                if (blueprint == null)
                 {
-                    blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-TECH-ENG" || b.Name.Contains("Software Engineering", StringComparison.OrdinalIgnoreCase));
+                    if (techDomain == "SQL")
+                    {
+                        blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-DATA-SQL" || b.Name.Contains("Database", StringComparison.OrdinalIgnoreCase));
+                    }
+                    else
+                    {
+                        blueprint = allBlueprints.FirstOrDefault(b => b.Code == "RULE-TECH-ENG" || b.Name.Contains("Software Engineering", StringComparison.OrdinalIgnoreCase));
+                    }
                 }
             }
 
@@ -367,33 +380,36 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                 {
                     var query = allQuestions.AsEnumerable();
 
-                    if (isWalkinAptitudeRound)
+                    if (isWalkinRound1)
                     {
-                        // IT Walk-in Round 1: Strictly General Aptitude (Universal math & logic, never Civil/Survey)
-                        query = query.Where(q => (q.SectionType == "Aptitude" || q.Language == "General Aptitude")
-                                               && q.Language != "Survey Assistant Aptitude"
-                                               && !(q.Language?.Contains("Survey") ?? false)
-                                               && !(q.Language?.Contains("Civil") ?? false));
-                    }
-                    else if (isCandidateNonIT)
-                    {
-                        // Non-IT Track: Questions from Survey / Civil / General Aptitude
-                        if (rule.SectionType == "Aptitude")
+                        if (isCandidateNonIT && isCivilOrSurvey)
                         {
-                            query = query.Where(q => q.Language == "General Aptitude" || (q.Language?.Contains("Survey") ?? false) || q.SectionType == "Aptitude");
-                        }
-                        else if (rule.SectionType == "TechnicalMCQ")
-                        {
-                            query = query.Where(q => (q.Language?.Contains("Survey") ?? false) || (q.Language?.Contains("Civil") ?? false) || q.Language == "Survey Assistant Aptitude");
-                        }
-                        else if (rule.SectionType == "SubjectiveTheory")
-                        {
+                            // Non-IT Walk-in for Civil / Survey role: gets Civil & Survey questions in Round 1
                             query = query.Where(q => ((q.Language?.Contains("Survey") ?? false) || (q.Language?.Contains("Civil") ?? false) || q.Language == "Survey Assistant Aptitude")
-                                                   && (q.SectionType == "SubjectiveTheory" || q.QuestionType == "SUBJECTIVE"));
+                                                   && (q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE"));
                         }
                         else
                         {
-                            query = query.Where(q => q.Language == "Survey Assistant Aptitude" || q.Language == "General Aptitude" || (q.Language?.Contains("Survey") ?? false));
+                            // Universal Aptitude for all other Walk-in Round 1 candidates (IT tracks or Non-IT non-civil roles)
+                            query = query.Where(q => (q.SectionType == "Aptitude" || q.Language == "General Aptitude")
+                                                   && (q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE")
+                                                   && q.Language != "Survey Assistant Aptitude"
+                                                   && !(q.Language?.Contains("Survey") ?? false)
+                                                   && !(q.Language?.Contains("Civil") ?? false));
+                        }
+                    }
+                    else if (isCandidateNonIT)
+                    {
+                        // Non-IT Technical / Domain Round (Direct Round 2 or Walk-in Round 2)
+                        if (isCivilOrSurvey)
+                        {
+                            query = query.Where(q => ((q.Language?.Contains("Survey") ?? false) || (q.Language?.Contains("Civil") ?? false) || q.Language == "Survey Assistant Aptitude")
+                                                   && (q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE"));
+                        }
+                        else
+                        {
+                            query = query.Where(q => (q.Language == "General Aptitude" || q.SectionType == "Aptitude")
+                                                   && (q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE"));
                         }
                     }
                     else
@@ -445,7 +461,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                             else // DOTNET
                             {
                                 query = query.Where(q => (q.SectionType == "Coding" || q.QuestionType == "CODING")
-                                                       && ((q.Language?.Contains("C#") ?? false) || (q.Language?.Contains(".NET") ?? false) || q.Language == "Software Engineering"));
+                                                       && ((q.Language?.Contains("C#") ?? false) || (q.Language?.Contains(".NET") ?? false) || (q.Language?.Contains("React") ?? false) || (q.Language?.Contains("JavaScript") ?? false) || q.Language == "Software Engineering"));
                             }
                         }
                         else if (rule.SectionType == "SQLQuery")
@@ -496,17 +512,31 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                             isSubjectiveRule ? (q.SectionType == "SubjectiveTheory" || q.QuestionType == "SUBJECTIVE") :
                             (q.SectionType == "TechnicalMCQ" || q.SectionType == "Aptitude" || q.QuestionType == "SINGLE_CHOICE" || q.QuestionType == "MULTI_CHOICE");
 
-                        if (isWalkinAptitudeRound)
+                        if (isWalkinRound1)
                         {
-                            pool = allQuestions.Where(q => q.Language == "General Aptitude" && TypeFilter(q)).ToList();
+                            if (isCandidateNonIT && isCivilOrSurvey)
+                            {
+                                pool = allQuestions.Where(q => ((q.Language?.Contains("Survey") ?? false) || (q.Language?.Contains("Civil") ?? false) || q.Language == "Survey Assistant Aptitude") && TypeFilter(q)).ToList();
+                            }
+                            else
+                            {
+                                pool = allQuestions.Where(q => q.Language == "General Aptitude" && TypeFilter(q)).ToList();
+                            }
                         }
                         else if (isCandidateNonIT)
                         {
-                            pool = allQuestions.Where(q => ((q.Language?.Contains("Survey") ?? false) || q.Language == "General Aptitude") && TypeFilter(q)).ToList();
+                            if (isCivilOrSurvey)
+                            {
+                                pool = allQuestions.Where(q => ((q.Language?.Contains("Survey") ?? false) || (q.Language?.Contains("Civil") ?? false) || q.Language == "Survey Assistant Aptitude") && TypeFilter(q)).ToList();
+                            }
+                            else
+                            {
+                                pool = allQuestions.Where(q => q.Language == "General Aptitude" && TypeFilter(q)).ToList();
+                            }
                         }
                         else if (techDomain == "SQL")
                         {
-                            pool = allQuestions.Where(q => q.Language == "SQL" && TypeFilter(q)).ToList();
+                            pool = allQuestions.Where(q => (q.Language == "SQL" || (q.Language?.Contains("Database") ?? false)) && TypeFilter(q)).ToList();
                         }
                         else if (techDomain == "REACT")
                         {
@@ -514,7 +544,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                         }
                         else
                         {
-                            pool = allQuestions.Where(q => (q.Language == "C# (.NET)" || q.Language == "Software Engineering") && TypeFilter(q)).ToList();
+                            pool = allQuestions.Where(q => (q.Language == "C# (.NET)" || q.Language == "Software Engineering" || (isCodingRule && (q.Language == "JavaScript / React" || q.SectionType == "Coding" || q.QuestionType == "CODING"))) && TypeFilter(q)).ToList();
                         }
                     }
 
@@ -536,8 +566,12 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
                             SectionRuleId = rule.Id,
                             OriginalMasterQuestionId = masterQ.Id,
                             OriginalMasterQuestion = masterQ,
-                            SectionName = isWalkinAptitudeRound ? "Aptitude & Logical Reasoning" : (!string.IsNullOrWhiteSpace(rule.SectionName) ? rule.SectionName : rule.SectionType),
-                            SectionType = isWalkinAptitudeRound ? "Aptitude" : rule.SectionType,
+                            SectionName = isUniversalAptitudeRound 
+                                ? "Aptitude & Logical Reasoning" 
+                                : (isCivilSurveyExam 
+                                    ? "Survey & Civil Engineering Fundamentals" 
+                                    : (!string.IsNullOrWhiteSpace(rule.SectionName) ? rule.SectionName : rule.SectionType)),
+                            SectionType = isUniversalAptitudeRound ? "Aptitude" : rule.SectionType,
                             DisplayOrder = globalDisplayOrder++,
                             QuestionType = masterQ.QuestionType,
                             QuestionText = masterQ.QuestionText,

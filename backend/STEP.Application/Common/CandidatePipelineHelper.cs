@@ -63,26 +63,40 @@ namespace STEP.Application.Common
 
         /// <summary>
         /// Determines if the vacancy/role belongs to the Non-IT Track (using standard MCQ / field assessment).
+        /// Prioritizes the Vacancy's AssessmentBlueprint Code.
         /// </summary>
         public static bool IsNonITRole(CandidateEntity candidate)
         {
             if (candidate == null) return false;
+            return IsNonITRole(candidate.Vacancy);
+        }
 
-            // 1. Blueprint check: explicitly assigned RULE-TECH-ENG or RULE-DATA-SQL -> Definitely IT
-            var bpCode = candidate.Vacancy?.AssessmentBlueprint?.Code;
-            if (bpCode == "RULE-TECH-ENG" || bpCode == "RULE-DATA-SQL")
+        /// <summary>
+        /// Determines if the vacancy belongs to the Non-IT Track (checks Blueprint Code first, then role taxonomy).
+        /// </summary>
+        public static bool IsNonITRole(STEP.Domain.Entities.Vacancy.Vacancy? vacancy)
+        {
+            if (vacancy == null) return false;
+
+            // 1. Primary: Blueprint Code check (data-driven by Code, never hardcoded IDs)
+            var bpCode = vacancy.AssessmentBlueprint?.Code;
+            if (!string.IsNullOrWhiteSpace(bpCode))
             {
-                return false;
+                if (bpCode.Equals("RULE-TECH-ENG", StringComparison.OrdinalIgnoreCase) ||
+                    bpCode.Equals("RULE-DATA-SQL", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                if (bpCode.Equals("RULE-MCQ-ONLY", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
             }
 
-            if (bpCode == "RULE-MCQ-ONLY" || bpCode == "RULE-SURV-ASST")
-            {
-                return true;
-            }
-
-            // 2. Role taxonomy check
-            var roleName = (candidate.Vacancy?.MasterRole?.Name ?? "").ToLowerInvariant();
-            var vacTitle = (candidate.Vacancy?.Title ?? "").ToLowerInvariant();
+            // 2. Fallback: Role taxonomy check
+            var roleName = (vacancy.MasterRole?.Name ?? "").ToLowerInvariant();
+            var vacTitle = (vacancy.Title ?? "").ToLowerInvariant();
 
             if (roleName.Contains("survey") || roleName.Contains("civil") ||
                 roleName.Contains("admin") || roleName.Contains("field") ||
@@ -92,7 +106,7 @@ namespace STEP.Application.Common
                 return true;
             }
 
-            // 3. Role is in common IT designations
+            // 3. Common IT designations check
             var isIT = roleName.Contains(".net") || roleName.Contains("c#") ||
                        roleName.Contains("software") || roleName.Contains("developer") ||
                        roleName.Contains("engineer") || roleName.Contains("react") ||
@@ -105,6 +119,35 @@ namespace STEP.Application.Common
                        vacTitle.Contains("data") || vacTitle.Contains("devops") || vacTitle.Contains("cloud");
 
             return !isIT;
+        }
+
+        /// <summary>
+        /// Determines if the vacancy/candidate belongs to Civil / Surveying discipline.
+        /// </summary>
+        public static bool IsCivilOrSurveyRole(CandidateEntity candidate)
+        {
+            if (candidate == null) return false;
+            return IsCivilOrSurveyRole(candidate.Vacancy);
+        }
+
+        public static bool IsCivilOrSurveyRole(STEP.Domain.Entities.Vacancy.Vacancy? vacancy)
+        {
+            if (vacancy == null) return false;
+            var roleName = (vacancy.MasterRole?.Name ?? "").ToLowerInvariant();
+            var vacTitle = (vacancy.Title ?? "").ToLowerInvariant();
+            return roleName.Contains("survey") || roleName.Contains("civil") ||
+                   vacTitle.Contains("survey") || vacTitle.Contains("civil");
+        }
+
+        /// <summary>
+        /// Determines if a drive type represents Direct Sourcing vs Walk-in Drive.
+        /// </summary>
+        public static bool IsDirectDrive(bool isDirectParam, string? driveType)
+        {
+            if (isDirectParam) return true;
+            if (string.IsNullOrWhiteSpace(driveType)) return false;
+            return driveType.Contains("Direct", StringComparison.OrdinalIgnoreCase) ||
+                   driveType.Contains("Sourced", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -124,7 +167,7 @@ namespace STEP.Application.Common
             var bpCode = candidate.Vacancy?.AssessmentBlueprint?.Code ?? "";
 
             // SQL / Database
-            if (bpCode == "RULE-DATA-SQL" || combined.Contains("sql") || combined.Contains("database") || combined.Contains("data analyst"))
+            if (bpCode.Equals("RULE-DATA-SQL", StringComparison.OrdinalIgnoreCase) || combined.Contains("sql") || combined.Contains("database") || combined.Contains("data analyst"))
             {
                 return "SQL";
             }

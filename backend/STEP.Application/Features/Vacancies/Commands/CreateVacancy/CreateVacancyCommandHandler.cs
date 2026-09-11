@@ -9,7 +9,9 @@ using STEP.Application.Common.Interfaces;
 using STEP.Application.Features.Vacancies.Common;
 using STEP.Domain.Entities.Audit;
 using STEP.Domain.Entities.Master;
+using STEP.Application.Common;
 using VacancyEntity = STEP.Domain.Entities.Vacancy.Vacancy;
+using CandidateEntity = STEP.Domain.Entities.Candidate.Candidate;
 using STEP.Domain.Entities.Vacancy;
 
 namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
@@ -53,18 +55,16 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
                 HiringManagerId = request.HiringManagerId,
             };
 
-            var roleName = masterRole.Name.ToLowerInvariant();
-            var titleLower = request.Title.ToLowerInvariant();
-            var isNonIT = roleName.Contains("survey") || roleName.Contains("civil") || roleName.Contains("admin") ||
-                          titleLower.Contains("survey") || titleLower.Contains("civil") || titleLower.Contains("assistant");
-            var isSQL = roleName.Contains("sql") || roleName.Contains("database") || roleName.Contains("data analyst") ||
-                        titleLower.Contains("sql") || titleLower.Contains("database") || titleLower.Contains("data analyst");
+            vacancy.MasterRole = masterRole;
+            var isNonIT = CandidatePipelineHelper.IsNonITRole(vacancy);
+            var techDomain = CandidatePipelineHelper.ResolveTechDomain(new CandidateEntity { Vacancy = vacancy });
 
-            var blueprintCode = isNonIT ? "RULE-MCQ-ONLY" : (isSQL ? "RULE-DATA-SQL" : "RULE-TECH-ENG");
+            var blueprintCode = isNonIT ? "RULE-MCQ-ONLY" : (techDomain == "SQL" ? "RULE-DATA-SQL" : "RULE-TECH-ENG");
             var blueprint = await db.AssessmentBlueprints.FirstOrDefaultAsync(b => b.Code == blueprintCode, cancellationToken);
             if (blueprint != null)
             {
                 vacancy.AssessmentBlueprintId = blueprint.Id;
+                vacancy.AssessmentBlueprint = blueprint;
             }
 
             var hasProvidedFlows = request.PipelineFlows != null && request.PipelineFlows.Count > 0 && request.PipelineFlows.Any(f => f.Rounds != null && f.Rounds.Count > 0);
@@ -97,7 +97,7 @@ namespace STEP.Application.Features.Vacancies.Commands.CreateVacancy
             }
             else
             {
-                var isDirect = request.DriveType != null && request.DriveType.Contains("Direct", StringComparison.OrdinalIgnoreCase);
+                var isDirect = CandidatePipelineHelper.IsDirectDrive(false, request.DriveType);
                 var defaultFlow = new VacancyPipelineFlow
                 {
                     VersionName = "Standard Selection Flow",

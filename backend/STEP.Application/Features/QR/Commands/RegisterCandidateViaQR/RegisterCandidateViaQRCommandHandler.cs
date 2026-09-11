@@ -27,6 +27,10 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 .Include(q => q.Vacancy)
                     .ThenInclude(v => v.PipelineFlows)
                         .ThenInclude(f => f.Rounds)
+                .Include(q => q.Vacancy)
+                    .ThenInclude(v => v.MasterRole)
+                .Include(q => q.Vacancy)
+                    .ThenInclude(v => v.AssessmentBlueprint)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(q => q.Code == request.Code, cancellationToken);
 
@@ -35,6 +39,8 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                 var vacancy = await db.Vacancies
                     .Include(v => v.PipelineFlows)
                         .ThenInclude(f => f.Rounds)
+                    .Include(v => v.MasterRole)
+                    .Include(v => v.AssessmentBlueprint)
                     .AsSplitQuery()
                     .FirstOrDefaultAsync(v => v.VacancyCode == request.Code, cancellationToken);
 
@@ -43,6 +49,8 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                     vacancy = await db.Vacancies
                         .Include(v => v.PipelineFlows)
                             .ThenInclude(f => f.Rounds)
+                        .Include(v => v.MasterRole)
+                        .Include(v => v.AssessmentBlueprint)
                         .AsSplitQuery()
                         .FirstOrDefaultAsync(v => v.Id == numericId, cancellationToken);
                 }
@@ -100,7 +108,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterCandidateViaQR
                     $"You already applied for this role on {eligibility.LastAppliedAt:dd MMM yyyy}. You can re-apply for the same role after {eligibility.EligibleFrom:dd MMM yyyy} ({CandidateReapplicationPolicy.CooldownDays}-day cooldown).")]);
             }
 
-            var isDirectHiring = qrCode.Vacancy?.DriveType == "Direct" || qrCode.Vacancy?.DriveType == "Direct / Sourced Hiring" || qrCode.Vacancy?.DriveType == "Direct Hiring";
+            var isDirectHiring = CandidatePipelineHelper.IsDirectDrive(false, qrCode.Vacancy?.DriveType);
             var channel = isDirectHiring ? "Direct Sourced" : "Walk-in";
 
             var candidate = new CandidateEntity

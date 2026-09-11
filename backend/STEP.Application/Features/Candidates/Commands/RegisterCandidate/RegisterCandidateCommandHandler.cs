@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using STEP.Application.Common;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
 using STEP.Application.Common.Services;
@@ -20,10 +21,12 @@ namespace STEP.Application.Features.Candidates.Commands.RegisterCandidate
         {
             var vacancy = await db.Vacancies
                 .Include(v => v.PipelineFlows).ThenInclude(f => f.Rounds)
+                .Include(v => v.MasterRole)
+                .Include(v => v.AssessmentBlueprint)
                 .FirstOrDefaultAsync(v => v.Id == request.VacancyId, cancellationToken)
                 ?? throw new NotFoundException(nameof(VacancyEntity), request.VacancyId);
 
-            var isDirectHiring = vacancy.DriveType == "Direct" || vacancy.DriveType == "Direct / Sourced Hiring" || vacancy.DriveType == "Direct Hiring";
+            var isDirectHiring = CandidatePipelineHelper.IsDirectDrive(false, vacancy.DriveType);
             var channel = !string.IsNullOrWhiteSpace(request.RegistrationChannel) ? request.RegistrationChannel : (isDirectHiring ? "Direct Sourced" : "Walk-in");
 
             var candidate = new CandidateEntity

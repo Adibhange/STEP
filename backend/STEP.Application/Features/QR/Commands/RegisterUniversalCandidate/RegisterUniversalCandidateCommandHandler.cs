@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using STEP.Application.Common;
 using STEP.Application.Common.Exceptions;
 using STEP.Application.Common.Interfaces;
 using STEP.Application.Common.Services;
@@ -63,6 +64,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                 .Include(v => v.PipelineFlows)
                     .ThenInclude(f => f.Rounds)
                 .Include(v => v.MasterRole)
+                .Include(v => v.AssessmentBlueprint)
                 .Include(v => v.HiringLocation)
                 .AsSplitQuery()
                 .Where(v => !v.IsDeleted && v.Status == "Active")
@@ -79,6 +81,7 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                     .Include(v => v.PipelineFlows)
                         .ThenInclude(f => f.Rounds)
                     .Include(v => v.MasterRole)
+                    .Include(v => v.AssessmentBlueprint)
                     .Include(v => v.HiringLocation)
                     .AsSplitQuery()
                     .Where(v => !v.IsDeleted && v.Status == "Active" && v.MasterRoleId == masterRole.Id)
@@ -96,11 +99,16 @@ namespace STEP.Application.Features.QR.Commands.RegisterUniversalCandidate
                 var defaultDept = await db.MasterDepartments.FirstOrDefaultAsync(d => !d.IsDeleted, cancellationToken);
                 var defaultEmpType = await db.MasterEmploymentTypes.FirstOrDefaultAsync(e => !e.IsDeleted, cancellationToken);
 
+                var isNonIT = CandidatePipelineHelper.IsNonITRole(new Vacancy { MasterRole = masterRole, Title = roleName });
+                var defaultBpCode = isNonIT ? "RULE-MCQ-ONLY" : (roleName.Contains("sql", StringComparison.OrdinalIgnoreCase) ? "RULE-DATA-SQL" : "RULE-TECH-ENG");
+                var defaultBp = await db.AssessmentBlueprints.FirstOrDefaultAsync(b => b.Code == defaultBpCode, cancellationToken);
+
                 matchingVacancy = new Vacancy
                 {
                     VacancyCode = $"VAC-{DateTime.UtcNow:yyyyMM}-{codeSuffix}",
                     Title = $"{roleName} ({targetDriveType})",
                     MasterRoleId = masterRole?.Id ?? 1,
+                    AssessmentBlueprintId = defaultBp?.Id,
                     HiringLocationId = location?.Id ?? 1,
                     DepartmentId = defaultDept?.Id ?? 1,
                     EmploymentTypeId = defaultEmpType?.Id ?? 1,
