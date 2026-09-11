@@ -246,6 +246,7 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
             // Clean up stale session ONLY if an IT candidate taking Technical Round was mistakenly assigned RULE-MCQ-ONLY.
             var existingSessionV2 = await db.CandidateExamSessionsV2
                 .Include(s => s.Candidate)
+                .Include(s => s.CandidatePipelineProgress)
                 .Include(s => s.Vacancy)
                 .Include(s => s.AssessmentBlueprint)
                 .Include(s => s.Questions).ThenInclude(q => q.Options)
@@ -649,6 +650,11 @@ namespace STEP.Application.Features.Exams.Commands.StartExamSession
 
                 db.CandidateExamSessionsV2.Add(sessionV2);
                 await db.SaveChangesAsync(cancellationToken);
+
+                sessionV2.Candidate = candidate;
+                sessionV2.Vacancy = candidate.Vacancy;
+                sessionV2.CandidatePipelineProgress = progress;
+                sessionV2.AssessmentBlueprint = blueprint;
 
                 return ExamWorkspaceMapper.ToWorkspaceDto(sessionV2);
             }
