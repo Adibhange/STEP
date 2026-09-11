@@ -21,6 +21,7 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                     .ThenInclude(v => v.PipelineFlows)
                         .ThenInclude(f => f.Rounds)
                 .Include(c => c.PipelineProgressHistory)
+                    .ThenInclude(p => p.SkippedBy)
                 .Include(c => c.Documents)
                 .AsSplitQuery()
                 .AsNoTracking()
@@ -150,10 +151,12 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var isAssessment = hasSess || (rawTitle != null && (rawTitle.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Assessment", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Coding", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Challenge", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Track", StringComparison.OrdinalIgnoreCase)));
                         var effectiveRoundType = isAssessment ? "Assessment" : (p.RoundType ?? PipelineRoundClassification.Classify(r.RoundType));
 
+                        var skippedByName = p.SkippedBy != null ? $"{p.SkippedBy.FirstName} {p.SkippedBy.LastName}".Trim() : null;
                         combinedProgressDtos.Add(new PipelineProgressDto(
                             p.Id, p.RoundNumber, rawTitle, effectiveRoundType,
                             effectiveStatus, effectiveScore, p.StartedAt, p.CompletedAt,
-                            hasSess ? sessInfo.SessionId : null, interviewInfo?.Id, p.Remarks, interviewerName, interviewerUserId));
+                            hasSess ? sessInfo.SessionId : null, interviewInfo?.Id, p.Remarks, interviewerName, interviewerUserId,
+                            p.SkipReason, skippedByName));
                     }
                     else
                     {
@@ -188,10 +191,12 @@ namespace STEP.Application.Features.Candidates.Queries.GetCandidateById
                         var rawTitle = p.RoundTitle ?? $"Round {p.RoundNumber}";
                         var isAssessment = hasSess || rawTitle.Contains("Aptitude", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Assessment", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Coding", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Challenge", StringComparison.OrdinalIgnoreCase) || rawTitle.Contains("Track", StringComparison.OrdinalIgnoreCase);
                         var effectiveRoundType = isAssessment ? "Assessment" : p.RoundType;
+                        var skippedByName = p.SkippedBy != null ? $"{p.SkippedBy.FirstName} {p.SkippedBy.LastName}".Trim() : null;
 
                         return new PipelineProgressDto(
                             p.Id, p.RoundNumber, rawTitle, effectiveRoundType, effectiveStatus, effectiveScore, p.StartedAt, p.CompletedAt,
-                            hasSess ? sessInfo.SessionId : null, interviewInfo?.Id, p.Remarks, interviewerName, interviewerUserId);
+                            hasSess ? sessInfo.SessionId : null, interviewInfo?.Id, p.Remarks, interviewerName, interviewerUserId,
+                            p.SkipReason, skippedByName);
                     })
                     .ToList();
             }

@@ -90,6 +90,26 @@ export const candidatesApi = stepApi.injectEndpoints({
 			}),
 			invalidatesTags: ["Candidates"],
 		}),
+		skipCandidateRound: builder.mutation<
+			ApiEnvelope<any>,
+			{
+				candidateId: number;
+				roundNumber: number;
+				reason?: string | null;
+				targetRoundNumber?: number | null;
+			}
+		>({
+			query: ({ candidateId, roundNumber, reason, targetRoundNumber }) => ({
+				url: `/candidates/${candidateId}/rounds/${roundNumber}/skip`,
+				method: "POST",
+				body: { reason, targetRoundNumber },
+			}),
+			invalidatesTags: (result, error, arg) => [
+				"Candidates",
+				"Interviews",
+				{ type: "Candidates", id: arg.candidateId },
+			],
+		}),
 		uploadCandidateDocument: builder.mutation<
 			ApiEnvelope<any>,
 			{ candidateId: number; file: File; documentType?: string }
@@ -240,6 +260,7 @@ export const {
 	useAssignPipelineFlowMutation,
 	useAssignEvaluatorMutation,
 	useUpdateRoundInterviewerFeedbackMutation,
+	useSkipCandidateRoundMutation,
 	useUploadCandidateDocumentMutation,
 	useDeleteCandidateDocumentMutation,
 	useScheduleCandidateTestMutation,

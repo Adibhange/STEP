@@ -43,6 +43,7 @@ import {
 	useEvaluateCandidateStageMutation,
 	useAssignEvaluatorMutation,
 	useUpdateRoundInterviewerFeedbackMutation,
+	useSkipCandidateRoundMutation,
 	useUploadCandidateDocumentMutation,
 	useUpdateCandidateMutation,
 	useDeleteCandidateDocumentMutation,
@@ -60,7 +61,7 @@ export interface StageItem {
 	id: number;
 	name: string;
 	status: string;
-	statusType: "passed" | "rejected" | "pending" | "terminated" | "locked";
+	statusType: "passed" | "rejected" | "pending" | "terminated" | "locked" | "waived";
 	date: string;
 	interviewer: string;
 	interviewerInitials: string;
@@ -82,6 +83,8 @@ export interface StageItem {
 	terminationReason?: string;
 	candidateExamSessionId?: number | null;
 	interviewerUserId?: number | null;
+	skipReason?: string | null;
+	skippedByName?: string | null;
 }
 
 export interface CandidateDocument {
@@ -403,6 +406,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 	const [assignEvaluator] = useAssignEvaluatorMutation();
 	const [updateRoundInterviewerFeedback, { isLoading: isUpdatingRound1 }] =
 		useUpdateRoundInterviewerFeedbackMutation();
+	const [skipCandidateRound, { isLoading: isSkippingRound }] =
+		useSkipCandidateRoundMutation();
+	const [showSkipModal, setShowSkipModal] = useState(false);
+	const [skipTargetStage, setSkipTargetStage] = useState<StageItem | null>(null);
+	const [selectedDestinationRound, setSelectedDestinationRound] = useState<number | null>(null);
+	const [skipReasonText, setSkipReasonText] = useState("");
 	const [uploadCandidateDocument] = useUploadCandidateDocumentMutation();
 	const { data: usersRes } = useGetUsersQuery();
 
@@ -426,8 +435,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 	const isHrOrDirectorOrAdmin = isHr || isDirector || isAdmin;
 	const isInterviewer = userRole === "interviewer";
 
-	// Dynamic round permissions: Round 1 interviewer editable for HR department and Director; Feedback editable on all UNLOCKED rounds
+	// Dynamic round permissions:
+	// - Round 1 interviewer editable for HR department and Director
+	// - Feedback editable on all UNLOCKED rounds for HR and Director
+	// - Round Skip functionality is strictly available ONLY to:
+	//   1. Users belonging to the HR department
+	//   2. Director
 	const canEditRound1 = isDirector || isHr || isAdmin;
+	const canSkipRound = isDirector || isHr || isAdmin;
 	const isRoundInterviewerEditable = (roundNumber: number) =>
 		roundNumber === 1 && canEditRound1;
 	const isRoundFeedbackEditable = (stageOrId: StageItem | number) => {
@@ -743,10 +758,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 					const isAutoPassedRound = (p.roundTitle || "")
 						.toLowerCase()
 						.includes("auto-passed");
+					const isCurrentRoundWaived =
+						p.status?.toLowerCase() === "waived" ||
+						p.status?.toLowerCase() === "skipped";
 					const isCurrentRoundFailed =
-						p.status?.toLowerCase() === "failed" ||
+						!isCurrentRoundWaived &&
+						(p.status?.toLowerCase() === "failed" ||
 						p.status?.toLowerCase() === "rejected" ||
-						p.resultStatus?.toLowerCase() === "fail";
+						p.resultStatus?.toLowerCase() === "fail");
 					const isCurrentRoundPassed =
 						p.status?.toLowerCase() === "passed" ||
 						p.status?.toLowerCase() === "cleared" ||
@@ -755,17 +774,19 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 						isAutoPassedRound;
 
 					// Strict sequential stage progression:
-					// Check if any prior round actually failed
+					// Check if any prior round actually failed (excluding waived rounds)
 					const failedPriorRound = history.find(
 						(prev: any) =>
 							prev.roundNumber < p.roundNumber &&
+							prev.status?.toLowerCase() !== "waived" &&
+							prev.status?.toLowerCase() !== "skipped" &&
 							(prev.status?.toLowerCase() === "failed" ||
 								prev.status?.toLowerCase() === "rejected" ||
 								prev.resultStatus?.toLowerCase() === "fail"),
 					);
 					const hasPriorFailure = Boolean(failedPriorRound);
 
-					// Check if the immediately preceding round is cleared/passed
+					// Check if the immediately preceding round is cleared/passed or waived
 					const prevRound = history.find(
 						(prev: any) => prev.roundNumber === p.roundNumber - 1,
 					);
@@ -775,13 +796,17 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 							(prevRound.status?.toLowerCase() === "passed" ||
 								prevRound.status?.toLowerCase() === "cleared" ||
 								prevRound.status?.toLowerCase() === "completed" ||
+								prevRound.status?.toLowerCase() === "waived" ||
+								prevRound.status?.toLowerCase() === "skipped" ||
 								prevRound.resultStatus?.toLowerCase() === "pass" ||
 								(prevRound.roundTitle || "")
 									.toLowerCase()
 									.includes("auto-passed")));
 
 					const isLocked =
-						p.roundNumber > 1 && (hasPriorFailure || !isPrevRoundPassed);
+						!isCurrentRoundWaived &&
+						p.roundNumber > 1 &&
+						(hasPriorFailure || !isPrevRoundPassed);
 
 					const hasCompletedTest = Boolean(
 						p.completedAt ||
@@ -824,12 +849,14 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 						id: p.roundNumber,
 						name: cleanRoundName,
 						status:
-							isLocked ? "Locked"
+							isCurrentRoundWaived ? "Waived"
+							: isLocked ? "Locked"
 							: isCurrentRoundFailed ? "Failed"
 							: isCurrentRoundPassed ? "Passed"
 							: p.status || "Pending",
 						statusType:
-							isLocked ? "locked"
+							isCurrentRoundWaived ? "waived"
+							: isLocked ? "locked"
 							: isCurrentRoundFailed ? "rejected"
 							: isCurrentRoundPassed ? "passed"
 							: "pending",
@@ -877,7 +904,12 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 							: p.roundType === "Assessment" ? "Online Proctored"
 							: "In Office",
 						feedback:
-							isLocked ?
+							isCurrentRoundWaived ?
+								p.remarks ||
+								(p.skipReason ?
+									`Round skipped: ${p.skipReason}`
+								:	"Round waived by authorized authority.")
+							: isLocked ?
 								hasPriorFailure ?
 									`Round locked — candidate failed Round ${failedPriorRound?.roundNumber || 1}.`
 								:	`Round pending — complete Round ${p.roundNumber - 1} first.`
@@ -925,8 +957,10 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 										:	"Round pending";
 								})(),
 						result:
-							isLocked ? "Locked"
+							isCurrentRoundWaived ? "Waived / Skipped"
+							: isLocked ? "Locked"
 							: isCurrentRoundFailed ? "Failed"
+							: isCurrentRoundPassed ? "Passed"
 							: p.status || "Pending",
 						interviewId: p.interviewId ?? null,
 						candidateExamSessionId: p.candidateExamSessionId ?? null,
@@ -937,6 +971,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 						hasPriorFailure: hasPriorFailure,
 						failedRoundNumber: failedPriorRound?.roundNumber,
 						hasCompletedTest: hasCompletedTest,
+						skipReason: p.skipReason ?? null,
+						skippedByName: p.skippedByName ?? null,
 					};
 				});
 
@@ -3010,6 +3046,8 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 													className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
 														stage.isTerminated || stage.isLocked ?
 															"bg-[var(--surface-3)] text-[var(--text-tertiary)] border-[var(--border-default)]"
+														: stage.status === "Waived" || stage.statusType === "waived" ?
+															"bg-amber-500/15 text-amber-400 border-amber-500/30 font-bold"
 														: isPassed ?
 															"bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]"
 														: isRejected ?
@@ -3039,7 +3077,17 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 												</span>
 											:	!stage.isTerminated && (
 													<div className='flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:ml-auto'>
-														{stage.name.toLowerCase().includes("screening") ?
+														{stage.status === "Waived" || stage.statusType === "waived" ?
+															<span
+																className='px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5 shadow-2xs'
+																title={stage.skipReason ? `Waiver Reason: ${stage.skipReason}` : "Round waived by HR / Director"}>
+																<Icon
+																	name='arrow-right'
+																	size='xs'
+																/>
+																<span>Round Waived / Skipped</span>
+															</span>
+														: stage.name.toLowerCase().includes("screening") ?
 															/* HR Screening Round (Direct Sourced) */
 															isRejected || stage.statusType === "rejected" || stage.status === "Failed" || stage.status === "Rejected" ?
 																<span className='px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--status-danger-bg)] text-[var(--status-danger-text)] border border-[var(--status-danger-border)] flex items-center gap-1'>
@@ -3443,6 +3491,33 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 																</span>
 															</span>
 														:	null}
+
+														{/* Skip Round Action — Strictly Authorized for HR Department & Director */}
+														{canSkipRound &&
+															!stage.isLocked &&
+															stage.status !== "Passed" &&
+															stage.statusType !== "passed" &&
+															stage.status !== "Waived" &&
+															stage.statusType !== "waived" &&
+															candidate.status !== "Hired" && (
+																<button
+																	type='button'
+																	onClick={() => {
+																		setSkipTargetStage(stage);
+																		const nextRounds = stagesData.filter((s) => s.id > stage.id);
+																		setSelectedDestinationRound(nextRounds.length > 0 ? nextRounds[0].id : null);
+																		setSkipReasonText("");
+																		setShowSkipModal(true);
+																	}}
+																	className='h-7 sm:h-7.5 px-2.5 sm:px-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-black text-[11.5px] sm:text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95'
+																	title={`Skip / waive Round ${stage.id} for ${candidate.name}`}>
+																	<Icon
+																		name='arrow-right'
+																		size='xs'
+																	/>
+																	<span>Skip Round</span>
+																</button>
+															)}
 													</div>
 												)
 											}
@@ -3789,6 +3864,319 @@ export const CandidateProfilePage: React.FC<CandidateProfilePageProps> = ({
 					</motion.div>
 				</div>
 			</div>
+
+			{/* --- 4.5. Skip Round Confirmation Modal (HR & Director Only) -------------------- */}
+			<AnimatePresence>
+				{showSkipModal && skipTargetStage && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.15 }}
+						className='fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4'
+						onClick={() => setShowSkipModal(false)}>
+						<motion.div
+							initial={{ opacity: 0, scale: 0.95, y: 8 }}
+							animate={{ opacity: 1, scale: 1, y: 0 }}
+							exit={{ opacity: 0, scale: 0.96, y: 6 }}
+							transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+							className='relative max-w-lg w-full dialog-card rounded-[var(--radius-xl)] p-5 shadow-[var(--shadow-xl)] flex flex-col gap-4 overflow-hidden border border-amber-500/30'
+							onClick={(e) => e.stopPropagation()}>
+							{/* Top Inset Highlight Catch */}
+							<div className='absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent pointer-events-none' />
+
+							<div className='flex items-center justify-between border-b border-[var(--border-soft)] pb-3'>
+								<div className='flex items-center gap-2.5'>
+									<div className='w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 font-bold border border-amber-500/30'>
+										<Icon
+											name='arrow-right'
+											size='xs'
+										/>
+									</div>
+									<div className='flex flex-col'>
+										<h3 className='text-base font-bold text-[var(--text-primary)] font-heading'>
+											Skip Round — Select Destination
+										</h3>
+										<span className='text-xs text-[var(--text-secondary)] font-medium truncate max-w-[320px]'>
+											Starting from Round {skipTargetStage.id}: {skipTargetStage.name}
+										</span>
+									</div>
+								</div>
+								<button
+									type='button'
+									onClick={() => setShowSkipModal(false)}
+									className='p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer'
+									aria-label='Close dialog'>
+									<Icon
+										name='x'
+										size='sm'
+									/>
+								</button>
+							</div>
+
+							<div className='flex flex-col gap-3.5 text-xs'>
+								{/* Destination Selection */}
+								{(() => {
+									const availableDestinations = stagesData.filter((s) => s.id > skipTargetStage.id);
+									const maxRoundId = stagesData.length > 0 ? Math.max(...stagesData.map((s) => s.id)) : 4;
+
+									return (
+										<div className='flex flex-col gap-2'>
+											<div className='flex items-center justify-between'>
+												<label className='font-bold text-[var(--text-primary)] text-xs'>
+													Where do you want to skip to?
+												</label>
+												<span className='text-[11px] text-amber-400 font-medium'>
+													Select destination round
+												</span>
+											</div>
+
+											<div className='flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-0.5 custom-scrollbar'>
+												{availableDestinations.map((dest) => {
+													const isSelected = selectedDestinationRound === dest.id;
+													const isImmediateNext = dest.id === skipTargetStage.id + 1;
+													const waivedRoundsCount = dest.id - skipTargetStage.id;
+
+													return (
+														<div
+															key={dest.id}
+															onClick={() => setSelectedDestinationRound(dest.id)}
+															className={`p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+																isSelected
+																	? "bg-amber-500/15 border-amber-500/60 shadow-xs ring-1 ring-amber-500/20"
+																	: "bg-[var(--surface-2)] border-[var(--border-default)] hover:border-amber-500/40 hover:bg-[var(--surface-3)]"
+															}`}>
+															<div className='flex items-center gap-2.5 min-w-0'>
+																<div
+																	className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+																		isSelected
+																			? "border-amber-400 bg-amber-500 text-black"
+																			: "border-[var(--border-default)] bg-[var(--surface-1)]"
+																	}`}>
+																	{isSelected && (
+																		<div className='w-1.5 h-1.5 rounded-full bg-black' />
+																	)}
+																</div>
+																<div className='flex flex-col min-w-0'>
+																	<span
+																		className={`text-xs font-semibold truncate ${
+																			isSelected ? "text-amber-300" : "text-[var(--text-primary)]"
+																		}`}>
+																		Round {dest.id}: {dest.name}
+																	</span>
+																	<span className='text-[10.5px] text-[var(--text-tertiary)]'>
+																		{isImmediateNext
+																			? `Advance to next round (Waives Round ${skipTargetStage.id})`
+																			: `Waives Rounds ${skipTargetStage.id} through ${dest.id - 1} (${waivedRoundsCount} rounds waived)`}
+																	</span>
+																</div>
+															</div>
+
+															<span
+																className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 transition-colors ${
+																	isSelected
+																		? "bg-amber-500 text-black font-bold"
+																		: "bg-[var(--surface-3)] text-[var(--text-secondary)] border border-[var(--border-subtle)]"
+																}`}>
+																{isImmediateNext ? "Next Round" : `Jump to R${dest.id}`}
+															</span>
+														</div>
+													);
+												})}
+
+												{/* Complete Pipeline Option */}
+												<div
+													onClick={() => setSelectedDestinationRound(maxRoundId + 1)}
+													className={`p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+														selectedDestinationRound !== null && selectedDestinationRound > maxRoundId
+															? "bg-emerald-500/15 border-emerald-500/60 shadow-xs ring-1 ring-emerald-500/20"
+															: "bg-[var(--surface-2)] border-[var(--border-default)] hover:border-emerald-500/40 hover:bg-[var(--surface-3)]"
+													}`}>
+													<div className='flex items-center gap-2.5 min-w-0'>
+														<div
+															className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+																selectedDestinationRound !== null && selectedDestinationRound > maxRoundId
+																	? "border-emerald-400 bg-emerald-500 text-black"
+																	: "border-[var(--border-default)] bg-[var(--surface-1)]"
+															}`}>
+															{selectedDestinationRound !== null && selectedDestinationRound > maxRoundId && (
+																<div className='w-1.5 h-1.5 rounded-full bg-black' />
+															)}
+														</div>
+														<div className='flex flex-col min-w-0'>
+															<span
+																className={`text-xs font-semibold truncate ${
+																	selectedDestinationRound !== null && selectedDestinationRound > maxRoundId
+																		? "text-emerald-300"
+																		: "text-[var(--text-primary)]"
+																}`}>
+																Complete Pipeline & Offer
+															</span>
+															<span className='text-[10.5px] text-[var(--text-tertiary)]'>
+																Waive all remaining rounds & mark candidate as Hired
+															</span>
+														</div>
+													</div>
+													<span
+														className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 transition-colors ${
+															selectedDestinationRound !== null && selectedDestinationRound > maxRoundId
+																? "bg-emerald-500 text-black font-bold"
+																: "bg-[var(--surface-3)] text-[var(--text-secondary)] border border-[var(--border-subtle)]"
+														}`}>
+														Direct Hire
+													</span>
+												</div>
+											</div>
+										</div>
+									);
+								})()}
+
+								{/* Dynamic Waiver Notice */}
+								{(() => {
+									const maxRoundId = stagesData.length > 0 ? Math.max(...stagesData.map((s) => s.id)) : 4;
+									const isCompletePipeline = selectedDestinationRound !== null && selectedDestinationRound > maxRoundId;
+									const isMultiRoundJump = selectedDestinationRound !== null && selectedDestinationRound > skipTargetStage.id + 1;
+									const targetStageObj = stagesData.find((s) => s.id === selectedDestinationRound);
+
+									return (
+										<div className='p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300 flex flex-col gap-1'>
+											<div className='font-bold flex items-center gap-1.5 text-amber-400'>
+												<Icon
+													name='alert-triangle'
+													size='xs'
+												/>
+												<span>
+													{isCompletePipeline
+														? "Direct Hire / Pipeline Complete"
+														: isMultiRoundJump
+														? `Multi-Round Skip: Round ${skipTargetStage.id} → Round ${selectedDestinationRound}`
+														: "Confirm Round Waiver"}
+												</span>
+											</div>
+											<p className='text-[11px] text-amber-300/90 leading-relaxed'>
+												{isCompletePipeline ? (
+													<>
+														All remaining rounds from{" "}
+														<strong className='text-white'>Round {skipTargetStage.id}</strong> onwards
+														will be marked as <strong className='text-amber-300'>Waived</strong>. Candidate{" "}
+														<strong className='text-white'>{candidate.name}</strong> will be marked as{" "}
+														<strong className='text-emerald-400'>Hired</strong>.
+													</>
+												) : isMultiRoundJump ? (
+													<>
+														Rounds <strong className='text-white'>{skipTargetStage.id}</strong> through{" "}
+														<strong className='text-white'>{selectedDestinationRound - 1}</strong> will be
+														marked as <strong className='text-amber-300'>Waived</strong>.{" "}
+														<strong className='text-white'>{candidate.name}</strong> will advance directly to{" "}
+														<strong className='text-white'>
+															Round {selectedDestinationRound}: {targetStageObj?.name || `Round ${selectedDestinationRound}`}
+														</strong>
+														.
+													</>
+												) : (
+													<>
+														Skipping this round will mark{" "}
+														<strong className='text-white'>Round {skipTargetStage.id}</strong> as{" "}
+														<strong className='text-amber-300'>Waived</strong> and advance{" "}
+														<strong className='text-white'>{candidate.name}</strong> directly to the next stage.
+													</>
+												)}
+											</p>
+										</div>
+									);
+								})()}
+
+								<div className='flex flex-col gap-1.5'>
+									<label className='font-bold text-[var(--text-primary)]'>
+										Reason for Skipping / Waiver (Optional)
+									</label>
+									<textarea
+										rows={2}
+										value={skipReasonText}
+										onChange={(e) => setSkipReasonText(e.target.value)}
+										placeholder='e.g. Candidate demonstrated 4.5+ years specialized expertise; fast-tracked per Director review...'
+										maxLength={500}
+										className='w-full text-xs rounded-lg p-2.5 bg-[var(--surface-2)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 leading-relaxed resize-y'
+									/>
+									<span className='text-[10px] text-[var(--text-tertiary)] self-end font-mono'>
+										{skipReasonText.length}/500
+									</span>
+								</div>
+							</div>
+
+							<div className='flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-soft)]'>
+								<button
+									type='button'
+									disabled={isSkippingRound}
+									onClick={() => setShowSkipModal(false)}
+									className='px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-secondary)] transition-all cursor-pointer'>
+									Cancel
+								</button>
+								<button
+									type='button'
+									disabled={isSkippingRound}
+									onClick={async () => {
+										try {
+											await skipCandidateRound({
+												candidateId: numericId,
+												roundNumber: skipTargetStage.id,
+												targetRoundNumber: selectedDestinationRound,
+												reason: skipReasonText.trim() || undefined,
+											}).unwrap();
+
+											const maxRoundId = stagesData.length > 0 ? Math.max(...stagesData.map((s) => s.id)) : 4;
+											const isCompletePipeline = selectedDestinationRound !== null && selectedDestinationRound > maxRoundId;
+
+											toast.success("Round(s) Skipped Successfully", {
+												description: isCompletePipeline
+													? `${candidate.name} has completed the pipeline and is marked as Hired.`
+													: selectedDestinationRound && selectedDestinationRound > skipTargetStage.id + 1
+													? `Candidate advanced from Round ${skipTargetStage.id} to Round ${selectedDestinationRound}.`
+													: `Round ${skipTargetStage.id} has been waived for ${candidate.name}.`,
+											});
+											setShowSkipModal(false);
+											setSkipTargetStage(null);
+											refetchCandidate();
+										} catch (err: any) {
+											toast.error("Failed to Skip Round", {
+												description:
+													err?.data?.message ||
+													err?.message ||
+													"An error occurred while skipping the round.",
+											});
+										}
+									}}
+									className='px-4 py-1.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-black inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm disabled:opacity-50'>
+									{isSkippingRound ?
+										<>
+											<Icon
+												name='spinner'
+												size='xs'
+												className='animate-spin'
+											/>
+											<span>Skipping...</span>
+										</>
+									:	<>
+											<Icon
+												name='arrow-right'
+												size='xs'
+											/>
+											<span>
+												{selectedDestinationRound !== null &&
+												selectedDestinationRound > (stagesData.length > 0 ? Math.max(...stagesData.map((s) => s.id)) : 4)
+													? "Complete Pipeline & Hire"
+													: selectedDestinationRound && selectedDestinationRound > skipTargetStage.id + 1
+													? `Skip to Round ${selectedDestinationRound}`
+													: "Confirm Skip Round"}
+											</span>
+										</>
+									}
+								</button>
+							</div>
+						</motion.div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 
 			{/* --- 5. High-Resolution Profile Photo Lightbox Modal -------------------- */}
 			<AnimatePresence>

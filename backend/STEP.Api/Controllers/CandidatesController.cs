@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using STEP.Application.Common.Models;
 using STEP.Application.Features.Candidates.Commands.AssignPipelineFlow;
 using STEP.Application.Features.Candidates.Commands.RegisterCandidate;
+using STEP.Application.Features.Candidates.Commands.SkipCandidateRound;
 using STEP.Application.Features.Candidates.Commands.UpdateRoundInterviewerFeedback;
 using STEP.Application.Features.Candidates.Commands.UploadCandidateDocument;
 using STEP.Application.Features.Candidates.Queries.GetCandidateById;
@@ -94,6 +95,16 @@ namespace STEP.Api.Controllers
             return Ok(ApiResponse<object>.Ok(candidate, "Round interviewer and feedback updated successfully"));
         }
 
+        [HttpPost("{id:int}/rounds/{roundNumber:int}/skip")]
+        [Authorize]
+        public async Task<IActionResult> SkipRound(
+            int id, int roundNumber, [FromBody] SkipRoundRequestBody? body)
+        {
+            var candidate = await mediator.Send(new SkipCandidateRoundCommand(
+                id, roundNumber, body?.Reason, body?.TargetRoundNumber));
+            return Ok(ApiResponse<object>.Ok(candidate, "Round skipped successfully"));
+        }
+
         [HttpPut("{id:int}")]
         [Authorize(Policy = "Candidate.Approve")]
         public async Task<IActionResult> UpdateCandidate(int id, [FromBody] UpdateCandidateRequestBody body)
@@ -158,6 +169,7 @@ namespace STEP.Api.Controllers
     public record UpdateRoundInterviewerFeedbackRequestBody(int? InterviewerUserId, string? Feedback);
     public record ScheduleTestRequestBody(string TestMode, string ScheduledDate, string StartTime, string EndTime, string? Passcode);
     public record GenerateDirectorAccessLinkRequestBody(bool Regenerate);
+    public record SkipRoundRequestBody(string? Reason = null, int? TargetRoundNumber = null);
     public record UpdateCandidateRequestBody(
         string FirstName, string LastName, string Email, string Phone, string? CurrentLocation,
         string? HighestQualification, decimal TotalExperienceYears, decimal CurrentCTC, decimal ExpectedCTC, int NoticePeriodDays);
